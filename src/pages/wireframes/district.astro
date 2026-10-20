@@ -1,0 +1,103 @@
+---
+import WireLayout from '~/components/wire/WireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import Ph from '~/components/wire/Ph.astro';
+import { sortedDistricts, postsForDistrict, eventsForDistrict } from '~/lib/content';
+import { t, langOf, formatDate, dateParts } from '~/lib/i18n';
+import { districtBySlug, topicBySlug } from '~/data/districts';
+
+const lang = 'ml' as const;
+const slug = 'kozhikode';
+const d = districtBySlug[slug];
+const all = sortedDistricts();
+const i = all.findIndex((x) => x.slug === slug);
+const posts = postsForDistrict(slug);
+const events = eventsForDistrict(slug);
+const tabs = ['News', 'Office-bearers', 'Offices', 'Gallery'];
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+---
+<WireLayout title={`${d.name.en} district`} page="district">
+  <div class="border-b border-zinc-200 bg-zinc-50">
+    <div class="wf-wrap grid items-center gap-6 py-6 md:grid-cols-[1fr_200px]">
+      <div>
+        <nav lang="en" class="t-meta" aria-label="Breadcrumb"><a href="/wireframes">Home</a> / <a href="#">Districts</a> / {d.name.en}</nav>
+        <h1 lang="en" class="t-display mt-2">{d.name.en}</h1>
+        <p lang="en" class="mt-1 text-zinc-600">District committee · HQ {d.hq.en} · {plural(posts.length, 'post')} · {plural(events.length, 'upcoming event')}</p>
+        <Note n={1}>Name, HQ and counts up top, with a small locator map. The Districts page itself keeps the full interactive map and a list of all 15.</Note>
+      </div>
+      <Ph label="Locator map" ratio="3/4" class="hidden w-full md:grid" />
+    </div>
+  </div>
+
+  <div class="wf-wrap mt-6">
+    <Note n={2}>Tabs split the district's content so the page stays short on phones. Each tab has its own link, so a secretary can share the Office-bearers tab directly.</Note>
+    <div lang="en" class="no-scrollbar -mx-4 flex gap-1 overflow-x-auto border-b border-zinc-200 px-4 md:mx-0 md:px-0" role="tablist" aria-label="District sections" data-tabs>
+      {tabs.map((tb, n) => (
+        <button type="button" role="tab" id={`tab-${n}`} aria-controls={`panel-${n}`} aria-selected={n === 0 ? 'true' : 'false'} class="-mb-px whitespace-nowrap border-b-2 border-transparent px-3 py-2.5 text-[0.9375rem] text-zinc-600 aria-selected:border-zinc-800 aria-selected:font-semibold aria-selected:text-zinc-900">{tb}</button>
+      ))}
+    </div>
+
+    <div class="mt-6 grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div>
+        <section role="tabpanel" id="panel-0" aria-labelledby="tab-0">
+          {posts.length ? (
+            <ul class="divide-y divide-zinc-200">
+              {posts.map((p) => (
+                <li class="relative flex gap-4 py-4 first:pt-0">
+                  <div class="min-w-0 flex-1">
+                    <p lang="en" class="t-meta">{topicBySlug[p.topic].name.en} · {formatDate(p.date, 'en', 'short')}</p>
+                    <a href="/wireframes/article" lang={langOf(p.title, lang)} class="stretched t-h3 mt-0.5 block">{t(p.title, lang)}</a>
+                  </div>
+                  <Ph ratio="4/3" class="w-24 shrink-0 sm:w-32" />
+                </li>
+              ))}
+            </ul>
+          ) : <p lang="en" class="text-zinc-500">No district news yet.</p>}
+        </section>
+        <section role="tabpanel" id="panel-1" aria-labelledby="tab-1" hidden lang="en">
+          <ul class="grid gap-3 sm:grid-cols-3">
+            {['President', 'Secretary', 'Treasurer'].map((r) => (
+              <li class="wf-box flex items-center gap-3 p-3"><Ph label="" class="size-12 shrink-0 !rounded-full" /><div><p class="t-label">{r}</p><p class="text-sm text-zinc-500">Name, phone</p></div></li>
+            ))}
+          </ul>
+          <p class="t-meta mt-3">Then vice presidents, joint secretaries and the women's sub-committee, with a "last checked" date.</p>
+        </section>
+        <section role="tabpanel" id="panel-2" aria-labelledby="tab-2" hidden lang="en">
+          <div class="wf-box p-4"><p class="font-semibold">District office</p><p class="text-sm text-zinc-500">Address · phone · email · opening hours · directions link</p></div>
+          <p class="t-meta mt-3">Then area and unit offices as a list.</p>
+        </section>
+        <section role="tabpanel" id="panel-3" aria-labelledby="tab-3" hidden>
+          <ul class="grid grid-cols-2 gap-3 sm:grid-cols-3">{Array.from({ length: 6 }).map(() => <li><Ph ratio="4/3" /></li>)}</ul>
+        </section>
+      </div>
+
+      <aside lang="en">
+        <h2 class="t-h2 mb-2">Events in {d.name.en}</h2>
+        {events.length ? (
+          <ul class="space-y-2">
+            {events.map((e) => { const p = dateParts(e.start); return <li class="flex gap-3 text-sm"><span class="w-12 shrink-0 font-semibold tabular-nums">{p.d} {p.monthShort}</span><span lang={langOf(e.title, lang)} class="font-medium">{t(e.title, lang)}</span></li>; })}
+          </ul>
+        ) : <p class="text-sm text-zinc-500">Nothing scheduled.</p>}
+      </aside>
+    </div>
+
+    <nav lang="en" aria-label="Other districts" class="mt-12 flex justify-between gap-4 border-t border-zinc-200 pt-4 text-sm">
+      {all[i - 1] ? <a href="#" class="font-semibold">← {all[i - 1].name.en}</a> : <span />}
+      <a href="#" class="wf-link">All districts</a>
+      {all[i + 1] ? <a href="#" class="font-semibold">{all[i + 1].name.en} →</a> : <span />}
+    </nav>
+  </div>
+</WireLayout>
+
+<script>
+  const list = document.querySelector<HTMLElement>('[data-tabs]');
+  list?.addEventListener('click', (e) => {
+    const tab = (e.target as HTMLElement).closest<HTMLButtonElement>('[role=tab]');
+    if (!tab) return;
+    list.querySelectorAll<HTMLButtonElement>('[role=tab]').forEach((t) => {
+      const on = t === tab;
+      t.setAttribute('aria-selected', String(on));
+      document.getElementById(t.getAttribute('aria-controls')!)!.hidden = !on;
+    });
+  });
+</script>

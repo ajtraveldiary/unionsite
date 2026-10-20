@@ -1,0 +1,33 @@
+---
+import Base from '~/layouts/Base.astro';
+import PageHero from '~/components/PageHero.astro';
+import Icon from '~/components/ui/Icon.astro';
+import type { Lang } from '~/lib/types';
+import { usefulLinks } from '~/data/site';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const host = (u: string) => new URL(u).hostname.replace(/^www\./, '');
+---
+<Base lang={lang} title="Useful links" description="Kerala Government portals State employees use every day — SPARK, eOffice, Document Portal, PSC and more.">
+  <PageHero lang={lang} eyebrow="Kerala Govt portals" title="Useful links" sub="The official portals employees use most, in one place. Every link opens the Government site in a new tab." crumbs={[{ label: 'Useful links' }]} />
+
+  <div class="container-x py-10 lg:py-14" lang="en">
+    <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {usefulLinks.map((l) => (
+        <li class="reveal">
+          <a href={l.url} target="_blank" rel="noopener" class="spotlight group card lift flex h-full items-center gap-4 p-5">
+            <span class="grid size-12 shrink-0 place-items-center rounded-xl bg-brand-soft text-lg font-extrabold text-brand transition-transform group-hover:-rotate-6" aria-hidden="true">{l.label.slice(0, 2).toUpperCase()}</span>
+            <span class="min-w-0 flex-1">
+              <span class="block font-semibold group-hover:text-brand">{l.label}</span>
+              <span class="block text-sm text-ink-3">{l.note}</span>
+              <span class="mt-1 block truncate text-xs text-ink-3">{host(l.url)}</span>
+            </span>
+            <Icon name="ArrowUpRight" size={18} class="text-ink-3 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-brand" />
+          </a>
+        </li>
+      ))}
+    </ul>
+    <p class="mt-8 flex items-start gap-2 text-sm text-ink-3"><Icon name="Info" size={16} class="mt-0.5 shrink-0" /> These are Government of Kerala and public-sector sites. The union is not responsible for their content or availability.</p>
+  </div>
+</Base>

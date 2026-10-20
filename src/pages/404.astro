@@ -1,0 +1,28 @@
+---
+import Base from '~/layouts/Base.astro';
+import Icon from '~/components/ui/Icon.astro';
+import { langFromPath, href } from '~/lib/i18n';
+
+const lang = langFromPath(Astro.url.pathname);
+const links = [
+  ['Government orders', '/orders', 'FileText'],
+  ['News', '/news', 'Newspaper'],
+  ['Districts', '/districts', 'MapPinned'],
+  ['Kerala Service', '/kerala-service', 'BookOpen'],
+] as const;
+---
+<Base lang={lang} title="Page not found" noindex>
+  <section class="container-x py-16 text-center lg:py-24" lang="en">
+    <p lang="ml" aria-hidden="true" class="display select-none text-[clamp(5rem,3rem+10vw,10rem)] !leading-none text-brand">൪൦൪</p>
+    <h1 class="h1 mt-6">This page isn't here</h1>
+    <p class="mx-auto mt-2 max-w-md text-ink-2">It may have moved when the site was rebuilt. Search for it, or start from one of these.</p>
+    <div class="mt-6 flex justify-center">
+      <button type="button" data-open-search class="btn btn-primary"><Icon name="Search" size={18} /> Search the site</button>
+    </div>
+    <ul class="mx-auto mt-10 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
+      {links.map(([label, p, icon]) => (
+        <li><a href={href(lang, p)} class="card lift flex flex-col items-center gap-2 p-4 text-sm font-semibold"><Icon name={icon} size={22} class="text-brand" />{label}</a></li>
+      ))}
+    </ul>
+  </section>
+</Base>

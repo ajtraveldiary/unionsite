@@ -1,0 +1,6 @@
+---
+/** Review annotation for the Phase A wireframes. Hidden with the toolbar's Notes switch. */
+interface Props { n: number | string; class?: string }
+const { n, class: cls = '' } = Astro.props;
+---
+<aside class:list={['wf-note', cls]} lang="en"><span class="wf-note-n">{n}</span><div><slot /></div></aside>

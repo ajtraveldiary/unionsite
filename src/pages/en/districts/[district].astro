@@ -1,0 +1,8 @@
+---
+import DistrictView from '~/views/DistrictView.astro';
+import { districtPaths } from '~/lib/paths';
+
+export function getStaticPaths() { return districtPaths(); }
+const { slug } = Astro.props;
+---
+<DistrictView lang="en" slug={slug} />

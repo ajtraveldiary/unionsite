@@ -1,0 +1,8 @@
+---
+import ArticleView from '~/views/ArticleView.astro';
+import { postPaths } from '~/lib/paths';
+
+export function getStaticPaths() { return postPaths(); }
+const { id } = Astro.props;
+---
+<ArticleView lang="en" id={id} />

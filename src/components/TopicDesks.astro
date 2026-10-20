@@ -1,0 +1,119 @@
+---
+/**
+ * Topic sections carried over from the old home page (FSETO news, Janapaksha Civil
+ * Service, volunteer work, arts & sports), folded into one tab strip. The Secretary's
+ * page sits beside Union news instead, as it did on the old site.
+ * All panels are rendered on the server; the script only switches which one shows.
+ */
+import Poster from './ui/Poster.astro';
+import Icon from './ui/Icon.astro';
+import StoryCard from './StoryCard.astro';
+import SectionHead from './ui/SectionHead.astro';
+import type { Lang } from '~/lib/types';
+import { t, langOf, href, formatDate } from '~/lib/i18n';
+import { postsForTopic, postUrl } from '~/lib/content';
+import { topicBySlug } from '~/data/districts';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+
+const desks = [
+  { topic: 'fseto', note: "Federation of State Employees' and Teachers' Organisations" },
+  { topic: 'janapaksha', note: 'Campaigns for a people-oriented civil service' },
+  { topic: 'social-work', note: 'Flood relief, blood donation and other volunteer work' },
+  { topic: 'arts-sports', note: 'Arts festivals, games and competitions for employees' },
+]
+  .map((d) => ({ ...d, name: topicBySlug[d.topic].name, posts: postsForTopic(d.topic) }))
+  .filter((d) => d.posts.length);
+
+---
+<section class="container-x mt-14 lg:mt-16" aria-labelledby="desks-title">
+  <SectionHead id="desks-title" eyebrow="In focus" title="Union desks" />
+
+  <div class="no-scrollbar -mx-4 mb-6 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:px-0" role="tablist" aria-label="Topic" data-desk-tabs>
+    {desks.map((d, i) => (
+      <button
+        type="button"
+        role="tab"
+        id={`desk-tab-${d.topic}`}
+        aria-controls={`desk-${d.topic}`}
+        aria-selected={i === 0 ? 'true' : 'false'}
+        tabindex={i === 0 ? 0 : -1}
+        class="chip shrink-0"
+        lang="en"
+      >
+        {d.name.en}
+        <span lang="en" class="tabular text-xs opacity-60">{d.posts.length}</span>
+      </button>
+    ))}
+  </div>
+
+  {desks.map((d, i) => {
+    const [lead, ...rest] = d.posts;
+    return (
+      <div role="tabpanel" id={`desk-${d.topic}`} aria-labelledby={`desk-tab-${d.topic}`} hidden={i !== 0} class="desk-panel grid gap-6 lg:grid-cols-[1.25fr_1fr] lg:gap-10">
+        <article class="group card lift relative flex flex-col overflow-hidden">
+          <div class="relative aspect-[16/9] overflow-hidden bg-paper-2">
+            {lead.cover.kind === 'poster' && <Poster cover={lead.cover} seed={lead.id} lang={lang} class="size-full transition-transform duration-700 ease-out group-hover:scale-[1.04]" />}
+          </div>
+          <div class="flex flex-1 flex-col p-5 sm:p-6">
+            <time lang="en" datetime={lead.date} class="text-sm text-ink-3">{formatDate(lead.date, 'en')}</time>
+            <h3 lang={langOf(lead.title, lang)} class="h2 mt-1 clamp-3">
+              <a href={postUrl(lead, lang)} class="stretched">{t(lead.title, lang)}</a>
+            </h3>
+            <p lang={langOf(lead.summary, lang)} class="clamp-3 mt-2 text-ink-2">{t(lead.summary, lang)}</p>
+          </div>
+        </article>
+
+        <div class="flex min-w-0 flex-col">
+          <p lang="en" class="mb-4 text-ink-2">{d.note}</p>
+          {rest.length > 0 && (
+            <ul class="divide-y divide-line">
+              {rest.slice(0, 4).map((p) => <li class="py-3 first:pt-0"><StoryCard post={p} lang={lang} variant="compact" hideTopic /></li>)}
+            </ul>
+          )}
+          <a href={href(lang, `/news?topic=${d.topic}`)} lang="en" class="btn btn-ghost mt-5 self-start lg:mt-auto">
+            More from {d.name.en} <Icon name="ArrowRight" size={16} />
+          </a>
+        </div>
+      </div>
+    );
+  })}
+</section>
+
+<style>
+  .desk-panel:not([hidden]) { animation: desk-in 0.35s var(--ease-out-soft); }
+  @keyframes desk-in { from { opacity: 0; transform: translateY(6px); } }
+  @media (prefers-reduced-motion: reduce) { .desk-panel { animation: none !important; } }
+</style>
+
+<script>
+  document.addEventListener('astro:page-load', () => {
+    const list = document.querySelector<HTMLElement>('[data-desk-tabs]');
+    if (!list) return;
+    const tabs = [...list.querySelectorAll<HTMLButtonElement>('[role=tab]')];
+    const select = (tab: HTMLButtonElement, focus = false) => {
+      for (const t of tabs) {
+        const on = t === tab;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        document.getElementById(t.getAttribute('aria-controls')!)!.hidden = !on;
+      }
+      tab.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+      if (focus) tab.focus();
+    };
+    list.addEventListener('click', (e) => {
+      const tab = (e.target as HTMLElement).closest<HTMLButtonElement>('[role=tab]');
+      if (tab) select(tab);
+    });
+    // Arrow keys move between tabs, as the ARIA tabs pattern expects
+    list.addEventListener('keydown', (e) => {
+      const i = tabs.indexOf(document.activeElement as HTMLButtonElement);
+      if (i < 0) return;
+      const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+      if (next === undefined) return;
+      e.preventDefault();
+      select(tabs[(next + tabs.length) % tabs.length], true);
+    });
+  });
+</script>

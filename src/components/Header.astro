@@ -1,0 +1,130 @@
+---
+import Logo from './ui/Logo.astro';
+import Icon from './ui/Icon.astro';
+import LangSwitch from './LangSwitch.astro';
+import { href, ui } from '~/lib/i18n';
+import type { Lang } from '~/lib/types';
+import { sortedDistricts } from '~/lib/content';
+import { orderSubjects, orderGroups } from '~/data/orders';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const path = Astro.url.pathname.replace(/^\/en(?=\/|$)/, '') || '/';
+
+// No Home item: the logo links home, and phones have Home in the bottom bar.
+const nav = [
+  { label: ui.about, path: '/about/state-committee', match: '/about' },
+  { label: ui.news, path: '/news' },
+  { label: ui.districts, path: '/districts', menu: 'districts' },
+  { label: ui.orders, path: '/orders', menu: 'orders' },
+  { label: ui.keralaService, path: '/kerala-service' },
+  { label: ui.events, path: '/events' },
+  { label: ui.contact, path: '/contact' },
+];
+const isActive = (n: { path: string; match?: string }) => path.startsWith(n.match ?? n.path);
+const topSubjects = orderSubjects.filter((s) => ['da', 'pay-revision', 'leave', 'bonus', 'medisep', 'gpf'].includes(s.slug));
+---
+<header id="site-header" lang="en" class="sticky top-0 z-40 no-print">
+  <div class="kasavu" aria-hidden="true"></div>
+  <div class="header-bar border-b border-line bg-paper/85 backdrop-blur-xl supports-[backdrop-filter]:bg-paper/75">
+    <div class="container-x flex items-center gap-4 header-pad">
+      <a href={href(lang, '/')} class="shrink-0 rounded-lg" aria-label="Kerala NGO Union — home">
+        <!-- Wrappers carry the breakpoints: Logo's own inline-flex would override `hidden` -->
+        <!-- Full wordmark where there's room; stacked on phones and beside the lg–xl menu -->
+        <span class="hidden sm:inline-flex lg:hidden xl:inline-flex"><Logo size={40} /></span>
+        <span class="inline-flex sm:hidden lg:inline-flex xl:hidden"><Logo size={36} stacked /></span>
+      </a>
+
+      <nav aria-label="Primary" class="hidden lg:flex shrink-0">
+        <ul class="flex items-center gap-0.5 xl:gap-1">
+          {nav.map((n) => (
+            <li class="group relative">
+              <a
+                href={href(lang, n.path)}
+                aria-current={isActive(n) ? 'page' : undefined}
+                class:list={['nav-link relative flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-2 text-[0.9rem] font-medium transition-colors', isActive(n) ? 'text-ink' : 'text-ink-2 hover:text-ink']}
+              >
+                {isActive(n) && <span class="nav-pill absolute inset-0 -z-10 rounded-full bg-brand-soft" style="view-transition-name: nav-pill" />}
+                <span class:list={[isActive(n) && 'text-brand font-semibold']}>{n.label}</span>
+                {n.menu && <Icon name="ChevronDown" size={14} class="opacity-60 transition-transform group-hover:rotate-180 group-focus-within:rotate-180" />}
+              </a>
+
+              {n.menu === 'districts' && (
+                <div class="mega invisible absolute left-1/2 top-full z-50 w-[560px] -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                  <div class="card p-4 shadow-2xl shadow-black/10">
+                    <div class="mb-3 flex items-center justify-between">
+                      <span class="eyebrow">15 district committees</span>
+                      <a href={href(lang, '/districts')} class="text-sm font-semibold text-brand hover:underline">Open the map →</a>
+                    </div>
+                    <ul class="grid grid-cols-3 gap-1">
+                      {sortedDistricts().map((d) => (
+                        <li>
+                          <a href={href(lang, `/districts/${d.slug}`)} class="block rounded-lg px-2.5 py-1.5 hover:bg-paper-2">
+                            <span class="block text-[0.9rem] font-semibold leading-snug">{d.name.en}</span>
+                            <span class="block text-xs text-ink-3">HQ {d.hq.en}</span>
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {n.menu === 'orders' && (
+                <div class="mega invisible absolute left-1/2 top-full z-50 w-[480px] -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                  <div class="card grid grid-cols-[1fr_1.3fr] gap-4 p-4 shadow-2xl shadow-black/10">
+                    <div>
+                      <span class="eyebrow">Groups</span>
+                      <ul class="mt-2 space-y-1">
+                        {orderGroups.map((g) => (
+                          <li><a href={href(lang, `/orders?g=${g.slug}`)} class="block rounded-lg px-2 py-1.5 text-sm font-medium hover:bg-paper-2">{g.name.en}</a></li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <span class="eyebrow">Most searched</span>
+                      <div class="mt-2 flex flex-wrap gap-1.5">
+                        {topSubjects.map((s) => (
+                          <a href={href(lang, `/orders?s=${s.slug}`)} class="chip !min-h-8 text-[0.8rem]">{s.name.en}</a>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <div class="flex min-w-0 flex-1 items-center justify-end gap-1.5 sm:gap-2">
+        <!-- The search bar takes whatever room the row has left (up to 20rem); its label
+             grows from icon only, to "Search", to the full prompt as that room allows -->
+        <div class="@container flex min-w-10 max-w-80 flex-1 justify-end">
+          <button
+            type="button"
+            data-open-search
+            aria-label="Search"
+            class="flex h-10 w-full items-center justify-center gap-2 rounded-full border border-line-strong bg-surface px-2.5 text-sm text-ink-3 transition hover:border-ink-3 hover:text-ink-2 @[6rem]:justify-start @[6rem]:px-3.5"
+          >
+            <Icon name="Search" size={18} />
+            <span class="hidden truncate @[6rem]:inline @[13rem]:hidden">Search</span>
+            <span class="hidden truncate @[13rem]:inline">Search orders, news…</span>
+          </button>
+        </div>
+        <LangSwitch lang={lang} />
+        <button type="button" data-theme-toggle class="hidden sm:grid size-10 place-items-center rounded-full text-ink-2 hover:bg-paper-2 hover:text-ink" aria-label="Toggle dark mode">
+          <Icon name="Moon" size={19} class="theme-moon" />
+          <Icon name="Sun" size={19} class="theme-sun" />
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<style>
+  .header-pad { padding-block: 6px; transition: padding 0.25s var(--ease-out-soft); }
+  :global([data-scrolled]) .header-pad { padding-block: 2px; }
+  :global([data-scrolled]) .header-bar { box-shadow: 0 6px 24px -18px rgb(0 0 0 / 0.5); }
+  :global([data-theme='dark']) .theme-moon, :global(:root:not([data-theme='dark'])) .theme-sun { display: none; }
+</style>

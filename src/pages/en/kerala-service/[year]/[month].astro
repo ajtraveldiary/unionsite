@@ -1,0 +1,8 @@
+---
+import IssueView from '~/views/IssueView.astro';
+import { issuePaths } from '~/lib/paths';
+
+export function getStaticPaths() { return issuePaths(); }
+const { year, month } = Astro.props;
+---
+<IssueView lang="en" year={year} month={month} />

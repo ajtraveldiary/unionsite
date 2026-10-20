@@ -1,0 +1,160 @@
+---
+import '~/styles/global.css';
+import { ClientRouter } from 'astro:transitions';
+import Header from '~/components/Header.astro';
+import BottomNav from '~/components/BottomNav.astro';
+import Footer from '~/components/Footer.astro';
+import Announcement from '~/components/Announcement.astro';
+import CommandPalette from '~/components/islands/CommandPalette';
+import { altPath } from '~/lib/i18n';
+import type { Lang } from '~/lib/types';
+import notoMl from '@fontsource-variable/noto-sans-malayalam/files/noto-sans-malayalam-malayalam-wght-normal.woff2?url';
+import notoLatin from '@fontsource-variable/noto-sans-malayalam/files/noto-sans-malayalam-latin-wght-normal.woff2?url';
+
+interface Props {
+  title?: string;
+  description?: string;
+  lang: Lang;
+  /** Set when the English page actually shows English content */
+  noindex?: boolean;
+  ogImage?: string;
+}
+const { title, description = 'Kerala NGO Union — the organisation of Kerala State Government employees. News, government orders, district committees and the Kerala Service magazine.', lang, noindex = false } = Astro.props;
+const fullTitle = title ? `${title} · Kerala NGO Union` : 'Kerala NGO Union · കേരള എൻ.ജി.ഒ യൂണിയൻ';
+const site = Astro.site!;
+const alt = altPath(Astro.url.pathname);
+const canonical = new URL(lang === 'en' ? alt.en : alt.ml, site);
+---
+<!doctype html>
+<html lang={lang} data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="ml" href={new URL(alt.ml, site)} />
+    <link rel="alternate" hreflang="en" href={new URL(alt.en, site)} />
+    <link rel="alternate" hreflang="x-default" href={new URL(alt.ml, site)} />
+    {noindex && <meta name="robots" content="noindex" />}
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content={lang === 'ml' ? 'ml_IN' : 'en_IN'} />
+    <meta name="theme-color" content="#C8102E" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href={notoMl} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={notoLatin} as="font" type="font/woff2" crossorigin />
+    <script is:inline>
+      (() => {
+        const apply = (doc) => {
+          let theme = 'light';
+          try {
+            const saved = localStorage.getItem('theme');
+            theme = saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            const ann = doc.querySelector('[data-ann]');
+            if (ann && localStorage.getItem('ann-dismissed') === ann.dataset.ann) doc.documentElement.classList.add('ann-hidden');
+          } catch {}
+          doc.documentElement.dataset.theme = theme;
+        };
+        apply(document);
+        document.addEventListener('DOMContentLoaded', () => apply(document), { once: true });
+        if (!window.__themeHook) {
+          window.__themeHook = true;
+          document.addEventListener('astro:before-swap', (e) => apply(e.newDocument));
+        }
+      })();
+    </script>
+    <ClientRouter fallback="swap" />
+  </head>
+  <body class="min-h-dvh">
+    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-paper">Skip to content</a>
+    <Announcement />
+    <Header lang={lang} />
+    <main id="main" class="pb-28 lg:pb-0">
+      <slot />
+    </main>
+    <Footer lang={lang} />
+    <BottomNav lang={lang} />
+    <CommandPalette client:idle transition:persist="search" />
+  </body>
+</html>
+
+<script>
+  // One set of delegated listeners for the whole session (survives ClientRouter swaps).
+  const root = document.documentElement;
+
+  document.addEventListener('click', (e) => {
+    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-theme-toggle],[data-open-search],[data-open-more],[data-close-sheet],[data-dismiss-ann],[data-set-lang]');
+    if (!el) {
+      // Click on a <dialog> backdrop closes it
+      const t = e.target as HTMLElement;
+      if (t instanceof HTMLDialogElement && t.open) t.close();
+      return;
+    }
+    if (el.hasAttribute('data-theme-toggle')) {
+      const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      const swap = () => { root.dataset.theme = next; };
+      // Circular reveal from the button when the View Transitions API is available
+      const r = el.getBoundingClientRect();
+      root.style.setProperty('--vt-x', `${r.left + r.width / 2}px`);
+      root.style.setProperty('--vt-y', `${r.top + r.height / 2}px`);
+      if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        root.classList.add('theme-vt');
+        document.startViewTransition(swap).finished.finally(() => root.classList.remove('theme-vt'));
+      } else swap();
+      try { localStorage.setItem('theme', next); } catch {}
+    } else if (el.hasAttribute('data-open-search')) {
+      document.querySelector<HTMLDialogElement>('#more-sheet')?.close();
+      window.dispatchEvent(new CustomEvent('open-search'));
+    } else if (el.hasAttribute('data-open-more')) {
+      document.querySelector<HTMLDialogElement>('#more-sheet')?.showModal();
+    } else if (el.hasAttribute('data-close-sheet')) {
+      el.closest('dialog')?.close();
+    } else if (el.hasAttribute('data-dismiss-ann')) {
+      const id = el.closest<HTMLElement>('[data-ann]')?.dataset.ann ?? '';
+      root.classList.add('ann-hidden');
+      try { localStorage.setItem('ann-dismissed', id); } catch {}
+    } else if (el.hasAttribute('data-set-lang')) {
+      document.cookie = `lang=${el.dataset.setLang}; path=/; max-age=31536000; samesite=lax`;
+    }
+  });
+
+  // Shrinking sticky header
+  let ticking = false;
+  const onScroll = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      root.toggleAttribute('data-scrolled', scrollY > 24);
+      ticking = false;
+    });
+  };
+  addEventListener('scroll', onScroll, { passive: true });
+  document.addEventListener('astro:page-load', onScroll);
+
+  // Cursor spotlight on interactive tiles
+  document.addEventListener('pointermove', (e) => {
+    const el = (e.target as HTMLElement).closest?.<HTMLElement>('.spotlight');
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty('--mx', `${e.clientX - r.left}px`);
+    el.style.setProperty('--my', `${e.clientY - r.top}px`);
+  }, { passive: true });
+
+  // Close the More sheet after navigating
+  document.addEventListener('astro:after-swap', () => document.querySelector<HTMLDialogElement>('#more-sheet')?.close());
+</script>
+
+<style is:global>
+  /* Theme switch: circular reveal from the toggle */
+  .theme-vt::view-transition-old(root) { animation: none; }
+  .theme-vt::view-transition-new(root) {
+    animation: theme-reveal 0.55s var(--ease-out-soft);
+  }
+  @keyframes theme-reveal {
+    from { clip-path: circle(0 at var(--vt-x, 50%) var(--vt-y, 0)); }
+    to { clip-path: circle(150vmax at var(--vt-x, 50%) var(--vt-y, 0)); }
+  }
+</style>

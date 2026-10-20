@@ -1,0 +1,8 @@
+---
+import OrderView from '~/views/OrderView.astro';
+import { orderPaths } from '~/lib/paths';
+
+export function getStaticPaths() { return orderPaths(); }
+const { id } = Astro.props;
+---
+<OrderView lang="en" id={id} />

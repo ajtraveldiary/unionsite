@@ -1,0 +1,54 @@
+---
+import Base from '~/layouts/Base.astro';
+import PageHero from '~/components/PageHero.astro';
+import Icon from '~/components/ui/Icon.astro';
+import OrdersLibrary, { type LibOrder } from '~/components/islands/OrdersLibrary';
+import type { Lang } from '~/lib/types';
+import { t, langOf, formatDate, formatKb } from '~/lib/i18n';
+import { allOrders, orderUrl } from '~/lib/content';
+import { orderGroups, orderSubjects } from '~/data/orders';
+import { usefulLinks } from '~/data/site';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+
+const lib: LibOrder[] = allOrders().map((o) => ({
+  id: o.id,
+  url: orderUrl(o, lang),
+  goNumber: o.goNumber,
+  goDate: o.goDate,
+  dateLabel: formatDate(o.goDate, 'en', 'short'),
+  group: o.group,
+  subject: o.subject,
+  title: t(o.title, lang),
+  titleLang: langOf(o.title, lang),
+  altTitle: lang === 'en' ? o.title.ml : o.title.en,
+  important: o.important,
+  pdf: formatKb(o.pdfKb),
+}));
+---
+<Base lang={lang} title="Government orders" description="Search Kerala Government orders and circulars for State employees by GO number, subject or keyword — DA, pay revision, pension, leave and more.">
+  <PageHero lang={lang} eyebrow="Orders library" title="Government orders & circulars" sub="Find any GO in seconds — by number, subject or keyword, in Malayalam or English. Share a link instead of forwarding the PDF." crumbs={[{ label: 'Orders' }]} />
+  <div class="container-x grid grid-cols-[minmax(0,1fr)] gap-10 py-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:py-12">
+    <OrdersLibrary
+      client:load
+      orders={lib}
+      groups={orderGroups.map((g) => ({ slug: g.slug, label: g.name.en }))}
+      subjects={orderSubjects.map((s) => ({ slug: s.slug, label: s.name.en, group: s.group }))}
+    />
+    <aside lang="en" class="space-y-5">
+      <div class="card p-5">
+        <div class="flex items-center gap-2 text-sm font-bold"><Icon name="Info" size={17} class="text-info" /> Reference copies</div>
+        <p class="mt-2 text-sm leading-relaxed text-ink-2">Orders here are reference copies for members. Always check the official Government source for the authoritative version.</p>
+      </div>
+      <div class="card p-5">
+        <p class="text-sm font-bold">Official portals</p>
+        <ul class="mt-3 space-y-2 text-sm">
+          {usefulLinks.slice(0, 4).map((l) => (
+            <li><a href={l.url} target="_blank" rel="noopener" class="group flex items-center justify-between gap-2 text-ink-2 hover:text-brand"><span>{l.label} <span class="text-ink-3">· {l.note}</span></span><Icon name="ArrowUpRight" size={14} /></a></li>
+          ))}
+        </ul>
+      </div>
+    </aside>
+  </div>
+</Base>

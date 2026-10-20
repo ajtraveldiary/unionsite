@@ -1,0 +1,6 @@
+---
+/** Grey placeholder where a photo, cover, map or video goes. */
+interface Props { label?: string; ratio?: string; class?: string }
+const { label = 'Photo', ratio, class: cls = '' } = Astro.props;
+---
+<div class:list={['wf-ph', cls]} style={ratio ? `aspect-ratio:${ratio}` : undefined} aria-hidden="true"><span>{label}</span></div>

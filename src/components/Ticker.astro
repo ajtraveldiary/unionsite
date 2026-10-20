@@ -1,0 +1,39 @@
+---
+import Icon from './ui/Icon.astro';
+import { formatDate, t, langOf } from '~/lib/i18n';
+import type { Lang } from '~/lib/types';
+import { latestOrders, orderUrl, allPosts, postUrl } from '~/lib/content';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const items = [
+  ...latestOrders(4).map((o) => ({ kind: 'GO', text: o.title, sub: o.goNumber, url: orderUrl(o, lang), date: o.goDate })),
+  ...allPosts().slice(0, 4).map((p) => ({ kind: 'News', text: p.title, sub: formatDate(p.date, lang, 'short'), url: postUrl(p, lang), date: p.date })),
+].sort((a, b) => b.date.localeCompare(a.date));
+---
+<section aria-label="Latest updates" class="ticker relative border-b border-line bg-surface no-print">
+  <div class="flex items-stretch">
+    <div lang="en" class="relative z-10 flex shrink-0 items-center gap-2 bg-brand-solid px-3 text-[0.72rem] font-bold uppercase tracking-[0.14em] text-white sm:px-4">
+      <Icon name="Flame" size={15} stroke={2.2} /> <span class="hidden sm:inline">Latest</span>
+      <span class="absolute -right-3 top-0 h-full w-3 bg-brand-solid [clip-path:polygon(0_0,100%_50%,0_100%)]" aria-hidden="true"></span>
+    </div>
+    <div class="relative flex-1 overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_4%,#000_94%,transparent)]">
+      <div class="ticker-track flex w-max">
+        {[0, 1].map((copy) => (
+          <ul class="flex shrink-0 items-center" aria-hidden={copy === 1 ? 'true' : undefined}>
+            {items.map((it) => (
+              <li class="flex items-center">
+                <a href={it.url} tabindex={copy === 1 ? -1 : undefined} class="group flex items-center gap-2.5 px-5 py-1.5 whitespace-nowrap">
+                  <span lang="en" class:list={['badge', it.kind === 'GO' ? 'badge-gold' : 'badge-brand']}>{it.kind}</span>
+                  <span lang={langOf(it.text, lang)} class="text-[0.875rem] font-medium group-hover:text-brand group-hover:underline underline-offset-4">{t(it.text, lang)}</span>
+                  <span class="text-xs text-ink-3 tabular">{it.sub}</span>
+                </a>
+                <span class="size-1.5 rotate-45 bg-gold-line" aria-hidden="true"></span>
+              </li>
+            ))}
+          </ul>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>

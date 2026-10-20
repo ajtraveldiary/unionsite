@@ -1,0 +1,65 @@
+---
+import WireLayout from '~/components/wire/WireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import { allOrders, subjectName } from '~/lib/content';
+import { t, langOf, formatDate, formatKb } from '~/lib/i18n';
+import { orderGroups, orderSubjects } from '~/data/orders';
+
+const lang = 'ml' as const;
+const orders = allOrders();
+const years = [...new Set(orders.map((o) => o.goDate.slice(0, 4)))];
+---
+<WireLayout title="Orders" page="orders">
+  <div class="wf-wrap pt-6">
+    <nav lang="en" class="t-meta" aria-label="Breadcrumb"><a href="/wireframes">Home</a> / Orders</nav>
+    <h1 lang="en" class="t-display mt-2">Government orders</h1>
+    <p lang="en" class="mt-1 text-zinc-600">GOs and circulars for State employees. Search by GO number, subject or any word, in Malayalam or English.</p>
+    <Note n={1}>Search is the main control here. Results update as you type; a GO number like "112/2026" jumps straight to that order.</Note>
+    <input class="wf-input mt-4 !min-h-14 max-w-3xl text-[1.05rem]" placeholder="GO number, subject or keyword" aria-label="Search orders" lang="en" />
+
+    <Note n={2}>Three filters: group as tabs (only three), subject and year as dropdowns. Active filters show as removable chips.</Note>
+    <div lang="en" class="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
+      <div class="flex gap-1 rounded-xl bg-zinc-100 p-1" role="tablist" aria-label="Group">
+        <button type="button" role="tab" aria-selected="true" class="rounded-lg bg-white px-3 py-1.5 text-sm font-semibold shadow-sm">All</button>
+        {orderGroups.map((g) => <button type="button" role="tab" aria-selected="false" class="rounded-lg px-3 py-1.5 text-sm text-zinc-600">{g.name.en}</button>)}
+      </div>
+      <select class="wf-input md:w-56" aria-label="Subject"><option>All subjects</option>{orderSubjects.map((s) => <option>{s.name.en}</option>)}</select>
+      <select class="wf-input md:w-36" aria-label="Year"><option>All years</option>{years.map((y) => <option>{y}</option>)}</select>
+      <p class="t-meta md:ml-auto">{orders.length} orders</p>
+    </div>
+  </div>
+
+  <div class="wf-wrap mt-6">
+    <Note n={3}>Desktop shows a dense table: number, date and subject in their own columns so they can be scanned. Phones get the same data as a list.</Note>
+    <!-- Desktop table -->
+    <table lang="en" class="hidden w-full border-collapse text-left text-sm md:table">
+      <thead>
+        <tr class="border-b-2 border-zinc-800 text-xs uppercase tracking-wide text-zinc-500">
+          <th class="py-2 pr-4 font-semibold">GO number</th><th class="py-2 pr-4 font-semibold">Date</th><th class="py-2 pr-4 font-semibold">Subject</th><th class="py-2 pr-4 font-semibold">Title</th><th class="py-2 font-semibold">PDF</th>
+        </tr>
+      </thead>
+      <tbody>
+        {orders.map((o) => (
+          <tr class="relative border-b border-zinc-200 align-top hover:bg-zinc-50">
+            <td class="whitespace-nowrap py-3 pr-4 font-semibold tabular-nums">{o.goNumber}</td>
+            <td class="whitespace-nowrap py-3 pr-4 tabular-nums text-zinc-600">{formatDate(o.goDate, 'en', 'short')}</td>
+            <td class="whitespace-nowrap py-3 pr-4 text-zinc-600">{subjectName(o.subject)?.en}</td>
+            <td class="py-3 pr-4"><a href="#" lang={langOf(o.title, lang)} class="font-medium leading-snug">{t(o.title, lang)}</a>{o.important && <span class="ml-2 rounded bg-zinc-200 px-1.5 py-0.5 text-xs font-semibold">Important</span>}</td>
+            <td class="whitespace-nowrap py-3 text-zinc-600">{formatKb(o.pdfKb)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+    <!-- Phone list -->
+    <ul class="divide-y divide-zinc-200 border-t border-zinc-200 md:hidden">
+      {orders.map((o) => (
+        <li class="relative py-3">
+          <p lang="en" class="t-meta"><span class="font-semibold text-zinc-800">{o.goNumber}</span> · {formatDate(o.goDate, 'en', 'short')}</p>
+          <a href="#" lang={langOf(o.title, lang)} class="stretched mt-0.5 block font-medium leading-snug">{t(o.title, lang)}</a>
+          <p lang="en" class="t-meta mt-0.5">{subjectName(o.subject)?.en} · PDF {formatKb(o.pdfKb)}{o.important && ' · Important'}</p>
+        </li>
+      ))}
+    </ul>
+    <p lang="en" class="t-meta mt-6">Page numbers appear here once there are more than 50 results.</p>
+  </div>
+</WireLayout>

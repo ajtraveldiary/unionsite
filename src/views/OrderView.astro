@@ -1,0 +1,116 @@
+---
+import Base from '~/layouts/Base.astro';
+import Icon from '~/components/ui/Icon.astro';
+import Brand from '~/components/ui/Brand.astro';
+import OrderRow from '~/components/OrderRow.astro';
+import type { Lang } from '~/lib/types';
+import { t, langOf, href, formatDate, formatKb, hasEn, ui } from '~/lib/i18n';
+import { orderById, subjectBySlug, orderGroups } from '~/data/orders';
+import { orderPath, relatedOrders } from '~/lib/content';
+
+interface Props { lang: Lang; id: number }
+const { lang, id } = Astro.props;
+const o = orderById[id];
+const subj = subjectBySlug[o.subject];
+const group = orderGroups.find((g) => g.slug === o.group)!;
+const pageUrl = new URL(href(lang, orderPath(o)), Astro.site).toString();
+const shareText = `${o.goNumber} — ${t(o.title, lang)}\n${pageUrl}`;
+const summary = o.summary;
+---
+<Base lang={lang} title={`${o.goNumber} · ${o.title.en}`} description={`${o.title.en}. ${o.goNumber}, dated ${formatDate(o.goDate, 'en')}.`}>
+  <div class="page-hero border-b border-line">
+    <div class="container-x pb-8 pt-6 lg:pb-10 lg:pt-10">
+      <nav aria-label="Breadcrumb" lang="en" class="mb-5 text-sm text-ink-3">
+        <a href={href(lang, '/')} class="hover:underline">Home</a> /
+        <a href={href(lang, '/orders')} class="hover:underline">Orders</a> /
+        <a href={href(lang, `/orders?s=${o.subject}`)} class="hover:underline">{subj.name.en}</a>
+      </nav>
+      <div lang="en" class="flex flex-wrap items-center gap-2">
+        <span class="go-number !text-[0.95rem]">{o.goNumber}</span>
+        <span class="badge badge-ink !h-7"><Icon name="Calendar" size={13} /> {formatDate(o.goDate, 'en')}</span>
+        {o.important && <span class="badge badge-gold !h-7"><Icon name="Star" size={13} /> Important</span>}
+        {o.sample && <span class="badge badge-ink !h-7">Sample order</span>}
+      </div>
+      <h1 lang={langOf(o.title, lang)} class="h1 mt-4 max-w-[30ch]">{t(o.title, lang)}</h1>
+      <p lang={lang === 'en' ? 'ml' : 'en'} class="mt-2 max-w-[60ch] text-lg text-ink-3">{lang === 'en' ? o.title.ml : o.title.en}</p>
+    </div>
+  </div>
+
+  <div class="container-x grid gap-10 py-8 lg:grid-cols-[1fr_340px] lg:py-12">
+    <div class="min-w-0">
+      <!-- PDF preview (the pdf.js viewer replaces this in Phase 4) -->
+      <div class="relative overflow-hidden rounded-2xl border border-line bg-paper-2 p-4 sm:p-8">
+        <div class="doc mx-auto aspect-[1/1.414] max-w-[520px] rounded-sm bg-white p-[7%] text-[#222] shadow-[0_20px_50px_-20px_rgb(0_0_0/0.4)]">
+          <div class="text-center">
+            <div class="mx-auto mb-2 size-10 rounded-full border-2 border-[#999]"></div>
+            <p class="text-[clamp(8px,1.6vw,12px)] font-bold tracking-[0.2em]">GOVERNMENT OF KERALA</p>
+            <p class="mt-1 text-[clamp(7px,1.3vw,10px)] text-[#555]">Abstract</p>
+          </div>
+          <p lang={langOf(o.title, 'en')} class="mt-4 text-center text-[clamp(8px,1.5vw,11.5px)] font-semibold leading-snug">{o.title.en}</p>
+          <div class="mt-3 flex justify-between border-y border-[#ccc] py-1 text-[clamp(6px,1.2vw,9px)] text-[#555]"><span>{o.department.toUpperCase()}</span><span>{o.goNumber}</span></div>
+          <div class="mt-4 space-y-1.5">
+            {Array.from({ length: 14 }).map((_, i) => <div class="h-[clamp(3px,0.6vw,5px)] rounded bg-[#e6e6e6]" style={`width:${[96, 100, 92, 98, 70, 100, 94, 99, 88, 60, 97, 93, 100, 45][i]}%`}></div>)}
+          </div>
+        </div>
+        <div lang="en" class="absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-center gap-2 bg-gradient-to-t from-paper-2 via-paper-2/95 to-transparent px-4 pb-5 pt-16">
+          <button type="button" class="btn btn-primary" disabled title="The PDF viewer is added with the real orders in Phases 2–4"><Icon name="Eye" size={18} /> Open PDF</button>
+          <button type="button" class="btn btn-ghost bg-surface" disabled><Icon name="Download" size={18} /> Download · {formatKb(o.pdfKb)}</button>
+        </div>
+      </div>
+      {o.sample && <p lang="en" class="mt-3 text-center text-xs text-ink-3">Sample order for the prototype — the real PDF and viewer arrive with the import.</p>}
+
+      {summary && (
+        <section class="mt-10">
+          <h2 lang="en" class="h3">Summary</h2>
+          {lang === 'en' && !hasEn(summary) && <p lang="en" class="mt-2 text-sm text-warning">{ui.enMissing}</p>}
+          <p lang={langOf(summary, lang)} class="prose-union mt-3 text-[1.05rem]">{t(summary, lang)}</p>
+        </section>
+      )}
+
+      <div lang="en" class="mt-10 flex gap-3 rounded-xl border border-line bg-surface p-4 text-sm text-ink-2">
+        <Icon name="Info" size={18} class="mt-0.5 text-info" />
+        <p>This is a reference copy for members. Check the official Government source for the authoritative version.</p>
+      </div>
+    </div>
+
+    <aside lang="en" class="space-y-5 lg:sticky lg:top-24 lg:self-start">
+      <div class="card p-5">
+        <p class="text-sm font-bold">Share this order</p>
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          <a href={`https://wa.me/?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noopener" class="btn col-span-2 bg-[#1f9d55] text-white hover:bg-[#178246]"><Brand name="whatsapp" size={18} /> WhatsApp</a>
+          <button type="button" class="btn btn-ghost" data-copy={pageUrl}><Icon name="Link" size={16} /> <span data-copy-label>Copy link</span></button>
+          <button type="button" class="btn btn-ghost" onclick="window.print()"><Icon name="Printer" size={16} /> Print</button>
+        </div>
+      </div>
+      <dl class="card divide-y divide-line text-sm">
+        {[
+          ['GO number', o.goNumber],
+          ['Date', formatDate(o.goDate, 'en')],
+          ['Department', o.department],
+          ['Group', group.name.en],
+          ['Subject', subj.name.en],
+          ['PDF', `${o.pages} ${o.pages === 1 ? 'page' : 'pages'} · ${formatKb(o.pdfKb)}`],
+        ].map(([k, v]) => (
+          <div class="flex justify-between gap-4 px-5 py-3"><dt class="text-ink-3">{k}</dt><dd class="text-right font-semibold tabular">{v}</dd></div>
+        ))}
+      </dl>
+    </aside>
+  </div>
+
+  <section class="container-x" aria-labelledby="rel-title">
+    <h2 id="rel-title" lang="en" class="h2 mb-4">Related orders</h2>
+    <div class="card p-1.5 sm:p-2"><ul class="divide-y divide-line">{relatedOrders(o).map((r) => <OrderRow order={r} lang={lang} />)}</ul></div>
+  </section>
+</Base>
+
+<script>
+  document.addEventListener('astro:page-load', () => {
+    document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((b) => {
+      b.onclick = async () => {
+        try { await navigator.clipboard.writeText(b.dataset.copy!); } catch {}
+        const l = b.querySelector('[data-copy-label]');
+        if (l) { l.textContent = 'Copied!'; setTimeout(() => (l.textContent = 'Copy link'), 1800); }
+      };
+    });
+  });
+</script>

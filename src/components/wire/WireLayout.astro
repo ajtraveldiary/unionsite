@@ -1,0 +1,135 @@
+---
+/**
+ * Page frame for the Phase A wireframes: review toolbar, header, footer and phone
+ * bottom bar. Structure only; Phase B replaces this with the real design system.
+ */
+import '~/styles/wire.css';
+
+interface Props { title: string; page: 'home' | 'news' | 'article' | 'orders' | 'district' | 'about' }
+const { title, page } = Astro.props;
+
+const pages = [
+  { id: 'home', label: 'Home', path: '/wireframes' },
+  { id: 'news', label: 'News', path: '/wireframes/news' },
+  { id: 'article', label: 'Article', path: '/wireframes/article' },
+  { id: 'orders', label: 'Orders', path: '/wireframes/orders' },
+  { id: 'district', label: 'District', path: '/wireframes/district' },
+  { id: 'about', label: 'About', path: '/wireframes/about' },
+];
+// The five main sections from the plan; Events sits under News, Media under About
+const nav = [
+  { label: 'News', path: '/wireframes/news', id: 'news' },
+  { label: 'Orders', path: '/wireframes/orders', id: 'orders' },
+  { label: 'Districts', path: '/wireframes/district', id: 'district' },
+  { label: 'Kerala Service', path: '#', id: 'ks' },
+  { label: 'About', path: '/wireframes/about', id: 'about' },
+];
+const tabs = [
+  { label: 'Home', path: '/wireframes', id: 'home' },
+  { label: 'News', path: '/wireframes/news', id: 'news' },
+  { label: 'Search', path: '#search', id: 'search' },
+  { label: 'Orders', path: '/wireframes/orders', id: 'orders' },
+  { label: 'Districts', path: '/wireframes/district', id: 'district' },
+];
+const footer = [
+  { head: 'News', links: ['Latest news', 'Events', 'Secretary’s page', 'FSETO', 'Notices'] },
+  { head: 'Orders', links: ['Search orders', 'Govt orders', 'NPS', 'Pension'] },
+  { head: 'Districts', links: ['All 15 districts', 'District map'] },
+  { head: 'Kerala Service', links: ['Current issue', 'Archive', 'Articles site'] },
+  { head: 'About', links: ['History', 'State committee', 'Conferences', 'Struggles', 'Documents', 'Media', 'Contact'] },
+];
+---
+<!doctype html>
+<html lang="ml">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <title>{title} · Wireframe · Kerala NGO Union</title>
+    <script is:inline>
+      try { if (localStorage.getItem('wf-notes') === 'off') document.documentElement.classList.add('notes-off'); } catch {}
+    </script>
+  </head>
+  <body class="min-h-dvh">
+    <!-- Review toolbar (not part of the design) -->
+    <div lang="en" class="bg-zinc-900 text-[0.8125rem] text-zinc-100">
+      <div class="wf-wrap flex flex-wrap items-center gap-x-4 gap-y-1 py-2">
+        <span class="font-semibold">Phase A wireframe</span>
+        <nav aria-label="Wireframe pages" class="no-scrollbar -mx-1 flex flex-1 gap-1 overflow-x-auto">
+          {pages.map((p) => (
+            <a href={p.path} aria-current={p.id === page ? 'page' : undefined} class:list={['rounded px-2 py-1 whitespace-nowrap', p.id === page ? 'bg-white text-zinc-900' : 'hover:bg-zinc-700']}>{p.label}</a>
+          ))}
+        </nav>
+        <button type="button" data-notes-toggle class="rounded border border-zinc-600 px-2 py-1 hover:bg-zinc-700">Notes: <span data-notes-state>on</span></button>
+      </div>
+    </div>
+
+    <header lang="en" class="sticky top-0 z-30 border-b border-zinc-200 bg-white/95 backdrop-blur">
+      <div class="wf-wrap flex h-16 items-center gap-3 lg:gap-6">
+        <a href="/wireframes" class="flex min-w-0 items-center gap-2.5 lg:shrink-0" aria-label="Kerala NGO Union, home">
+          <span class="wf-ph size-10 shrink-0 !rounded-lg">Logo</span>
+          <!-- Two lines on phones so the name is never cut off -->
+          <span lang="ml" class="t-title text-[1rem] font-bold !leading-[1.15] sm:text-[1.15rem]"><span class="block sm:inline">കേരള എൻ.ജി.ഒ</span> <span class="block sm:inline">യൂണിയൻ</span></span>
+        </a>
+        <nav aria-label="Primary" class="hidden flex-1 lg:block">
+          <ul class="flex gap-1">
+            {nav.map((n) => (
+              <li><a href={n.path} aria-current={n.id === page ? 'page' : undefined} class:list={['block rounded-lg px-3 py-2 text-[0.9375rem]', n.id === page ? 'bg-zinc-100 font-semibold' : 'text-zinc-600 hover:text-zinc-900']}>{n.label}</a></li>
+            ))}
+          </ul>
+        </nav>
+        <form action="/wireframes/orders" class="ml-auto hidden w-72 md:block" role="search">
+          <input name="q" class="wf-input !min-h-10 !rounded-full text-sm" placeholder="Search orders, news, districts" aria-label="Search the site" />
+        </form>
+        <div class="ml-auto flex shrink-0 rounded-full border border-zinc-300 p-0.5 text-sm font-semibold md:ml-0" role="group" aria-label="Content language">
+          <span lang="ml" class="rounded-full bg-zinc-800 px-2.5 py-1 text-white sm:px-3">മല</span><span class="px-2.5 py-1 text-zinc-600 sm:px-3">EN</span>
+        </div>
+      </div>
+    </header>
+
+    <main id="main" class="pb-24 lg:pb-0">
+      <slot />
+    </main>
+
+    <footer lang="en" class="mt-16 border-t border-zinc-200 bg-zinc-50">
+      <div class="wf-wrap py-10">
+        <div class="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-6">
+          <div class="col-span-2 sm:col-span-3 lg:col-span-1">
+            <span class="wf-ph size-10 !rounded-lg">Logo</span>
+            <p class="mt-3 text-sm text-zinc-600">The organisation of Kerala State Government employees, since 1962.</p>
+          </div>
+          {footer.map((c) => (
+            <div>
+              <p class="t-label">{c.head}</p>
+              <ul class="mt-2 space-y-1.5 text-sm text-zinc-700">{c.links.map((l) => <li><a href="#">{l}</a></li>)}</ul>
+            </div>
+          ))}
+        </div>
+        <p class="mt-8 border-t border-zinc-200 pt-4 text-xs text-zinc-500">Govt portals: SPARK · eOffice · Document Portal · PSC · eSevanam … · Privacy · Accessibility</p>
+      </div>
+    </footer>
+
+    <!-- Phone bottom bar: Home · News · Search · Orders · Districts -->
+    <nav lang="en" aria-label="Mobile" class="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-white lg:hidden">
+      <ul class="grid grid-cols-5 pb-[env(safe-area-inset-bottom)]">
+        {tabs.map((tb) => (
+          <li><a href={tb.path} aria-current={tb.id === page ? 'page' : undefined} class:list={['flex flex-col items-center gap-1 py-2 text-[0.6875rem]', tb.id === page ? 'font-bold' : 'text-zinc-500']}>
+            <span class:list={['size-6 rounded-md', tb.id === page ? 'bg-zinc-800' : 'bg-zinc-300']} aria-hidden="true"></span>{tb.label}
+          </a></li>
+        ))}
+      </ul>
+    </nav>
+
+    <script>
+      const root = document.documentElement;
+      const state = document.querySelector('[data-notes-state]')!;
+      const sync = () => { state.textContent = root.classList.contains('notes-off') ? 'off' : 'on'; };
+      sync();
+      document.querySelector('[data-notes-toggle]')!.addEventListener('click', () => {
+        root.classList.toggle('notes-off');
+        try { localStorage.setItem('wf-notes', root.classList.contains('notes-off') ? 'off' : 'on'); } catch {}
+        sync();
+      });
+    </script>
+  </body>
+</html>

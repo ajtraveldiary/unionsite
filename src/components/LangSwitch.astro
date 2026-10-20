@@ -1,0 +1,14 @@
+---
+import { altPath } from '~/lib/i18n';
+import type { Lang } from '~/lib/types';
+
+interface Props { lang: Lang; class?: string }
+const { lang, class: cls = '' } = Astro.props;
+const alt = altPath(Astro.url.pathname);
+const search = Astro.url.search;
+---
+<div class:list={['lang-switch relative flex h-9 items-center rounded-full border border-line-strong bg-surface p-0.5 text-[0.8rem] font-semibold', cls]} role="group" aria-label="Article language">
+  <span class="lang-thumb absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-full bg-ink transition-transform duration-300" style={`transform: translateX(${lang === 'en' ? '100%' : '0'}); left: 2px`} aria-hidden="true"></span>
+  <a href={alt.ml + search} data-set-lang="ml" lang="ml" aria-current={lang === 'ml' ? 'true' : undefined} class:list={['relative z-10 grid h-full w-11 place-items-center rounded-full transition-colors', lang === 'ml' ? 'text-paper' : 'text-ink-2 hover:text-ink']} title="മലയാളം">മല</a>
+  <a href={alt.en + search} data-set-lang="en" aria-current={lang === 'en' ? 'true' : undefined} class:list={['relative z-10 grid h-full w-11 place-items-center rounded-full transition-colors', lang === 'en' ? 'text-paper' : 'text-ink-2 hover:text-ink']} title="English">EN</a>
+</div>

@@ -1,0 +1,88 @@
+---
+import WireLayout from '~/components/wire/WireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import Ph from '~/components/wire/Ph.astro';
+import { allPosts, upcomingEvents, sortedDistricts } from '~/lib/content';
+import { t, langOf, formatDate, dateParts } from '~/lib/i18n';
+import { topics, topicBySlug, districtBySlug } from '~/data/districts';
+
+const lang = 'ml' as const;
+const posts = allPosts();
+const PAGE = 12;
+const shown = posts.slice(0, PAGE);
+// Group by how recent the story is, so the list reads like a news feed
+const now = Date.now();
+const age = (iso: string) => (now - new Date(`${iso}T12:00:00+05:30`).getTime()) / 86_400_000;
+const groups = [
+  { label: 'This month', test: (d: number) => d <= 31 },
+  { label: 'Last three months', test: (d: number) => d > 31 && d <= 92 },
+  { label: 'Earlier', test: (d: number) => d > 92 },
+].map((g) => ({ ...g, items: shown.filter((p) => g.test(age(p.date))) })).filter((g) => g.items.length);
+const events = upcomingEvents(3);
+const ARTICLE = '/wireframes/article';
+---
+<WireLayout title="News" page="news">
+  <div class="wf-wrap pt-6">
+    <nav lang="en" class="t-meta" aria-label="Breadcrumb"><a href="/wireframes">Home</a> / News</nav>
+    <h1 lang="en" class="t-display mt-2">News</h1>
+    <Note n={1}>Search within news plus two filters. Topic chips scroll sideways on phones; district is a dropdown because there are 15.</Note>
+    <div class="mt-4 flex flex-col gap-3 md:flex-row">
+      <input class="wf-input md:max-w-md" placeholder="Search news" aria-label="Search news" lang="en" />
+      <select class="wf-input md:w-56" aria-label="District" lang="en">
+        <option>All districts</option><option>State level only</option>
+        {sortedDistricts().map((d) => <option>{d.name.en}</option>)}
+      </select>
+    </div>
+    <div lang="en" class="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0" role="toolbar" aria-label="Topic">
+      <button type="button" class="wf-chip" aria-pressed="true">All</button>
+      {topics.filter((tp) => posts.some((p) => p.topic === tp.slug)).map((tp) => <button type="button" class="wf-chip" aria-pressed="false">{tp.name.en}</button>)}
+    </div>
+  </div>
+
+  <div class="wf-wrap mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px]">
+    <div>
+      <Note n={2}>A text-first list. A small photo shows on the right only when the post has one; without it the row stays tidy instead of showing a placeholder.</Note>
+      {groups.map((g) => (
+        <section class="mb-8" aria-label={g.label}>
+          <h2 lang="en" class="t-label mb-1">{g.label}</h2>
+          <ul class="divide-y divide-zinc-200 border-t border-zinc-200">
+            {g.items.map((p, i) => (
+              <li class="relative flex gap-4 py-4">
+                <div class="min-w-0 flex-1">
+                  <p lang="en" class="t-meta">{topicBySlug[p.topic].name.en}{p.district && ` · ${districtBySlug[p.district].name.en}`} · {formatDate(p.date, 'en', 'short')}</p>
+                  <h3 lang={langOf(p.title, lang)} class="t-h3 mt-0.5"><a href={ARTICLE} class="stretched">{t(p.title, lang)}</a></h3>
+                  <p lang={langOf(p.summary, lang)} class="clamp-2 mt-1 text-sm text-zinc-600">{t(p.summary, lang)}</p>
+                </div>
+                {i % 3 === 0 && <Ph ratio="4/3" class="w-24 shrink-0 self-start sm:w-36" />}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+      <div lang="en" class="text-center">
+        <p class="t-meta">Showing {shown.length} of {posts.length}</p>
+        <button type="button" class="wf-btn wf-btn-line mt-2">Load more</button>
+      </div>
+    </div>
+
+    <aside lang="en" class="space-y-8">
+      <Note n={3}>Events live under News now. The side column holds the next events and the topic list; on phones it drops below the stories.</Note>
+      <section>
+        <h2 class="t-h2 mb-2">Coming up</h2>
+        <ul class="space-y-2">
+          {events.map((e) => {
+            const d = dateParts(e.start);
+            return <li class="flex gap-3 text-sm"><span class="w-12 shrink-0 font-semibold tabular-nums">{d.d} {d.monthShort}</span><span lang={langOf(e.title, lang)} class="font-medium">{t(e.title, lang)}</span></li>;
+          })}
+        </ul>
+        <a href="#" class="wf-link mt-2 inline-block">All events</a>
+      </section>
+      <section>
+        <h2 class="t-h2 mb-2">Topics</h2>
+        <ul class="space-y-1.5 text-sm">
+          {topics.map((tp) => <li class="flex justify-between"><a href="#">{tp.name.en}</a><span class="t-meta">{posts.filter((p) => p.topic === tp.slug).length}</span></li>)}
+        </ul>
+      </section>
+    </aside>
+  </div>
+</WireLayout>

@@ -1,0 +1,70 @@
+---
+import Base from '~/layouts/Base.astro';
+import PageHero from '~/components/PageHero.astro';
+import StoryCard from '~/components/StoryCard.astro';
+import type { Lang } from '~/lib/types';
+import { allPosts, sortedDistricts } from '~/lib/content';
+import { topics } from '~/data/districts';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const list = allPosts();
+---
+<Base lang={lang} title="News" description="News from the Kerala NGO Union and its 15 district committees.">
+  <PageHero lang={lang} eyebrow="Newsroom" title="Union news" sub="Struggles, campaigns, social work and district activity — as it happens." crumbs={[{ label: 'News' }]} />
+  <div class="container-x py-8 lg:py-12">
+    <div class="mb-8 flex flex-col gap-3 lg:flex-row lg:items-center" data-news-filters>
+      <div class="no-scrollbar -mx-4 flex flex-1 gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0" role="toolbar" aria-label="Topic">
+        <button type="button" class="chip" aria-pressed="true" data-f-topic="all" lang="en">All topics</button>
+        {topics.filter((tp) => list.some((p) => p.topic === tp.slug)).map((tp) => (
+          <button type="button" class="chip" aria-pressed="false" data-f-topic={tp.slug} lang="en">{tp.name.en}</button>
+        ))}
+      </div>
+      <label lang="en" class="flex items-center gap-2 text-sm font-semibold">
+        District
+        <select data-f-district class="h-10 rounded-xl border border-line-strong bg-surface px-3 font-medium">
+          <option value="all">All · state & districts</option>
+          <option value="state">State level only</option>
+          {sortedDistricts().map((d) => <option value={d.slug}>{d.name.en}</option>)}
+        </select>
+      </label>
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6" data-news-grid>
+      {list.map((p) => (
+        <div data-topic={p.topic} data-district={p.district ?? 'state'} class="news-item flex">
+          <StoryCard post={p} lang={lang} class="w-full" headingLevel="h2" />
+        </div>
+      ))}
+    </div>
+    <p lang="en" class="hidden py-16 text-center text-ink-3" data-news-empty>No stories match these filters yet.</p>
+  </div>
+</Base>
+
+<script>
+  document.addEventListener('astro:page-load', () => {
+    const root = document.querySelector<HTMLElement>('[data-news-filters]');
+    if (!root) return;
+    let topic = 'all', district = 'all';
+    const params = new URLSearchParams(location.search);
+    const apply = () => {
+      let shown = 0;
+      document.querySelectorAll<HTMLElement>('.news-item').forEach((el) => {
+        const ok = (topic === 'all' || el.dataset.topic === topic) && (district === 'all' || el.dataset.district === district);
+        el.hidden = !ok;
+        if (ok) shown++;
+      });
+      document.querySelector('[data-news-empty]')?.classList.toggle('hidden', shown > 0);
+      root.querySelectorAll<HTMLButtonElement>('[data-f-topic]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.fTopic === topic)));
+    };
+    const run = () => ('startViewTransition' in document && !matchMedia('(prefers-reduced-motion: reduce)').matches ? document.startViewTransition(apply) : apply());
+    root.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-f-topic]');
+      if (b) { topic = b.dataset.fTopic!; run(); }
+    });
+    const sel = root.querySelector<HTMLSelectElement>('[data-f-district]')!;
+    sel.addEventListener('change', () => { district = sel.value; run(); });
+    if (params.get('district')) { district = params.get('district')!; sel.value = district; }
+    if (params.get('topic')) topic = params.get('topic')!;
+    apply();
+  });
+</script>

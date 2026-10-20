@@ -1,0 +1,50 @@
+---
+import Base from '~/layouts/Base.astro';
+import PageHero from '~/components/PageHero.astro';
+import Icon from '~/components/ui/Icon.astro';
+import type { Lang } from '~/lib/types';
+import { href } from '~/lib/i18n';
+
+interface Props { lang: Lang; page: 'privacy' | 'accessibility' }
+const { lang, page } = Astro.props;
+
+const pages = {
+  privacy: {
+    title: 'Privacy',
+    sub: 'What this website collects, and what it does not.',
+    points: [
+      ['Shield', 'No tracking cookies', 'Visits are counted without cookies, so there is no consent banner. We record pages viewed, not who viewed them.'],
+      ['Play', 'Videos load on tap', 'YouTube is contacted only when you press play, using its privacy-enhanced mode.'],
+      ['Mail', 'Messages you send', 'What you write in the contact form is used only to reply to you and is not shared or sold.'],
+      ['Languages', 'Language choice', 'Choosing English or Malayalam saves one small preference in your browser, nothing more.'],
+      ['Lock', 'Admins', 'Editors sign in with a one-time email code. No passwords are stored.'],
+    ],
+  },
+  accessibility: {
+    title: 'Accessibility',
+    sub: 'The site aims to meet WCAG 2.2 level AA on phones and computers.',
+    points: [
+      ['Smartphone', 'Phone first', 'Every page works on a 360 px screen with large tap targets and a bottom tab bar.'],
+      ['Keyboard', 'Keyboard and screen readers', 'All controls work from the keyboard. Press Ctrl K anywhere to search. Pages have landmarks and a skip link.'],
+      ['Contrast', 'Contrast and dark mode', 'Text meets contrast rules in both light and dark themes.'],
+      ['Languages', 'Malayalam done properly', 'Malayalam text is marked as Malayalam, so screen readers pronounce it correctly.'],
+      ['Eye', 'Less motion', 'If your device asks for reduced motion, animations are switched off.'],
+    ],
+  },
+} as const;
+const p = pages[page];
+---
+<Base lang={lang} title={p.title} description={p.sub}>
+  <PageHero lang={lang} title={p.title} sub={p.sub} crumbs={[{ label: p.title }]} />
+  <div class="container-x max-w-[880px] py-10 lg:py-14" lang="en">
+    <ul class="space-y-3">
+      {p.points.map(([icon, head, body]) => (
+        <li class="card flex gap-4 p-5">
+          <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand"><Icon name={icon} size={21} /></span>
+          <div><h2 class="h3">{head}</h2><p class="mt-1 text-ink-2">{body}</p></div>
+        </li>
+      ))}
+    </ul>
+    <p class="mt-8 text-sm text-ink-3">Draft for the union's approval. Questions? Use the <a href={href(lang, '/contact')} class="font-semibold text-brand hover:underline">contact form</a>.</p>
+  </div>
+</Base>

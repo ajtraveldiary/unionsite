@@ -1,0 +1,79 @@
+---
+import Base from '~/layouts/Base.astro';
+import Icon from '~/components/ui/Icon.astro';
+import Brand from '~/components/ui/Brand.astro';
+import MagazineCover from '~/components/ui/MagazineCover.astro';
+import type { Lang } from '~/lib/types';
+import { href, monthName } from '~/lib/i18n';
+import { issuePath } from '~/lib/content';
+import { magazineIssues } from '~/data/site';
+
+interface Props { lang: Lang; year: number; month: number }
+const { lang, year, month } = Astro.props;
+const i = magazineIssues.findIndex((x) => x.year === year && x.month === month);
+// The list runs newest first, so the older issue is the next item.
+const newer = magazineIssues[i - 1];
+const older = magazineIssues[i + 1];
+const sameYear = magazineIssues.filter((x) => x.year === year);
+const label = `${monthName(month, 'en')} ${year}`;
+const pageUrl = new URL(href(lang, issuePath(year, month)), Astro.site).toString();
+---
+<Base lang={lang} title={`Kerala Service · ${label}`} description={`Kerala Service, ${label} — the Kerala NGO Union's monthly magazine.`}>
+  <section class="page-hero border-b border-line">
+    <div class="container-x grid items-center gap-8 pb-10 pt-6 md:grid-cols-[minmax(0,300px)_1fr] lg:gap-14 lg:pb-14 lg:pt-10">
+      <div class="issue-cover mx-auto w-[220px] overflow-hidden rounded-md shadow-[0_30px_60px_-20px_rgb(0_0_0/0.55)] ring-1 ring-black/10 md:w-full">
+        <MagazineCover year={year} month={month} class="block h-auto w-full" />
+      </div>
+      <div>
+        <nav aria-label="Breadcrumb" lang="en" class="mb-5 text-sm text-ink-3">
+          <a href={href(lang, '/')} class="hover:underline">Home</a> / <a href={href(lang, '/kerala-service')} class="hover:underline">Kerala Service</a> / <a href={href(lang, `/kerala-service#y${year}`)} class="hover:underline">{year}</a>
+        </nav>
+        <p lang="en" class="eyebrow">Kerala Service</p>
+        <h1 lang="en" class="display mt-2">{label}</h1>
+        <div lang="en" class="mt-7 flex flex-wrap gap-3">
+          <button type="button" class="btn btn-primary" disabled title="The reader arrives with the real PDFs"><Icon name="BookOpen" size={18} /> Read online</button>
+          <button type="button" class="btn btn-ghost" disabled><Icon name="Download" size={18} /> Download PDF</button>
+          <a href={`https://wa.me/?text=${encodeURIComponent(`Kerala Service · ${label}\n${pageUrl}`)}`} target="_blank" rel="noopener" class="btn bg-[#1f9d55] text-white hover:bg-[#178246]"><Brand name="whatsapp" size={17} /> Share</a>
+        </div>
+        <p lang="en" class="mt-4 max-w-md text-sm text-ink-3">The page-turn reader and download open once this issue's PDF is moved over from the current site. The cover is a stand-in until then.</p>
+      </div>
+    </div>
+  </section>
+
+  <nav lang="en" aria-label="Other issues" class="container-x mt-10 grid gap-3 sm:grid-cols-2">
+    {older ? (
+      <a href={href(lang, issuePath(older.year, older.month))} class="group card lift flex items-center gap-3 p-4">
+        <Icon name="ArrowLeft" size={18} class="text-ink-3 group-hover:text-brand" />
+        <span><span class="block text-xs text-ink-3">Older issue</span><span class="font-semibold">{monthName(older.month, 'en')} {older.year}</span></span>
+      </a>
+    ) : <span class="hidden sm:block" />}
+    {newer && (
+      <a href={href(lang, issuePath(newer.year, newer.month))} class="group card lift flex items-center justify-end gap-3 p-4 text-right">
+        <span><span class="block text-xs text-ink-3">Newer issue</span><span class="font-semibold">{monthName(newer.month, 'en')} {newer.year}</span></span>
+        <Icon name="ArrowRight" size={18} class="text-ink-3 group-hover:text-brand" />
+      </a>
+    )}
+  </nav>
+
+  <section class="container-x mt-14" aria-labelledby="yr-title">
+    <h2 id="yr-title" lang="en" class="h2 mb-5">More from {year}</h2>
+    <ul class="no-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 pb-3 lg:mx-0 lg:px-0">
+      {sameYear.map((x) => (
+        <li class="w-[110px] shrink-0 sm:w-[130px]">
+          <a href={href(lang, issuePath(x.year, x.month))} aria-current={x.month === month ? 'page' : undefined} class="group block">
+            <span class:list={['block overflow-hidden rounded-md ring-1 ring-black/10 transition group-hover:-translate-y-1', x.month === month && 'ring-[3px] !ring-brand-solid']}>
+              <MagazineCover year={x.year} month={x.month} class="block h-auto w-full" />
+            </span>
+            <span lang="en" class:list={['mt-2 block text-center text-sm', x.month === month ? 'font-bold text-brand' : 'font-medium']}>{monthName(x.month, 'en').slice(0, 3)}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+</Base>
+
+<style>
+  .issue-cover { animation: cover-in 0.7s var(--ease-spring) both; }
+  @keyframes cover-in { from { transform: perspective(900px) rotateY(-22deg) translateY(12px); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .issue-cover { animation: none; } }
+</style>

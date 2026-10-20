@@ -1,0 +1,125 @@
+---
+import Base from '~/layouts/Base.astro';
+import Icon from '~/components/ui/Icon.astro';
+import StoryCard from '~/components/StoryCard.astro';
+import EventCard from '~/components/EventCard.astro';
+import mapData from '~/data/geo/kerala-map.json';
+import type { Lang } from '~/lib/types';
+import { href } from '~/lib/i18n';
+import { sortedDistricts, postsForDistrict, eventsForDistrict, districtUrl } from '~/lib/content';
+import { districtBySlug } from '~/data/districts';
+
+interface Props { lang: Lang; slug: string }
+const { lang, slug } = Astro.props;
+const d = districtBySlug[slug];
+const all = sortedDistricts();
+const i = all.findIndex((x) => x.slug === slug);
+const prev = all[i - 1];
+const next = all[i + 1];
+const posts = postsForDistrict(slug);
+const events = eventsForDistrict(slug);
+const shape = mapData.districts.find((x) => x.slug === slug)!;
+// Office-bearer lists are confirmed by each district before launch (plan, section 17).
+const bearerRoles = ['President', 'Secretary', 'Treasurer'];
+---
+<Base lang={lang} title={`${d.name.en} district committee`} description={`News, events and office-bearers of the Kerala NGO Union ${d.name.en} district committee.`}>
+  <section class="page-hero relative overflow-hidden border-b border-line">
+    <div class="container-x grid items-center gap-6 pb-8 pt-6 lg:grid-cols-[1fr_260px] lg:pb-10 lg:pt-10">
+      <div>
+        <nav aria-label="Breadcrumb" lang="en" class="mb-5">
+          <ol class="flex flex-wrap items-center gap-1 text-sm text-ink-3">
+            <li><a href={href(lang, '/')} class="hover:text-ink hover:underline">Home</a></li>
+            <li class="flex items-center gap-1"><Icon name="ChevronRight" size={14} /><a href={href(lang, '/districts')} class="hover:text-ink hover:underline">Districts</a></li>
+            <li class="flex items-center gap-1"><Icon name="ChevronRight" size={14} /><span aria-current="page" class="text-ink-2">{d.name.en}</span></li>
+          </ol>
+        </nav>
+        <p lang="en" class="eyebrow mb-3 flex items-center gap-2"><span class="inline-block h-[3px] w-6 bg-brand-solid"></span>District committee · {String(d.sortOrder).padStart(2, '0')} of 15</p>
+        <h1 lang="en" class="display text-brand">{d.name.en}</h1>
+        <p lang="en" class="mt-2 flex items-center gap-1.5 text-lg text-ink-2"><Icon name="MapPin" size={18} class="text-brand" /> HQ {d.hq.en}</p>
+        <dl lang="en" class="mt-6 flex flex-wrap gap-6">
+          <div><dd class="text-3xl font-extrabold tabular">{posts.length}</dd><dt class="text-sm text-ink-3">news posts</dt></div>
+          <div><dd class="text-3xl font-extrabold tabular">{events.length}</dd><dt class="text-sm text-ink-3">upcoming events</dt></div>
+        </dl>
+      </div>
+      <a href={href(lang, '/districts')} class="mini-map mx-auto hidden w-[200px] lg:block" aria-label="Back to the districts map">
+        <svg viewBox={mapData.viewBox} class="h-auto w-full" aria-hidden="true">
+          {mapData.districts.map((x) => (
+            <path d={x.d} class={x.slug === slug ? 'fill-brand-solid' : 'fill-surface'} stroke="var(--line-strong)" stroke-width="1.1" stroke-linejoin="round" />
+          ))}
+          <path d={shape.d} class="pointer-events-none fill-brand-solid" stroke="var(--gold-line)" stroke-width="2" style="transform: translate(-3px,-4px)" />
+        </svg>
+      </a>
+    </div>
+  </section>
+
+  <div class="container-x grid gap-12 py-10 lg:grid-cols-[1fr_340px] lg:py-14">
+    <section aria-labelledby="dn-title" class="min-w-0">
+      <div class="mb-6 flex items-end justify-between gap-4">
+        <h2 id="dn-title" lang="en" class="h2">District news</h2>
+        <a href={href(lang, `/news?district=${slug}`)} lang="en" class="text-sm font-semibold text-brand hover:underline">Filter in News →</a>
+      </div>
+      {posts.length ? (
+        <div class="grid gap-4 sm:grid-cols-2">
+          {posts.map((p) => <StoryCard post={p} lang={lang} />)}
+        </div>
+      ) : (
+        <div lang="en" class="rounded-2xl border border-dashed border-line-strong p-8 text-center">
+          <span class="mx-auto grid size-12 place-items-center rounded-full bg-paper-2 text-ink-3"><Icon name="Newspaper" size={22} /></span>
+          <p class="mt-3 font-semibold">No district news yet</p>
+          <p class="mx-auto mt-1 max-w-sm text-sm text-ink-3">The district admin will post news from a phone once the admin panel is live. Older posts arrive with the import from the current site.</p>
+        </div>
+      )}
+    </section>
+
+    <aside class="space-y-8">
+      <section aria-labelledby="de-title">
+        <h2 id="de-title" lang="en" class="h3 mb-3">Events</h2>
+        {events.length ? (
+          <ul class="space-y-1.5">{events.map((e) => <EventCard event={e} lang={lang} />)}</ul>
+        ) : (
+          <p lang="en" class="rounded-xl border border-dashed border-line-strong p-4 text-sm text-ink-3">Nothing scheduled. See the <a href={href(lang, '/events')} class="font-semibold text-brand hover:underline">state calendar</a>.</p>
+        )}
+      </section>
+
+      <section aria-labelledby="db-title" lang="en">
+        <h2 id="db-title" class="h3 mb-3">Office-bearers</h2>
+        <ul class="card divide-y divide-line">
+          {bearerRoles.map((r) => (
+            <li class="flex items-center gap-3 px-4 py-3">
+              <span class="grid size-10 place-items-center rounded-full bg-paper-2 text-ink-3"><Icon name="UserRound" size={18} /></span>
+              <span><span class="block text-xs font-semibold uppercase tracking-wider text-ink-3">{r}</span><span class="text-sm text-ink-2">To be confirmed</span></span>
+            </li>
+          ))}
+        </ul>
+        <p class="mt-2 text-xs text-ink-3">The district committee confirms its office-bearers before launch.</p>
+      </section>
+    </aside>
+  </div>
+
+  <nav lang="en" aria-label="Other districts" class="container-x">
+    <div class="grid gap-3 sm:grid-cols-2">
+      {prev ? (
+        <a href={districtUrl(prev.slug, lang)} class="group card lift flex items-center gap-3 p-4">
+          <Icon name="ArrowLeft" size={18} class="text-ink-3 transition group-hover:-translate-x-0.5 group-hover:text-brand" />
+          <span><span class="block text-xs text-ink-3">Previous district</span><span class="font-bold">{prev.name.en}</span></span>
+        </a>
+      ) : <span class="hidden sm:block" />}
+      {next && (
+        <a href={districtUrl(next.slug, lang)} class="group card lift flex items-center justify-end gap-3 p-4 text-right">
+          <span><span class="block text-xs text-ink-3">Next district</span><span class="font-bold">{next.name.en}</span></span>
+          <Icon name="ArrowRight" size={18} class="text-ink-3 transition group-hover:translate-x-0.5 group-hover:text-brand" />
+        </a>
+      )}
+    </div>
+    <ul class="no-scrollbar -mx-4 mt-6 flex gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-wrap lg:px-0">
+      {all.map((x) => (
+        <li><a href={districtUrl(x.slug, lang)} class:list={['chip', x.slug === slug && 'is-active']} aria-current={x.slug === slug ? 'page' : undefined}>{x.name.en.replace('Thiruvananthapuram', 'TVM')}</a></li>
+      ))}
+    </ul>
+  </nav>
+</Base>
+
+<style>
+  .mini-map svg { filter: drop-shadow(0 10px 18px rgb(var(--shadow-color) / 0.18)); transition: transform 0.4s var(--ease-spring); }
+  .mini-map:hover svg { transform: rotate(-3deg) scale(1.03); }
+</style>

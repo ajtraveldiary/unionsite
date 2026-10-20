@@ -1,0 +1,53 @@
+---
+import WireLayout from '~/components/wire/WireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import Ph from '~/components/wire/Ph.astro';
+import { allPosts, relatedPosts } from '~/lib/content';
+import { formatDate, readingMinutes } from '~/lib/i18n';
+import { topicBySlug } from '~/data/districts';
+
+// Example: the Secretariat protest story, which has full text in both languages
+const p = allPosts().find((x) => x.slug === 'protest-march-secretariat-district-centres')!;
+const related = relatedPosts(p, 3);
+const topic = topicBySlug[p.topic].name.en;
+---
+<WireLayout title="Article" page="article">
+  <article class="wf-wrap max-w-[760px] pt-6">
+    <nav lang="en" class="t-meta" aria-label="Breadcrumb"><a href="/wireframes">Home</a> / <a href="/wireframes/news">News</a> / {topic}</nav>
+    <Note n={1}>One meta line (topic, date, reading time) above the headline, then a one-line summary. Share sits right under it, where people look for it.</Note>
+    <p lang="en" class="t-label mt-4">{topic}</p>
+    <h1 lang="ml" class="t-display mt-1">{p.title.ml}</h1>
+    <p lang="ml" class="mt-3 text-lg text-zinc-600">{p.summary.ml}</p>
+    <div lang="en" class="mt-4 flex flex-wrap items-center justify-between gap-3 border-y border-zinc-200 py-3">
+      <p class="t-meta">{formatDate(p.date, 'en')} · {readingMinutes(p.body?.ml)} min read</p>
+      <div class="flex gap-2">
+        <span class="wf-btn wf-btn-line !min-h-9 text-sm">WhatsApp</span>
+        <span class="wf-btn wf-btn-line !min-h-9 text-sm">Facebook</span>
+        <span class="wf-btn wf-btn-line !min-h-9 text-sm">Copy link</span>
+      </div>
+    </div>
+
+    <figure class="mt-6">
+      <Ph ratio="16/9" label="Photo, cropped to 16:9" />
+      <figcaption lang="ml" class="t-meta mt-2">ചിത്രത്തിന്റെ അടിക്കുറിപ്പ് (photo caption)</figcaption>
+    </figure>
+    <Note n={2}>Reading width is about 68 characters, with 18 px body text for long reads. A gallery of more photos would follow the text.</Note>
+
+    <div lang="ml" class="mt-6 space-y-5 text-[1.125rem] leading-[1.85]">
+      {p.body!.ml.map((para) => <p>{para}</p>)}
+    </div>
+  </article>
+
+  <section class="wf-wrap mt-12 max-w-[1000px]" aria-labelledby="related">
+    <div class="wf-section-head"><h2 id="related" lang="en" class="t-h1">More on {topic}</h2><a href="/wireframes/news" lang="en" class="wf-link">All news</a></div>
+    <Note n={3}>Related stories are text cards, the same pattern as the news list.</Note>
+    <ul class="grid gap-6 md:grid-cols-3">
+      {related.map((r) => (
+        <li class="relative border-t-2 border-zinc-800 pt-3">
+          <p lang="en" class="t-meta">{formatDate(r.date, 'en', 'short')}</p>
+          <a href="/wireframes/article" lang="ml" class="stretched t-h3 mt-0.5 block">{r.title.ml}</a>
+        </li>
+      ))}
+    </ul>
+  </section>
+</WireLayout>

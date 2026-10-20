@@ -1,0 +1,36 @@
+---
+/**
+ * Placeholder cover for a Kerala Service issue. Real covers are rendered from page 1
+ * of each PDF at upload (plan, section 9); until then every issue gets a distinct,
+ * on-brand cover so the archive still reads as a shelf of magazines.
+ */
+import { rng } from '~/lib/random';
+import { EN_MONTHS, ML_MONTHS } from '~/lib/i18n';
+
+interface Props { year: number; month: number; class?: string }
+const { year, month, class: cls = '' } = Astro.props;
+const r = rng(year * 100 + month);
+const themes = [
+  { bg: '#F4ECDD', ink: '#1B1A19', a: '#C8102E', b: '#E2B45A' },
+  { bg: '#C8102E', ink: '#FFFFFF', a: '#FFC72C', b: '#8E0A1F' },
+  { bg: '#1D2B3A', ink: '#F4ECDD', a: '#E2B45A', b: '#C8102E' },
+  { bg: '#E9E2D0', ink: '#1B1A19', a: '#1F7A4D', b: '#C8102E' },
+  { bg: '#2A1A14', ink: '#F4ECDD', a: '#C8102E', b: '#E2B45A' },
+];
+const th = themes[(year + month) % themes.length];
+const art: string[] = [];
+const kind = Math.floor(r() * 3);
+if (kind === 0) for (let i = 0; i < 5; i++) art.push(`<circle cx="${40 + r() * 130}" cy="${110 + r() * 110}" r="${18 + r() * 40}" fill="${i % 2 ? th.a : th.b}" opacity="${0.75 + r() * 0.25}"/>`);
+else if (kind === 1) for (let i = 0; i < 7; i++) art.push(`<rect x="${20 + i * 24}" y="${110 + r() * 50}" width="16" height="${60 + r() * 70}" fill="${i % 3 ? th.a : th.b}"/>`);
+else { for (let i = 0; i < 9; i++) art.push(`<path d="M105 245L${-20 + i * 30} 100" stroke="${i % 2 ? th.a : th.b}" stroke-width="11"/>`); art.push(`<circle cx="105" cy="245" r="40" fill="${th.a}"/>`); }
+---
+<svg viewBox="0 0 210 297" class={cls} role="img" aria-label={`Kerala Service, ${EN_MONTHS[month - 1]} ${year}`} xmlns="http://www.w3.org/2000/svg">
+  <rect width="210" height="297" fill={th.bg} />
+  <g set:html={art.join('')} />
+  <rect x="0" y="0" width="210" height="70" fill={th.bg} />
+  <text x="14" y="44" textLength="182" lengthAdjust="spacingAndGlyphs" fill={th.ink} lang="ml" style="font-family:'Anek Malayalam Variable','Noto Sans Malayalam Variable',sans-serif;font-stretch:86%;font-weight:800;font-size:34.8px">കേരള സർവീസ്</text>
+  <rect x="14" y="54" width="182" height="2" fill={th.a} />
+  <rect x="14" y="59" width="182" height="1" fill={th.a} />
+  <text x="14" y="276" fill={th.ink} lang="ml" style="font-family:'Anek Malayalam Variable','Noto Sans Malayalam Variable',sans-serif;font-stretch:86%;font-weight:700;font-size:17.4px">{ML_MONTHS[month - 1]} {year}</text>
+  <text x="14" y="68" fill={th.ink} style="font-family:'Noto Sans Malayalam Variable',sans-serif;font-weight:600;font-size:8px;letter-spacing:1.5px" opacity=".75">KERALA NGO UNION</text>
+</svg>

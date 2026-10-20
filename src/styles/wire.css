@@ -1,0 +1,68 @@
+/*
+ * Phase A wireframes. Deliberately greyscale and plain: this file tests structure and
+ * content order only. Colour, components and polish arrive in Phase B. Nothing here is
+ * shared with the prototype's global.css.
+ */
+@import "tailwindcss";
+@import "@fontsource-variable/noto-sans-malayalam/wght.css";
+@import "@fontsource-variable/anek-malayalam/wdth.css";
+
+@theme {
+  --font-sans: "Noto Sans Malayalam Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-title: "Anek Malayalam Variable", "Noto Sans Malayalam Variable", ui-sans-serif, sans-serif;
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; scroll-padding-top: 72px; }
+  body { background: #fff; color: #18181b; font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  :lang(ml) { line-height: 1.75; }
+  a { color: inherit; text-decoration: none; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid #18181b; outline-offset: 2px; border-radius: 4px; }
+}
+
+@layer components {
+  /* Titles: Anek Malayalam drawn 16% taller at the same width (decided in the redesign brief) */
+  .t-title, .t-display, .t-h1, .t-h2, .t-h3 { font-family: var(--font-title); font-stretch: 86%; }
+  .t-display { font-weight: 700; font-size: calc(clamp(1.75rem, 1.2rem + 2.2vw, 2.5rem) * 1.16); line-height: 1.12; }
+  .t-h1 { font-weight: 700; font-size: calc(clamp(1.4rem, 1.2rem + 0.8vw, 1.75rem) * 1.16); line-height: 1.2; }
+  .t-h2 { font-weight: 650; font-size: calc(clamp(1.15rem, 1.08rem + 0.4vw, 1.35rem) * 1.16); line-height: 1.28; }
+  .t-h3 { font-weight: 600; font-size: calc(1.05rem * 1.16); line-height: 1.32; }
+  :lang(ml) :is(.t-title, .t-display, .t-h1, .t-h2, .t-h3), :is(.t-title, .t-display, .t-h1, .t-h2, .t-h3):lang(ml) { line-height: 1.4; }
+  .t-meta { font-size: 0.8125rem; color: #71717a; font-variant-numeric: tabular-nums; }
+  .t-label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #52525b; }
+
+  .wf-wrap { width: 100%; max-width: 1200px; margin-inline: auto; padding-inline: 16px; }
+  @media (min-width: 768px) { .wf-wrap { padding-inline: 24px; } }
+
+  .wf-box { border: 1px solid #e4e4e7; border-radius: 12px; background: #fff; }
+  .wf-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-height: 44px; padding: 0 1rem; border-radius: 10px; font-size: 0.9375rem; font-weight: 600; white-space: nowrap; }
+  .wf-btn-dark { background: #27272a; color: #fff; }
+  .wf-btn-line { border: 1px solid #d4d4d8; }
+  .wf-chip { display: inline-flex; align-items: center; min-height: 36px; padding: 0 0.85rem; border-radius: 999px; border: 1px solid #d4d4d8; font-size: 0.875rem; white-space: nowrap; }
+  .wf-chip[aria-pressed="true"], .wf-chip[aria-selected="true"] { background: #27272a; border-color: #27272a; color: #fff; }
+  .wf-input { width: 100%; min-height: 48px; padding: 0 1rem; border: 1px solid #d4d4d8; border-radius: 12px; background: #fff; font-size: 1rem; }
+  .wf-link { font-size: 0.875rem; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+  .wf-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e4e4e7; }
+  .stretched::after { content: ""; position: absolute; inset: 0; }
+  .clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+
+  /* Image placeholder */
+  .wf-ph {
+    display: grid; place-items: center; border-radius: 10px; border: 1px solid #dcdce0;
+    background: repeating-linear-gradient(135deg, #f4f4f5 0 10px, #ececee 10px 20px);
+    color: #71717a; font-size: 0.75rem; font-weight: 600; text-align: center;
+  }
+
+  /* Review annotations (sticky notes), not part of the design */
+  .wf-note {
+    display: flex; gap: 0.5rem; align-items: flex-start; margin-block: 0.5rem;
+    padding: 0.5rem 0.75rem; border: 1px solid #e3c94b; border-radius: 8px;
+    background: #fff8c5; color: #4d3f00; font-size: 0.8125rem; line-height: 1.45;
+  }
+  .wf-note-n { flex: none; display: grid; place-items: center; width: 1.35rem; height: 1.35rem; border-radius: 999px; background: #4d3f00; color: #fff8c5; font-size: 0.7rem; font-weight: 700; }
+  .notes-off .wf-note { display: none; }
+}

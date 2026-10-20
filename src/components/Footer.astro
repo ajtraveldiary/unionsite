@@ -1,0 +1,59 @@
+---
+import Logo from './ui/Logo.astro';
+import Icon from './ui/Icon.astro';
+import Brand from './ui/Brand.astro';
+import { href, t, langOf } from '~/lib/i18n';
+import type { Lang } from '~/lib/types';
+import { site, usefulLinks } from '~/data/site';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const quick = [
+  ['Government orders', '/orders'],
+  ['Districts', '/districts'],
+  ['State committee', '/about/state-committee'],
+  ['Kerala Service', '/kerala-service'],
+  ['Events', '/events'],
+  ['Style guide', '/styleguide'],
+];
+---
+<footer lang="en" class="relative mt-16 overflow-hidden bg-night text-cream no-print">
+  <div class="kasavu" aria-hidden="true"></div>
+  <div class="container-x pb-28 pt-10 lg:pb-10">
+    <div class="grid gap-12 lg:grid-cols-[1.4fr_1fr_1.3fr]">
+      <div>
+        <Logo size={52} inverse />
+        <p class="mt-5 max-w-sm text-[0.95rem] leading-relaxed text-cream/70">
+          The organisation of Kerala State Government employees, standing for a people-oriented civil service since {site.founded}.
+        </p>
+        <p lang={langOf(site.address, lang)} class="mt-4 max-w-sm text-[0.95rem] text-cream/80">{t(site.address, lang)}</p>
+        <div class="mt-6 flex gap-2">
+          <a href={site.social.facebook} target="_blank" rel="noopener" aria-label="Facebook" class="grid size-11 place-items-center rounded-full border border-white/15 transition hover:border-saffron hover:text-saffron"><Brand name="facebook" size={18} /></a>
+          <a href={site.social.youtube} target="_blank" rel="noopener" aria-label="YouTube" class="grid size-11 place-items-center rounded-full border border-white/15 transition hover:border-saffron hover:text-saffron"><Brand name="youtube" size={18} /></a>
+          <a href="/rss.xml" aria-label="RSS feed" class="grid size-11 place-items-center rounded-full border border-white/15 transition hover:border-saffron hover:text-saffron"><Icon name="Rss" size={18} /></a>
+        </div>
+      </div>
+      <div>
+        <h2 class="text-xs font-bold uppercase tracking-[0.18em] text-saffron">Quick links</h2>
+        <ul class="mt-4 space-y-2.5">
+          {quick.map(([label, p]) => <li><a href={href(lang, p)} class="text-cream/75 transition hover:text-white">{label}</a></li>)}
+        </ul>
+      </div>
+      <div>
+        <h2 class="text-xs font-bold uppercase tracking-[0.18em] text-saffron">Kerala Govt portals</h2>
+        <ul class="mt-4 grid grid-cols-2 gap-x-4 gap-y-2.5">
+          {usefulLinks.slice(0, 8).map((l) => (
+            <li><a href={l.url} target="_blank" rel="noopener" class="group inline-flex items-center gap-1 text-cream/75 transition hover:text-white">{l.label}<Icon name="ArrowUpRight" size={13} class="opacity-0 transition group-hover:opacity-100" /></a></li>
+          ))}
+        </ul>
+      </div>
+    </div>
+
+    <p lang="ml" aria-hidden="true" class="pointer-events-none mt-16 select-none whitespace-nowrap text-[17vw] font-extrabold leading-none text-white/[0.04] lg:text-[11rem]">സംഘടിക്കുക</p>
+
+    <div class="mt-6 flex flex-col gap-3 border-t border-white/10 pt-6 text-sm text-cream/50 sm:flex-row sm:items-center sm:justify-between">
+      <p>© {new Date().getFullYear()} Kerala NGO Union. Since {site.founded}.</p>
+      <p class="flex gap-4"><a href={href(lang, '/privacy')} class="hover:text-white">Privacy</a><a href={href(lang, '/accessibility')} class="hover:text-white">Accessibility</a></p>
+    </div>
+  </div>
+</footer>
