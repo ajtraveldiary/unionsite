@@ -1,12 +1,17 @@
 ---
-/** A square tile in the Tools & guides grid: icon, name and what kind of tool it is. */
+/**
+ * A square tile in the Tools & guides grid: icon, name and what kind of tool it is.
+ * Without `href` the tool isn't built yet: the tile shows "Coming soon" and isn't a link.
+ */
 import Icon from '~/components/ui/Icon.astro';
 
-interface Props { name: string; kind: string; icon: string; href: string }
-const { name, kind, icon, href } = Astro.props;
+interface Props { name: string; kind: string; icon: string; href?: string; class?: string }
+const { name, kind, icon, href, class: cls = '' } = Astro.props;
 ---
-<article lang="en" class="card card-hover group relative flex aspect-square flex-col items-center justify-center gap-1.5 p-2 text-center">
-  <span class="grid size-10 place-items-center rounded-lg bg-accent-soft text-accent-ink"><Icon name={icon as any} size={20} /></span>
-  <h3 class="text-[0.8125rem] font-semibold leading-tight"><a href={href} class="stretched group-hover:text-accent-ink">{name}</a></h3>
-  <p class="text-[0.6875rem] text-ink-3">{kind}</p>
+<article lang="en" class:list={['card group relative flex aspect-square flex-col items-center justify-center gap-1.5 p-2 text-center', href ? 'card-hover' : 'bg-bg-subtle', cls]}>
+  <span class:list={['grid size-10 place-items-center rounded-lg', href ? 'bg-accent-soft text-accent-ink' : 'bg-surface text-ink-3']}><Icon name={icon as any} size={20} /></span>
+  <h3 class:list={['text-[0.8125rem] font-semibold leading-tight', !href && 'text-ink-2']}>
+    {href ? <a href={href} class="stretched group-hover:text-accent-ink">{name}</a> : name}
+  </h3>
+  <p class="text-[0.6875rem] text-ink-3">{href ? kind : 'Coming soon'}</p>
 </article>

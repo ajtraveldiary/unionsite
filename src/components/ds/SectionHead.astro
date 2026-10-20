@@ -4,7 +4,7 @@ interface Props { title: string; id?: string; href?: string; linkLabel?: string;
 const { title, id, href, linkLabel = 'See all', level = 'h2', size = 'h1' } = Astro.props;
 const H = level;
 ---
-<div lang="en" class:list={['mb-4 flex items-end justify-between gap-4 border-b pb-2', size === 'h1' ? 'border-line' : 'border-ink border-b-2']}>
+<div lang="en" class:list={['mb-4 flex items-end justify-between gap-4 border-b pb-2', size === 'h1' ? 'border-line' : 'min-h-[2.875rem] border-ink border-b-2']}>
   <H id={id} class={size === 'h1' ? 't-h1' : 't-h2'}>{title}</H>
   <div class="flex items-center gap-2">
     <slot />

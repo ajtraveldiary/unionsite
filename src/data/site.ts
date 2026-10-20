@@ -21,6 +21,14 @@ export const site = {
   },
 };
 
+/**
+ * Home-page notice strip (a strike call, a deadline). Shown only while active: set `until`
+ * to the last day it should show (inclusive), or set the notice to null when there is none.
+ */
+export const notice: { text: string; textLang?: 'ml' | 'en'; href?: string; until?: string } | null = {
+  text: 'This is a preview of the new website. Orders, events and posts marked “sample” are placeholder data.',
+};
+
 export const usefulLinks = [
   { label: 'SPARK', url: 'https://www.spark.gov.in/', note: 'Salary & service' },
   { label: 'eOffice', url: 'https://eoffice.kerala.gov.in/', note: 'e-File portal' },

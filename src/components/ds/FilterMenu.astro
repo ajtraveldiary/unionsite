@@ -2,8 +2,9 @@
 /**
  * Funnel button with a dropdown of options (e.g. districts). Put it inside an element with
  * `data-filterable` (and optional `data-limit`); items marked `data-filter-item` with
- * `data-value` are shown or hidden, up to the limit. An element with `data-filter-empty`
- * (containing `data-filter-name`) shows when nothing matches.
+ * `data-value` are shown or hidden, up to the limit. Items also marked `data-filter-only`
+ * show only when their value is picked (e.g. a story already shown higher up the page).
+ * An element with `data-filter-empty` (containing `data-filter-name`) shows when nothing matches.
  */
 interface Props { label: string; options: { value: string; label: string; short?: string }[]; allLabel?: string }
 const { label, options, allLabel = 'All' } = Astro.props;
@@ -38,7 +39,8 @@ const { label, options, allLabel = 'All' } = Astro.props;
         const value = pick.dataset.filterPick!;
         let shown = 0;
         for (const li of items) {
-          const ok = (!value || li.dataset.value === value) && shown < limit;
+          const match = value ? li.dataset.value === value : !li.hasAttribute('data-filter-only');
+          const ok = match && shown < limit;
           li.hidden = !ok;
           if (ok) shown++;
         }

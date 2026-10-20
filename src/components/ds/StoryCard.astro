@@ -1,0 +1,19 @@
+---
+/** A story stacked vertically: wide image spot, then the meta line and title. Opens a column. */
+import Media from './Media.astro';
+import type { Lang, Post } from '~/lib/types';
+import { t, langOf, formatDate } from '~/lib/i18n';
+import { postUrl } from '~/lib/content';
+import { topicBySlug } from '~/data/districts';
+
+interface Props { post: Post; lang: Lang; showTopic?: boolean; headingLevel?: 'h3' | 'h4' }
+const { post, lang, showTopic = false, headingLevel = 'h3' } = Astro.props;
+const H = headingLevel;
+---
+<article class="group relative">
+  <Media post={post} lang={lang} ratio="16/9" size="lg" />
+  <p lang="en" class="t-meta mt-2">{showTopic && <span class="font-semibold text-ink-2">{topicBySlug[post.topic]?.name.en} · </span>}{formatDate(post.date, 'en', 'short')}</p>
+  <H lang={langOf(post.title, lang)} class="t-h3 clamp-3 mt-0.5">
+    <a href={postUrl(post, lang)} class="stretched group-hover:text-accent-ink">{t(post.title, lang)}</a>
+  </H>
+</article>

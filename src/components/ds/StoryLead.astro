@@ -2,30 +2,56 @@
 /**
  * Lead story. On laptops the headline and summary sit on a dark fade at the bottom of the
  * photo, so the whole story fits the first screen; on phones they go under the photo.
+ * Without a photo it becomes a calm text-led panel: the topic's icon at the top, the
+ * headline at the bottom, in normal ink (no dark fade over an empty tile).
  *
  * Balance: on laptops the lead is at least 16:9 but stretches to the height of its row,
  * so when a taller list sits beside it the two still end on the same line (the photo is
  * cropped a little more instead of leaving a gap).
  */
 import Media from './Media.astro';
+import Icon from '~/components/ui/Icon.astro';
 import type { Lang, Post } from '~/lib/types';
 import { t, langOf, formatDate } from '~/lib/i18n';
 import { postUrl } from '~/lib/content';
 import { topicBySlug } from '~/data/districts';
+import { topicIcon } from '~/lib/topic-icons';
 
 interface Props { post: Post; lang: Lang; headingLevel?: 'h2' | 'h3' }
 const { post, lang, headingLevel = 'h3' } = Astro.props;
 const H = headingLevel;
+const photo = post.cover.kind === 'photo';
+const topic = topicBySlug[post.topic]?.name.en;
+const titleSize = '!text-[calc(clamp(1.45rem,1.1rem+1.2vw,2rem)*1.16)]';
 ---
-<article class="group relative overflow-hidden rounded-[var(--radius-card)] lg:h-full">
-  <!-- Sets the minimum 16:9 height on laptops; the photo then fills whatever height the row has -->
-  <div class="hidden lg:block" style="aspect-ratio:16/9" aria-hidden="true"></div>
-  <Media post={post} lang={lang} ratio="16/9" size="lg" eager class="w-full lg:absolute lg:inset-0 lg:h-full lg:![aspect-ratio:auto] lg:!rounded-none lg:!border-0" />
-  <div class="lg:absolute lg:inset-x-0 lg:bottom-0 lg:bg-gradient-to-t lg:from-black/90 lg:via-black/65 lg:to-transparent lg:px-6 lg:pb-5 lg:pt-24">
-    <p lang="en" class="t-meta mt-3 lg:mt-0 lg:!text-white/75">{topicBySlug[post.topic]?.name.en} · {formatDate(post.date, 'en')}</p>
-    <H lang={langOf(post.title, lang)} class="t-display mt-1 !text-[calc(clamp(1.45rem,1.1rem+1.2vw,2rem)*1.16)] lg:text-white">
-      <a href={postUrl(post, lang)} class="stretched decoration-2 underline-offset-4 group-hover:underline">{t(post.title, lang)}</a>
-    </H>
-    <p lang={langOf(post.summary, lang)} class="clamp-2 mt-2 text-ink-2 lg:text-white/85">{t(post.summary, lang)}</p>
-  </div>
-</article>
+{photo ? (
+  <article class="group relative overflow-hidden rounded-[var(--radius-card)] lg:h-full">
+    <!-- Sets the minimum 16:9 height on laptops; the photo then fills whatever height the row has -->
+    <div class="hidden lg:block" style="aspect-ratio:16/9" aria-hidden="true"></div>
+    <Media post={post} lang={lang} ratio="16/9" size="lg" eager class="w-full lg:absolute lg:inset-0 lg:h-full lg:![aspect-ratio:auto] lg:!rounded-none lg:!border-0" />
+    <div class="lg:absolute lg:inset-x-0 lg:bottom-0 lg:bg-gradient-to-t lg:from-black/90 lg:via-black/65 lg:to-transparent lg:px-6 lg:pb-5 lg:pt-24">
+      <p lang="en" class="t-meta mt-3 lg:mt-0 lg:!text-white/75">{topic} · {formatDate(post.date, 'en')}</p>
+      <H lang={langOf(post.title, lang)} class:list={['t-display mt-1 lg:text-white', titleSize]}>
+        <a href={postUrl(post, lang)} class="stretched decoration-2 underline-offset-4 group-hover:underline">{t(post.title, lang)}</a>
+      </H>
+      <p lang={langOf(post.summary, lang)} class="clamp-2 mt-2 text-ink-2 lg:text-white/85">{t(post.summary, lang)}</p>
+    </div>
+  </article>
+) : (
+  <article class="group relative overflow-hidden rounded-[var(--radius-card)] border border-line bg-bg-subtle lg:h-full">
+    <div class="hidden lg:block" style="aspect-ratio:16/9" aria-hidden="true"></div>
+    <div class="flex flex-col gap-6 p-5 sm:p-6 lg:absolute lg:inset-0 lg:justify-between lg:p-8">
+      <p lang="en" class="flex items-center gap-2.5 text-sm font-semibold text-ink-2">
+        <span class="grid size-11 place-items-center rounded-full bg-accent-soft text-accent-ink" aria-hidden="true"><Icon name={(topicIcon[post.topic] ?? 'Newspaper') as any} size={22} /></span>
+        {topic}
+      </p>
+      <div>
+        <p lang="en" class="t-meta">{formatDate(post.date, 'en')}</p>
+        <H lang={langOf(post.title, lang)} class:list={['t-display clamp-3 mt-1', titleSize]}>
+          <a href={postUrl(post, lang)} class="stretched decoration-2 underline-offset-4 group-hover:underline">{t(post.title, lang)}</a>
+        </H>
+        <p lang={langOf(post.summary, lang)} class="clamp-2 mt-2 text-ink-2">{t(post.summary, lang)}</p>
+      </div>
+    </div>
+  </article>
+)}

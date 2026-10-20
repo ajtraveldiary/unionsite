@@ -1,0 +1,35 @@
+---
+/** A YouTube video. Only the thumbnail loads; the player (no-cookie domain) loads when tapped. */
+import Icon from '~/components/ui/Icon.astro';
+import type { Lang, Video } from '~/lib/types';
+import { t, langOf, formatDate } from '~/lib/i18n';
+
+interface Props { video: Video; lang: Lang }
+const { video: v, lang } = Astro.props;
+const title = t(v.title, lang);
+---
+<article class="group">
+  <button type="button" data-yt={v.id} class="relative block aspect-video w-full overflow-hidden rounded-[10px] bg-bg-subtle" aria-label={`Play video: ${title}`}>
+    <img src={`https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`} alt="" loading="lazy" decoding="async" width="480" height="360" class="size-full object-cover" />
+    <span class="absolute inset-0 grid place-items-center" aria-hidden="true">
+      <span class="grid size-12 place-items-center rounded-full bg-black/70 text-white transition-colors group-hover:bg-accent"><Icon name="Play" size={20} class="ml-0.5 fill-current" /></span>
+    </span>
+  </button>
+  <h3 lang={langOf(v.title, lang)} class="clamp-2 mt-2 font-semibold leading-snug">{title}</h3>
+  <p lang="en" class="t-meta">{formatDate(v.date, 'en', 'short')}</p>
+</article>
+
+<script>
+  document.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-yt]');
+    if (!b || b.dataset.playing) return;
+    b.dataset.playing = '1';
+    const f = document.createElement('iframe');
+    f.src = `https://www.youtube-nocookie.com/embed/${b.dataset.yt}?autoplay=1&rel=0`;
+    f.allow = 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture';
+    f.allowFullscreen = true;
+    f.title = b.getAttribute('aria-label') ?? 'Video';
+    f.className = 'absolute inset-0 size-full';
+    b.replaceChildren(f);
+  });
+</script>

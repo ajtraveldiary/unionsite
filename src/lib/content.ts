@@ -3,7 +3,7 @@
 import { posts } from '~/data/news';
 import { orders, subjectBySlug } from '~/data/orders';
 import { districts } from '~/data/districts';
-import { events } from '~/data/site';
+import { events, notice } from '~/data/site';
 import type { Lang, Order, Post } from './types';
 import { href, t, langOf, formatDate } from './i18n';
 
@@ -75,4 +75,8 @@ export function districtMapInfo(lang: Lang) {
 export const liveliestDistrict = () =>
   sortedDistricts().map((d) => ({ d, p: latestForDistrict(d.slug) })).filter((x) => x.p).sort((a, b) => b.p!.date.localeCompare(a.p!.date))[0]?.d.slug;
 
-export const issuePath = (year: number, month: number) => `/kerala-service/${year}/${String(month).padStart(2, '0')}`;
+/** The home-page notice, if there is one and it hasn't expired. */
+export const activeNotice = () =>
+  notice && (!notice.until || new Date(`${notice.until}T23:59:59+05:30`) >= NOW()) ? notice : null;
+
+export const issuePath =(year: number, month: number) => `/kerala-service/${year}/${String(month).padStart(2, '0')}`;

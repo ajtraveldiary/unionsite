@@ -1,443 +1,231 @@
 ---
-import Base from '~/layouts/Base.astro';
-import Ticker from '~/components/Ticker.astro';
-import Poster from '~/components/ui/Poster.astro';
+/**
+ * Home page (redesign, Phase C). Layout as finalized in the wireframe:
+ * notice → Top news + Coming up → From the union → Latest orders + Tools & guides →
+ * Districts → Kerala Service + Videos. No story appears twice on the page, and columns
+ * side by side end on the same line.
+ */
+import AppLayout from '~/layouts/AppLayout.astro';
 import Icon from '~/components/ui/Icon.astro';
-import Brand from '~/components/ui/Brand.astro';
-import SectionHead from '~/components/ui/SectionHead.astro';
-import StoryCard from '~/components/StoryCard.astro';
-import OrderRow from '~/components/OrderRow.astro';
-import EventCard from '~/components/EventCard.astro';
-import TopicDesks from '~/components/TopicDesks.astro';
 import MagazineCover from '~/components/ui/MagazineCover.astro';
-import KeralaMap from '~/components/islands/KeralaMap';
-import mapData from '~/data/geo/kerala-map.json';
-import type { Lang } from '~/lib/types';
-import { t, langOf, href, formatDate, monthName, dateParts } from '~/lib/i18n';
-import { homeStories, latestOrders, upcomingEvents, postUrl, postsForTopic, districtMapInfo, liveliestDistrict, issuePath } from '~/lib/content';
-import { topicBySlug, topics } from '~/data/districts';
-import { site, stateCommittee, roleLabels, magazineIssues, videos } from '~/data/site';
-import { orders } from '~/data/orders';
+import SectionHead from '~/components/ds/SectionHead.astro';
+import Notice from '~/components/ds/Notice.astro';
+import StoryLead from '~/components/ds/StoryLead.astro';
+import StoryRow from '~/components/ds/StoryRow.astro';
+import StoryCard from '~/components/ds/StoryCard.astro';
+import EventSlider from '~/components/ds/EventSlider.astro';
+import EventCard from '~/components/ds/EventCard.astro';
+import OrderRow from '~/components/ds/OrderRow.astro';
+import ToolTile from '~/components/ds/ToolTile.astro';
+import DistrictTile from '~/components/ds/DistrictTile.astro';
+import FilterMenu from '~/components/ds/FilterMenu.astro';
+import EmptyState from '~/components/ds/EmptyState.astro';
+import VideoCard from '~/components/ds/VideoCard.astro';
+import type { Lang, Post } from '~/lib/types';
+import { href, monthName } from '~/lib/i18n';
+import { allPosts, latestOrders, upcomingEvents, sortedDistricts, postsForDistrict, issuePath, activeNotice } from '~/lib/content';
+import { magazineIssues, videos, site } from '~/data/site';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
 const L = (p: string) => href(lang, p);
-const { hero, secondary, rest } = homeStories();
-const slides = [hero, ...secondary];
-// Union news skips the stories already in the hero and the Secretary's page column beside it
-const [newsLead, ...newsMore] = rest.slice(3).filter((p) => p.topic !== 'secretary');
-const newsGrid = newsMore.slice(0, 8);
-const usedTopics = topics.filter((tp) => newsGrid.some((p) => p.topic === tp.slug)).slice(0, 5);
-const secretaryPosts = postsForTopic('secretary').slice(0, 5);
-const gs = stateCommittee.find((p) => p.role === 'general_secretary');
+const posts = allPosts();
+const notice = activeNotice();
 
-const quick = [
-  { label: 'Latest GOs', icon: 'FileText', path: '/orders', hot: true, meta: `${orders.length} orders` },
-  { label: 'Pay Revision', icon: 'Wallet', path: '/orders?s=pay-revision' },
-  { label: 'Pension', icon: 'HandCoins', path: '/orders?g=pension' },
-  { label: 'Kerala Service', icon: 'BookOpen', path: '/kerala-service' },
-  { label: 'Events', icon: 'CalendarDays', path: '/events' },
-  { label: 'Your district', icon: 'MapPinned', path: '/districts' },
-] as const;
+// Top news: the featured story leads, the next four sit beside it (three on phones)
+const lead = posts.find((p) => p.featured) ?? posts[0];
+const topRest = posts.filter((p) => p !== lead).slice(0, 4);
 
-const leaders = stateCommittee.filter((p) => ['president', 'general_secretary', 'treasurer'].includes(p.role));
-const second = stateCommittee.filter((p) => ['vice_president', 'secretary'].includes(p.role));
-const initials = (en: string) => en.replace(/[^A-Za-z ]/g, ' ').trim().split(/\s+/).slice(-2).map((w) => w[0]).join('');
+// From the union: three columns that carry on where Top news stops, so nothing repeats.
+// Each opens with a photo story when one exists, then lists three more as text.
+const used = new Set<number>([lead, ...topRest].map((p) => p.id));
+const take = (list: Post[], n: number) => {
+  const out = list.filter((p) => !used.has(p.id)).slice(0, n);
+  out.forEach((p) => used.add(p.id));
+  const i = out.findIndex((p) => p.cover.kind === 'photo');
+  return i > 0 ? [out[i], ...out.filter((_, j) => j !== i)] : out;
+};
+const columns = [
+  { name: 'Secretary’s page', more: '/news?topic=secretary', posts: take(posts.filter((p) => p.topic === 'secretary'), 4) },
+  { name: 'FSETO', more: '/news?topic=fseto', posts: take(posts.filter((p) => p.topic === 'fseto'), 4) },
+];
+columns.unshift({ name: 'NGO Union News', more: '/news', posts: take(posts.filter((p) => p.topic !== 'secretary' && p.topic !== 'fseto'), 4) });
 
-const issues = magazineIssues.slice(0, 5);
-const current = issues[0];
+// Orders and the tools beside them
+const orders = latestOrders(5);
+const popular = [
+  { label: 'DA', path: '/orders?s=da' },
+  { label: 'Pay Revision', path: '/orders?s=pay-revision' },
+  { label: 'Pension', path: '/orders?g=pension' },
+  { label: 'MEDISEP', path: '/orders?s=medisep' },
+  { label: 'Leave', path: '/orders?s=leave' },
+  { label: 'Bonus', path: '/orders?s=bonus' },
+];
+// Tools without a path aren't built yet and show "Coming soon"
+const tools = [
+  { name: 'DA arrears', kind: 'Calculator', icon: 'Calculator' },
+  { name: 'Pay fixation', kind: 'Calculator', icon: 'Calculator' },
+  { name: 'Leave surrender', kind: 'Calculator', icon: 'Calculator' },
+  { name: 'Pension & DCRG', kind: 'Calculator', icon: 'Calculator' },
+  { name: 'MEDISEP claim', kind: 'Guide', icon: 'BookOpen' },
+  { name: 'Apply for HBA', kind: 'Guide', icon: 'BookOpen' },
+  { name: 'GPF withdrawal', kind: 'Guide', icon: 'BookOpen' },
+  { name: 'Orders & PDFs', kind: 'Downloads', icon: 'FileDown', path: '/orders' },
+  { name: 'SPARK & portals', kind: 'Links', icon: 'ExternalLink', path: '/useful-links' },
+];
 
-const mapInfo = districtMapInfo(lang);
-const initialDistrict = liveliestDistrict();
+// Events: every upcoming event in the slider; district ones again in the Districts section
+const events = upcomingEvents(50);
+const districtEvents = events.filter((e) => e.district);
+// District news: stories already shown higher up appear only when their district is picked
+const districtPosts = posts.filter((p) => p.district);
+const EVENT_LIMIT = 4;
+const NEWS_LIMIT = 5;
+const districts = sortedDistricts().map((d) => ({ d, count: postsForDistrict(d.slug).length }));
+const districtOptions = districts.map(({ d }) => ({ value: d.slug, label: d.name.en, short: d.name.en.replace('Thiruvananthapuram', 'TVM') }));
+const firstNews = districtPosts.filter((p) => !used.has(p.id)).slice(0, NEWS_LIMIT);
+
+const issue = magazineIssues[0];
 ---
-<Base lang={lang}>
-  <h1 class="sr-only">Kerala NGO Union — കേരള എൻ.ജി.ഒ യൂണിയൻ</h1>
-  <Ticker lang={lang} />
+<AppLayout lang={lang}>
+  <h1 class="sr-only">Kerala NGO Union</h1>
 
-  <!-- ============ HERO ============ -->
-  <section aria-label="Top stories" class="container-x pt-5 lg:pt-8">
-    <!-- Phone: swipeable story deck -->
-    <div class="lg:hidden">
-      <div class="hero-deck no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 pb-2" data-deck>
-        {slides.map((p, i) => (
-          <article class="relative aspect-square w-[86%] shrink-0 snap-center overflow-hidden rounded-[20px] bg-night sm:aspect-[16/10] sm:w-[80%]" data-slide={i}>
-            <Poster cover={p.cover as any} seed={p.id} lang={lang} hero class="absolute inset-0 size-full" />
-            <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
-            <div class="absolute inset-x-0 bottom-0 p-5">
-              <span lang="en" class="badge mb-3 bg-white/15 text-white backdrop-blur">{topicBySlug[p.topic]?.name.en}</span>
-              <h2 lang={langOf(p.title, lang)} class="title text-[1.68rem] font-extrabold leading-[1.3] text-white">
-                <a href={postUrl(p, lang)} class="stretched">{t(p.title, lang)}</a>
-              </h2>
-              <p lang="en" class="mt-2 text-sm text-white/70">{formatDate(p.date, 'en')}</p>
-            </div>
-          </article>
-        ))}
-      </div>
-      <div class="mt-3 flex items-center justify-center gap-1.5" data-dots aria-hidden="true">
-        {slides.map((_, i) => <span class:list={['h-1.5 rounded-full bg-ink/20 transition-all duration-300', i === 0 ? 'w-6 !bg-brand-solid' : 'w-1.5']}></span>)}
-      </div>
+  {notice && (
+    <div class="wrap mt-4 lg:mt-6">
+      <Notice text={notice.text} textLang={notice.textLang} href={notice.href} />
     </div>
+  )}
 
-    <!-- Desktop: editorial front page -->
-    <div class="hidden gap-8 lg:grid lg:grid-cols-12">
-      <article class="group relative col-span-8 overflow-hidden rounded-[22px] bg-night">
-        <div class="relative aspect-[2/1]">
-          <Poster cover={hero.cover as any} seed={hero.id} lang={lang} hero class="absolute inset-0 size-full transition-transform duration-[1.2s] ease-out group-hover:scale-[1.03]" />
-          <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"></div>
-        </div>
-        <div class="absolute inset-x-0 bottom-0 p-8 xl:p-10">
-          <div lang="en" class="mb-4 flex items-center gap-2">
-            <span class="badge bg-saffron text-night">Top story</span>
-            <span lang="en" class="badge bg-white/15 text-white backdrop-blur">{topicBySlug[hero.topic]?.name.en}</span>
+  <!-- 1 · Top news, with upcoming events underneath -->
+  <section class="wrap mt-6 lg:mt-8" aria-labelledby="top-news">
+    <SectionHead title="Top news" id="top-news" href={L('/news')} linkLabel="All news" />
+    <div class="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <StoryLead post={lead} lang={lang} />
+      <ul class="balance-list divide-y divide-line">
+        {topRest.map((p, i) => (
+          <li class:list={['py-3 first:pt-0 lg:last:pb-0', i === 3 && 'max-lg:hidden']}><StoryRow post={p} lang={lang} /></li>
+        ))}
+      </ul>
+    </div>
+    {events.length > 0 && (
+      <EventSlider events={events} lang={lang} href={L('/events')} class="mt-8 border-t border-line pt-5" />
+    )}
+  </section>
+
+  <!-- 2 · From the union -->
+  <section class="wrap section" aria-labelledby="from-union">
+    <SectionHead title="From the union" id="from-union" />
+    <div class="grid gap-x-8 gap-y-10 md:grid-cols-3">
+      {columns.map((c) => {
+        const [first, ...rest] = c.posts;
+        return (
+          <div class="col">
+            <SectionHead title={c.name} level="h3" size="h2" />
+            {first ? (
+              <>
+                <StoryCard post={first} lang={lang} headingLevel="h4" />
+                <ul class="mt-3 divide-y divide-line border-t border-line">
+                  {rest.map((p) => <li class="py-3"><StoryRow post={p} lang={lang} thumb={false} meta="date" headingLevel="h4" /></li>)}
+                </ul>
+              </>
+            ) : (
+              <EmptyState compact title="Nothing new here yet" />
+            )}
+            <a href={L(c.more)} lang="en" class="link col-foot">More from {c.name}</a>
           </div>
-          <h2 lang={langOf(hero.title, lang)} class="display max-w-[22ch] !text-[clamp(1.6rem,0.9rem+1.6vw,2.3rem)] text-white">
-            <a href={postUrl(hero, lang)} class="stretched"><span class="slab">{t(hero.title, lang)}</span></a>
-          </h2>
-          <p lang={langOf(hero.summary, lang)} class="mt-4 max-w-[60ch] text-lg text-white/80">{t(hero.summary, lang)}</p>
-        </div>
-      </article>
+        );
+      })}
+    </div>
+  </section>
 
-      <div class="col-span-4 flex flex-col">
-        <p lang="en" class="eyebrow mb-3 flex items-center gap-2"><span class="inline-block h-[3px] w-6 bg-brand-solid"></span>Also today</p>
-        <ol class="flex flex-1 flex-col divide-y divide-line">
-          {secondary.map((p, i) => (
-            <li class="group relative flex flex-1 gap-4 py-4 first:pt-1">
-              <span class="outline-num text-[2.5rem] font-extrabold leading-none" aria-hidden="true">0{i + 2}</span>
-              <div class="min-w-0">
-                <span lang="en" class="text-[0.8rem] font-semibold text-brand">{topicBySlug[p.topic]?.name.en}</span>
-                <h3 lang={langOf(p.title, lang)} class="title clamp-3 text-[1.16rem] font-bold leading-snug transition-colors group-hover:text-brand">
-                  <a href={postUrl(p, lang)} class="stretched">{t(p.title, lang)}</a>
-                </h3>
-                <time lang="en" class="mt-1 block text-xs text-ink-3" datetime={p.date}>{formatDate(p.date, 'en', 'short')}</time>
-              </div>
+  <!-- 3 · Latest orders beside Tools & guides -->
+  <section class="wrap section grid gap-x-10 gap-y-12 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+    <div class="col">
+      <SectionHead title="Latest orders" href={L('/orders')} linkLabel="All orders" />
+      <nav aria-label="Popular subjects" lang="en" class="no-scrollbar -mx-4 mb-3 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
+        {popular.map((c) => <a href={L(c.path)} class="chip">{c.label}</a>)}
+      </nav>
+      <ul class="balance-list divide-y divide-line">
+        {orders.map((o) => <li class="py-3 lg:last:pb-0"><OrderRow order={o} lang={lang} /></li>)}
+      </ul>
+    </div>
+    <div class="col">
+      <SectionHead title="Tools & guides" />
+      <ul class="grid grid-cols-3 gap-2 lg:flex-1 lg:auto-rows-fr">
+        {tools.map((tl) => (
+          <li><ToolTile name={tl.name} kind={tl.kind} icon={tl.icon} href={tl.path && L(tl.path)} class="lg:h-full lg:min-h-[7.5rem] lg:!aspect-auto" /></li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <!-- 4 · Districts: events and news from every district (each filterable), then all 15 -->
+  <section class="wrap section" aria-labelledby="districts">
+    <SectionHead title="Districts" id="districts" href={L('/districts')} linkLabel="All districts" />
+    <div class="grid gap-x-8 gap-y-10 md:grid-cols-2 lg:grid-cols-3">
+      <div class="col" data-filterable data-limit={EVENT_LIMIT}>
+        <SectionHead title="District events" level="h3" size="h2">
+          <FilterMenu label="Filter district events by district" options={districtOptions} />
+        </SectionHead>
+        <ul class="space-y-2">
+          {districtEvents.map((e, i) => (
+            <li data-filter-item data-value={e.district} hidden={i >= EVENT_LIMIT}><EventCard event={e} lang={lang} showDistrict /></li>
+          ))}
+        </ul>
+        <div data-filter-empty hidden={districtEvents.length > 0}>
+          <EmptyState compact title="No upcoming events" text="New events appear here as soon as they are added."><span data-filter-name class="sr-only"></span></EmptyState>
+        </div>
+        <a href={L('/events')} lang="en" class="link col-foot">All events</a>
+      </div>
+
+      <div class="col" data-filterable data-limit={NEWS_LIMIT}>
+        <SectionHead title="District news" level="h3" size="h2">
+          <FilterMenu label="Filter district news by district" options={districtOptions} />
+        </SectionHead>
+        <ul class="divide-y divide-line">
+          {districtPosts.map((p) => (
+            <li data-filter-item data-value={p.district} data-filter-only={used.has(p.id) ? '' : undefined} hidden={!firstNews.includes(p)} class="py-3 first:pt-0">
+              <StoryRow post={p} lang={lang} meta="district" />
             </li>
           ))}
-        </ol>
-        <a href={L('/news')} lang="en" class="btn btn-ghost mt-3 w-full">All news <Icon name="ArrowRight" size={16} /></a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ QUICK ACTIONS ============ -->
-  <section aria-labelledby="qa-title" class="container-x mt-8 lg:mt-10" lang="en">
-    <h2 id="qa-title" class="sr-only">Quick actions</h2>
-    <ul class="grid grid-cols-3 gap-2.5 sm:gap-3 lg:grid-cols-6">
-      {quick.map((q, i) => (
-        <li class="reveal" style={`animation-delay:${i * 40}ms`}>
-          <a href={L(q.path)} class:list={['spotlight group flex h-full flex-col items-center gap-2 rounded-2xl border p-3 text-center transition-all duration-200 active:scale-[0.97] sm:p-4 lg:items-start lg:text-left', 'hot' in q ? 'border-transparent bg-brand-solid text-white' : 'border-line bg-surface hover:-translate-y-1 hover:border-line-strong hover:shadow-lg']}>
-            <span class:list={['grid size-10 place-items-center rounded-xl transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110', 'hot' in q ? 'bg-white/15' : 'bg-brand-soft text-brand']}>
-              <Icon name={q.icon} size={24} />
-            </span>
-            <span class="text-[0.85rem] font-bold leading-tight sm:text-[0.95rem]">{q.label}</span>
-          </a>
-        </li>
-      ))}
-    </ul>
-  </section>
-
-  <!-- ============ UNION NEWS ============ -->
-  <!-- Two columns as on the old site: Secretary's page on the left, Union news on the right.
-       On phones Union news comes first. -->
-  <section class="container-x mt-12 grid gap-10 lg:mt-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.1fr)] lg:gap-12">
-    <div class="min-w-0 lg:order-2">
-      <div class="col-head mb-6 flex items-end justify-between gap-4">
-        <div>
-          <h2 id="news-title" lang="en" class="h2">Union news</h2>
-        </div>
-        <a href={L('/news')} lang="en" class="mb-1 text-sm font-semibold text-brand hover:underline">All news →</a>
-      </div>
-
-      {newsLead && (
-        <article class="group card lift relative mb-6 grid overflow-hidden sm:grid-cols-[1.1fr_1fr]">
-          <div class="relative aspect-[16/10] overflow-hidden bg-paper-2 sm:aspect-auto sm:min-h-[240px]">
-            <Poster cover={newsLead.cover as any} seed={newsLead.id} lang={lang} class="absolute inset-0 size-full transition-transform duration-700 ease-out group-hover:scale-[1.04]" />
-            <span lang="en" class="badge absolute left-3 top-3 bg-brand-solid text-white">{topicBySlug[newsLead.topic]?.name.en}</span>
-          </div>
-          <div class="flex flex-col p-5 sm:p-6">
-            <time lang="en" datetime={newsLead.date} class="text-sm text-ink-3">{formatDate(newsLead.date, 'en')}</time>
-            <h3 lang={langOf(newsLead.title, lang)} class="h2 mt-1 clamp-3"><a href={postUrl(newsLead, lang)} class="stretched">{t(newsLead.title, lang)}</a></h3>
-            <p lang={langOf(newsLead.summary, lang)} class="clamp-3 mt-2 text-ink-2">{t(newsLead.summary, lang)}</p>
-            <span lang="en" class="mt-4 inline-flex items-center gap-1.5 self-start text-sm font-semibold text-brand sm:mt-auto sm:pt-4" aria-hidden="true">Read more <Icon name="ArrowRight" size={15} /></span>
-          </div>
-        </article>
-      )}
-
-      <div class="no-scrollbar -mx-4 mb-5 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:px-0" role="toolbar" aria-label="Filter by topic" data-topic-filter>
-        <button type="button" class="chip" aria-pressed="true" data-topic="all" lang="en">All</button>
-        {usedTopics.map((tp) => (
-          <button type="button" class="chip" aria-pressed="false" data-topic={tp.slug} lang="en">{tp.name.en}</button>
-        ))}
-      </div>
-      <ul class="grid gap-x-8 gap-y-5 sm:grid-cols-2" data-topic-grid>
-        {newsGrid.map((p) => <li><StoryCard post={p} lang={lang} variant="compact" /></li>)}
-      </ul>
-    </div>
-
-    <aside class="self-start rounded-2xl bg-paper-2 p-5 sm:p-6 lg:order-1" aria-labelledby="sec-page-title">
-      <div class="col-head mb-5">
-        <h2 id="sec-page-title" lang="en" class="h2">Secretary's page</h2>
-      </div>
-      {gs && (
-        <p class="mb-4 flex items-center gap-3">
-          <span class="grid size-10 shrink-0 place-items-center rounded-full bg-ink text-xs font-bold text-paper" aria-hidden="true">{initials(gs.name.en)}</span>
-          <span class="min-w-0 leading-tight">
-            <span lang={lang === 'en' ? 'en' : 'ml'} class="title block text-[1.15rem] font-bold">{lang === 'en' ? gs.name.en : gs.name.ml}</span>
-            <span lang="en" class="block text-sm text-ink-3">{roleLabels.general_secretary.en}</span>
-          </span>
-        </p>
-      )}
-      <ul class="divide-y divide-line">
-        {secretaryPosts.map((p) => {
-          const d = dateParts(p.date);
-          return (
-            <li class="group relative flex items-start gap-3.5 py-4 first:pt-0">
-              <!-- Date badge in place of a thumbnail -->
-              <time lang="en" datetime={p.date} class="grid size-14 shrink-0 place-content-center rounded-full border-2 border-brand-solid bg-surface text-center leading-none transition-colors group-hover:bg-brand-solid group-hover:text-white">
-                <span class="text-[1.15rem] font-extrabold tabular">{d.d}</span>
-                <span class="mt-0.5 text-[0.62rem] font-bold uppercase tracking-wider">{d.monthShort}</span>
-              </time>
-              <div class="min-w-0 pt-0.5">
-                <h3 lang={langOf(p.title, lang)} class="title clamp-3 text-[1.16rem] font-semibold leading-snug group-hover:text-brand">
-                  <a href={postUrl(p, lang)} class="stretched">{t(p.title, lang)}</a>
-                </h3>
-                <span lang="en" class="mt-0.5 block text-xs text-ink-3 tabular">{d.y}</span>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-      <a href={L('/news?topic=secretary')} lang="en" class="btn btn-ghost mt-2 w-full bg-surface">More from the Secretary <Icon name="ArrowRight" size={16} /></a>
-    </aside>
-  </section>
-
-  <!-- ============ ORDERS + EVENTS ============ -->
-  <section class="container-x mt-14 grid gap-10 lg:mt-16 lg:grid-cols-[1.55fr_1fr] lg:gap-12">
-    <div class="reveal">
-      <SectionHead eyebrow="Government orders" title="Latest orders" href={L('/orders')} linkLabel="All orders" />
-      <div class="card p-1.5 sm:p-2">
-        <ul class="divide-y divide-line">
-          {latestOrders(5).map((o) => <OrderRow order={o} lang={lang} />)}
         </ul>
+        <div data-filter-empty hidden={firstNews.length > 0}>
+          <EmptyState compact title="No district news yet" text="District committees post their news here."><span data-filter-name class="sr-only"></span></EmptyState>
+        </div>
+        <a href={L('/news')} lang="en" class="link col-foot">All district news</a>
       </div>
-      <a href={L('/orders')} lang="en" class="btn btn-ghost mt-4 w-full sm:hidden">All orders <Icon name="ArrowRight" size={16} /></a>
+
+      <div class="col md:col-span-2 lg:col-span-1">
+        <SectionHead title="All districts" level="h3" size="h2" />
+        <ul class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
+          {districts.map(({ d, count }) => <li><DistrictTile district={d} lang={lang} count={count} /></li>)}
+        </ul>
+        <a href={L('/districts')} lang="en" class="link col-foot">Map of districts</a>
+      </div>
     </div>
-    <div class="reveal">
-      <SectionHead eyebrow="Coming up" title="Events" href={L('/events')} linkLabel="Calendar" />
-      <ul class="space-y-1.5">
-        {upcomingEvents(3).map((e) => <EventCard event={e} lang={lang} />)}
+  </section>
+
+  <!-- 5 · Kerala Service and videos -->
+  <section class="wrap section grid gap-x-10 gap-y-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+    <div class="col">
+      <SectionHead title="Kerala Service" href={L('/kerala-service')} linkLabel="Archive" />
+      <div class="flex flex-1 gap-5">
+        <a href={L(issuePath(issue.year, issue.month))} class="block w-32 shrink-0 self-start overflow-hidden rounded-md border border-line" aria-label={`Read Kerala Service, ${monthName(issue.month, 'en')} ${issue.year}`}>
+          <MagazineCover year={issue.year} month={issue.month} class="h-auto w-full" />
+        </a>
+        <div lang="en" class="flex min-w-0 flex-col">
+          <p class="t-label">Current issue</p>
+          <p class="t-h2 mt-1">{monthName(issue.month, 'en')} {issue.year}</p>
+          <p class="mt-1 text-sm text-ink-2">The union's monthly magazine. Every issue since November 2014, readable on any phone.</p>
+          <a href={L(issuePath(issue.year, issue.month))} class="btn btn-primary btn-sm mt-auto self-start"><Icon name="BookOpen" size={16} /> Read online</a>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <SectionHead title="Videos" href={site.social.youtube} linkLabel="YouTube channel" />
+      <ul class="grid gap-x-4 gap-y-6 sm:grid-cols-3">
+        {videos.slice(0, 3).map((v) => <li><VideoCard video={v} lang={lang} /></li>)}
       </ul>
     </div>
   </section>
-
-  <!-- ============ TOPIC DESKS (sections from the old home page) ============ -->
-  <TopicDesks lang={lang} />
-
-  <!-- ============ STATS BAND ============ -->
-  <section aria-label="The union in numbers" class="stats relative isolate mt-14 overflow-hidden bg-red text-white lg:mt-20">
-    <div class="rays pointer-events-none absolute left-1/2 top-full -z-10 aspect-square w-[220vmax] -translate-x-1/2 -translate-y-1/2" aria-hidden="true"></div>
-    <div class="kasavu" aria-hidden="true"></div>
-    <div class="container-x py-10 lg:py-14">
-      <p lang="en" class="display max-w-[16ch] text-[clamp(2.2rem,1.2rem+4vw,4.5rem)] !leading-[1.1] reveal">For a people-oriented civil service</p>
-      <p lang="en" class="mt-3 max-w-xl text-lg text-white/80 reveal">Organising Kerala's State Government employees since {site.founded}.</p>
-      <dl lang="en" class="mt-12 grid grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-4">
-        {[
-          { n: site.founded, from: 1900, label: 'Founded', sub: 'roots in the 1920 NGO Association' },
-          { n: site.conferences, from: 0, label: 'State conferences', sub: '63rd in 2026', suffix: '' },
-          { n: 15, from: 0, label: 'District committees', sub: 'TVM North & South separate' },
-          { n: 330, from: 0, label: 'GOs & circulars', sub: 'searchable online', suffix: '+' },
-        ].map((s) => (
-          <div class="border-l-2 border-white/25 pl-4">
-            <dd class="text-[clamp(2.6rem,1.8rem+3vw,4.25rem)] font-extrabold leading-none tabular"><span data-count={s.n} data-from={s.from}>{s.n}</span>{s.suffix}</dd>
-            <dt class="mt-2 font-semibold">{s.label}</dt>
-            <p class="text-sm text-white/65">{s.sub}</p>
-          </div>
-        ))}
-      </dl>
-    </div>
-    <div class="kasavu" aria-hidden="true"></div>
-  </section>
-
-  <!-- ============ DISTRICTS ============ -->
-  <section class="relative mt-14 overflow-hidden border-y border-line bg-paper-2 py-12 lg:mt-20 lg:py-14" aria-labelledby="dist-title">
-    <div class="container-x">
-      <SectionHead id="dist-title" eyebrow="15 committees, one union" title="From the districts" href={L('/districts')} linkLabel="All districts" />
-      <KeralaMap client:visible viewBox={mapData.viewBox} districts={mapData.districts} info={mapInfo} initial={initialDistrict} />
-    </div>
-  </section>
-
-  <!-- ============ LEADERSHIP ============ -->
-  <section class="container-x mt-14 lg:mt-16" aria-labelledby="lead-title">
-    <SectionHead id="lead-title" eyebrow="State committee" title="Leadership" href={L('/about/state-committee')} linkLabel="Full committee" />
-    <div class="grid gap-4 sm:grid-cols-3">
-      {leaders.map((p, i) => (
-        <article class="group card lift relative overflow-hidden reveal">
-          <div class="relative h-36 overflow-hidden">
-            <Poster cover={{ kind: 'poster', word: { ml: initials(p.name.en), en: initials(p.name.en) }, motif: (['rays', 'rings', 'stripes'] as const)[i] }} seed={i + 1} lang="en" class="absolute inset-0 size-full opacity-95" />
-          </div>
-          <div class="relative -mt-10 px-5 pb-5">
-            <div class="grid size-20 place-items-center rounded-full border-4 border-surface bg-ink text-2xl font-extrabold text-paper" aria-hidden="true">{initials(p.name.en)}</div>
-            <p lang="en" class="eyebrow mt-3">{roleLabels[p.role].en}</p>
-            <h3 lang={lang === 'en' ? 'en' : 'ml'} class="h3 mt-1">{lang === 'en' ? p.name.en : p.name.ml}</h3>
-          </div>
-        </article>
-      ))}
-    </div>
-    <ul class="mt-4 flex flex-wrap gap-2" lang="en">
-      {second.map((p) => (
-        <li class="flex items-center gap-2 rounded-full border border-line bg-surface py-1 pl-1 pr-3.5">
-          <span class="grid size-8 place-items-center rounded-full bg-paper-2 text-[0.7rem] font-bold text-ink-2" aria-hidden="true">{initials(p.name.en)}</span>
-          <span class="text-sm"><span lang={lang === 'en' ? 'en' : 'ml'} class="font-semibold">{lang === 'en' ? p.name.en : p.name.ml}</span> <span class="text-ink-3">· {roleLabels[p.role].en}</span></span>
-        </li>
-      ))}
-    </ul>
-  </section>
-
-  <!-- ============ KERALA SERVICE ============ -->
-  <section class="container-x mt-14 lg:mt-20" aria-labelledby="ks-title">
-    <div class="card relative grid items-center gap-10 overflow-hidden p-6 sm:p-10 lg:grid-cols-[1fr_1.1fr] lg:p-14">
-      <div class="pointer-events-none absolute -left-20 -top-20 size-72 rounded-full bg-gold-soft" aria-hidden="true"></div>
-      <div class="relative">
-        <p lang="en" class="eyebrow">The union's monthly</p>
-        <h2 id="ks-title" lang="en" class="display mt-2 text-brand">Kerala Service</h2>
-        <p lang="en" class="mt-3 max-w-md text-ink-2">Every issue since November 2014, readable on any phone — no downloads, no plug-ins. Current issue: <strong class="text-ink">{monthName(current.month, 'en')} {current.year}</strong>.</p>
-        <div lang="en" class="mt-6 flex flex-wrap gap-3">
-          <a href={L(issuePath(current.year, current.month))} class="btn btn-primary"><Icon name="BookOpen" size={18} /> Read online</a>
-          <a href={L('/kerala-service')} class="btn btn-ghost">{magazineIssues.length} issues archive</a>
-        </div>
-      </div>
-      <a href={L('/kerala-service')} class="fan relative mx-auto block h-[300px] w-full max-w-[460px] sm:h-[340px]" aria-label="Open the Kerala Service archive">
-        {issues.slice().reverse().map((iss, i, arr) => (
-          <span class="fan-item absolute bottom-0 left-1/2 w-[46%] max-w-[200px] origin-bottom overflow-hidden rounded-md shadow-[0_18px_40px_-14px_rgb(0_0_0/0.45)] ring-1 ring-black/10" style={`--k:${i - (arr.length - 1) / 2}; z-index:${i}`}>
-            <MagazineCover year={iss.year} month={iss.month} class="block h-auto w-full" />
-          </span>
-        ))}
-      </a>
-    </div>
-  </section>
-
-  <!-- ============ VIDEOS ============ -->
-  <section class="container-x mt-14 lg:mt-16" aria-labelledby="vid-title">
-    <SectionHead id="vid-title" eyebrow="YouTube" title="Videos" href={site.social.youtube} linkLabel="Channel" />
-    <div class="no-scrollbar -mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
-      {videos.map((v) => (
-        <article class="w-[78%] shrink-0 snap-start sm:w-[44%] lg:w-auto">
-          <button type="button" class="yt group relative block aspect-video w-full overflow-hidden rounded-xl bg-night" data-yt={v.id} aria-label={`Play video: ${v.title.ml}`}>
-            <img src={`https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`} alt="" loading="lazy" width="480" height="360" class="size-full object-cover transition-transform duration-500 group-hover:scale-105" />
-            <span class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></span>
-            <span class="absolute left-1/2 top-1/2 grid size-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-brand-solid text-white shadow-xl transition-transform group-hover:scale-110"><Icon name="Play" size={22} stroke={2.4} class="ml-0.5 fill-white" /></span>
-          </button>
-          <h3 lang="ml" class="title clamp-2 mt-3 text-[1.16em] font-semibold leading-snug">{v.title.ml}</h3>
-          <p lang="en" class="mt-1 text-xs text-ink-3">{formatDate(v.date, 'en', 'short')}</p>
-        </article>
-      ))}
-    </div>
-  </section>
-
-  <!-- ============ SOCIAL CTA ============ -->
-  <section class="container-x mt-14" lang="en">
-    <div class="flex flex-col items-start justify-between gap-5 rounded-2xl border border-line bg-surface p-6 sm:flex-row sm:items-center sm:p-8">
-      <div>
-        <h2 class="h2">Get new orders on your phone</h2>
-        <p class="mt-1 text-ink-2">Add this site to your home screen, or follow the union for updates.</p>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <a href={site.social.facebook} target="_blank" rel="noopener" class="btn btn-ghost"><Brand name="facebook" size={17} /> Facebook</a>
-        <a href={site.social.youtube} target="_blank" rel="noopener" class="btn btn-ghost"><Brand name="youtube" size={17} /> YouTube</a>
-      </div>
-    </div>
-  </section>
-</Base>
-
-<style>
-  /* Column heading rule with a short red accent, after the old site */
-  .col-head { position: relative; padding-bottom: 0.75rem; border-bottom: 1px solid var(--line-strong); }
-  .col-head::after { content: ""; position: absolute; left: 0; bottom: -1px; width: 3rem; height: 3px; background: var(--brand-solid); }
-  .outline-num { color: transparent; -webkit-text-stroke: 1.5px var(--line-strong); transition: -webkit-text-stroke-color 0.2s; }
-  .group:hover .outline-num { -webkit-text-stroke-color: var(--brand); }
-
-  .rays {
-    background: repeating-conic-gradient(from 0deg, rgb(0 0 0 / 0.09) 0deg 6deg, transparent 6deg 12deg);
-    animation: spin-slow 120s linear infinite;
-  }
-
-  /* Magazine fan: spreads open on hover */
-  .fan-item {
-    translate: -50% 0;
-    rotate: calc(var(--k) * 7deg);
-    transform: translateX(calc(var(--k) * 26%));
-    transition: rotate 0.5s var(--ease-spring), transform 0.5s var(--ease-spring), translate 0.5s var(--ease-spring);
-  }
-  .fan:hover .fan-item, .fan:focus-visible .fan-item {
-    rotate: calc(var(--k) * 12deg);
-    transform: translateX(calc(var(--k) * 48%)) translateY(calc(var(--k) * var(--k) * 6px));
-  }
-  .fan-item:last-child { translate: -50% -8px; }
-</style>
-
-<script>
-  function initHome() {
-    // Story deck dots
-    const deck = document.querySelector<HTMLElement>('[data-deck]');
-    const dots = document.querySelectorAll<HTMLElement>('[data-dots] > span');
-    if (deck && dots.length) {
-      const io = new IntersectionObserver((entries) => {
-        for (const e of entries) if (e.isIntersecting) {
-          const i = Number((e.target as HTMLElement).dataset.slide);
-          dots.forEach((d, j) => { d.classList.toggle('w-6', i === j); d.classList.toggle('!bg-brand-solid', i === j); d.classList.toggle('w-1.5', i !== j); });
-        }
-      }, { root: deck, threshold: 0.6 });
-      deck.querySelectorAll('[data-slide]').forEach((s) => io.observe(s));
-    }
-
-    // Topic filter with a View Transition
-    const bar = document.querySelector<HTMLElement>('[data-topic-filter]');
-    const grid = document.querySelector<HTMLElement>('[data-topic-grid]');
-    bar?.addEventListener('click', (e) => {
-      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-topic]');
-      if (!btn || !grid) return;
-      const topic = btn.dataset.topic!;
-      const apply = () => {
-        bar.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
-        grid.querySelectorAll<HTMLElement>('.story').forEach((c) => { (c.closest('li') ?? c).hidden = topic !== 'all' && c.dataset.topic !== topic; });
-      };
-      grid.querySelectorAll<HTMLElement>('.story').forEach((c, i) => { c.style.viewTransitionName = `story-${i}`; });
-      if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.startViewTransition(apply);
-      else apply();
-    });
-
-    // Count-up numbers
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const counters = document.querySelectorAll<HTMLElement>('[data-count]');
-    const cio = new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        if (!e.isIntersecting) continue;
-        cio.unobserve(e.target);
-        const el = e.target as HTMLElement;
-        const to = Number(el.dataset.count), from = Number(el.dataset.from ?? 0);
-        if (reduce) { el.textContent = String(to); continue; }
-        const t0 = performance.now(), dur = 1400;
-        const step = (now: number) => {
-          const k = Math.min(1, (now - t0) / dur);
-          el.textContent = String(Math.round(from + (to - from) * (1 - Math.pow(1 - k, 4))));
-          if (k < 1) requestAnimationFrame(step);
-        };
-        requestAnimationFrame(step);
-      }
-    }, { threshold: 0.6 });
-    counters.forEach((c) => cio.observe(c));
-
-    // YouTube lite embed: the player loads only when tapped
-    document.querySelectorAll<HTMLButtonElement>('button[data-yt]').forEach((b) => {
-      b.addEventListener('click', () => {
-        const f = document.createElement('iframe');
-        f.src = `https://www.youtube-nocookie.com/embed/${b.dataset.yt}?autoplay=1&rel=0`;
-        f.allow = 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture';
-        f.allowFullscreen = true;
-        f.title = b.getAttribute('aria-label') ?? 'Video';
-        f.className = 'absolute inset-0 size-full';
-        b.replaceChildren(f);
-      }, { once: true });
-    });
-  }
-  document.addEventListener('astro:page-load', initHome);
-</script>
+</AppLayout>

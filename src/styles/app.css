@@ -173,12 +173,17 @@
   /* Balanced rows: columns side by side end on the same line.
      .col        a column that fills its row's height (grid items stretch by default)
      .col-foot   its "See all" link, pushed to the bottom so links line up across columns
-     .balance-list  a list beside a lead story: on laptops its items spread to the
-                    lead's height (the lead itself stretches if the list is taller) */
+     .balance-list  a list beside a taller neighbour (a lead story, a tools grid): on
+                    laptops its items spread to fill the height. The first item stays at
+                    the top, the last at the bottom, and every divider sits in the middle
+                    of its gap (middle items grow twice as much and centre their content). */
   .col { display: flex; flex-direction: column; }
   .col-foot { margin-top: auto; padding-top: 0.75rem; }
   @media (min-width: 1024px) {
-    .balance-list { display: flex; flex-direction: column; justify-content: space-between; height: 100%; }
+    .balance-list { display: flex; flex-direction: column; flex: 1 1 auto; }
+    .balance-list > * { flex: 2 1 auto; display: flex; flex-direction: column; justify-content: center; }
+    .balance-list > :first-child { flex-grow: 1; justify-content: flex-start; }
+    .balance-list > :last-child { flex-grow: 1; justify-content: flex-end; }
   }
 }
 
