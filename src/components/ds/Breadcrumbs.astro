@@ -1,0 +1,21 @@
+---
+import Icon from '~/components/ui/Icon.astro';
+import type { Lang } from '~/lib/types';
+import { href } from '~/lib/i18n';
+
+interface Props { lang: Lang; items: { label: string; path?: string }[] }
+const { lang, items } = Astro.props;
+const all = [{ label: 'Home', path: '/' }, ...items];
+---
+<nav aria-label="Breadcrumb" lang="en">
+  <ol class="flex flex-wrap items-center gap-1 text-sm text-ink-3">
+    {all.map((c, i) => (
+      <li class="flex items-center gap-1">
+        {i > 0 && <Icon name="ChevronRight" size={14} />}
+        {c.path && i < all.length - 1
+          ? <a href={href(lang, c.path)} class="hover:text-ink hover:underline underline-offset-2">{c.label}</a>
+          : <span aria-current="page" class="text-ink-2">{c.label}</span>}
+      </li>
+    ))}
+  </ol>
+</nav>

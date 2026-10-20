@@ -1,0 +1,43 @@
+---
+/**
+ * The image spot for a story. Shows the post's photo when it has one; otherwise a calm
+ * neutral tile with the topic's icon and name, so rows keep the same shape.
+ */
+import Icon from '~/components/ui/Icon.astro';
+import type { Lang, Post } from '~/lib/types';
+import { t } from '~/lib/i18n';
+import { topicBySlug } from '~/data/districts';
+import { topicIcon } from '~/lib/topic-icons';
+
+interface Props {
+  post: Post;
+  lang: Lang;
+  ratio?: string;
+  /** Larger icon and label for big spots (lead stories) */
+  size?: 'sm' | 'lg';
+  class?: string;
+  eager?: boolean;
+}
+const { post, lang, ratio = '4/3', size = 'sm', class: cls = '', eager = false } = Astro.props;
+const topic = topicBySlug[post.topic];
+---
+{post.cover.kind === 'photo' ? (
+  <img
+    src={post.cover.src}
+    alt={t(post.cover.alt, lang)}
+    loading={eager ? 'eager' : 'lazy'}
+    decoding="async"
+    class:list={['rounded-[10px] bg-bg-subtle object-cover', cls || 'w-full']}
+    style={`aspect-ratio:${ratio}${post.cover.focal ? `;object-position:${post.cover.focal[0] * 100}% ${post.cover.focal[1] * 100}%` : ''}`}
+  />
+) : (
+  <div
+    class:list={['flex flex-col items-center justify-center gap-1.5 rounded-[10px] border border-line bg-bg-subtle p-2 text-center text-ink-3', cls || 'w-full']}
+    style={`aspect-ratio:${ratio}`}
+    aria-hidden="true"
+    lang="en"
+  >
+    <Icon name={(topicIcon[post.topic] ?? 'Newspaper') as any} size={size === 'lg' ? 40 : 22} stroke={1.5} />
+    <span class:list={['font-semibold leading-tight', size === 'lg' ? 'text-sm' : 'text-[0.6875rem]']}>{topic?.name.en}</span>
+  </div>
+)}

@@ -1,0 +1,66 @@
+---
+/**
+ * Funnel button with a dropdown of options (e.g. districts). Put it inside an element with
+ * `data-filterable` (and optional `data-limit`); items marked `data-filter-item` with
+ * `data-value` are shown or hidden, up to the limit. An element with `data-filter-empty`
+ * (containing `data-filter-name`) shows when nothing matches.
+ */
+interface Props { label: string; options: { value: string; label: string; short?: string }[]; allLabel?: string }
+const { label, options, allLabel = 'All' } = Astro.props;
+---
+<details class="relative" data-filter-menu lang="en">
+  <summary class="btn btn-secondary btn-sm list-none [&::-webkit-details-marker]:hidden" aria-label={label}>
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" /></svg>
+    <span data-filter-label class="max-w-28 truncate">{allLabel}</span>
+  </summary>
+  <div class="popover absolute right-0 z-30 mt-1 max-h-72 w-60 overflow-y-auto p-1" role="menu">
+    <button type="button" role="menuitemradio" data-filter-pick="" data-short={allLabel} aria-checked="true" class="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-bg-subtle aria-checked:font-semibold aria-checked:text-accent-ink">All districts</button>
+    {options.map((o) => (
+      <button type="button" role="menuitemradio" data-filter-pick={o.value} data-short={o.short ?? o.label} aria-checked="false" class="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-bg-subtle aria-checked:font-semibold aria-checked:text-accent-ink">{o.label}</button>
+    ))}
+  </div>
+</details>
+
+<script>
+  function initFilters() {
+    document.querySelectorAll<HTMLElement>('[data-filterable]').forEach((box) => {
+      if (box.dataset.filterReady) return;
+      box.dataset.filterReady = '1';
+      const menu = box.querySelector<HTMLDetailsElement>('[data-filter-menu]');
+      if (!menu) return;
+      const limit = Number(box.dataset.limit) || Infinity;
+      const items = [...box.querySelectorAll<HTMLElement>('[data-filter-item]')];
+      const empty = box.querySelector<HTMLElement>('[data-filter-empty]');
+      const label = menu.querySelector<HTMLElement>('[data-filter-label]')!;
+      menu.addEventListener('click', (e) => {
+        const pick = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-filter-pick]');
+        if (!pick) return;
+        const value = pick.dataset.filterPick!;
+        let shown = 0;
+        for (const li of items) {
+          const ok = (!value || li.dataset.value === value) && shown < limit;
+          li.hidden = !ok;
+          if (ok) shown++;
+        }
+        if (empty) {
+          empty.hidden = shown > 0;
+          const name = empty.querySelector('[data-filter-name]');
+          if (name) name.textContent = value ? ` in ${pick.textContent!.trim()}` : '';
+        }
+        label.textContent = pick.dataset.short!;
+        menu.querySelectorAll('[data-filter-pick]').forEach((b) => b.setAttribute('aria-checked', String(b === pick)));
+        menu.open = false;
+      });
+    });
+  }
+  initFilters();
+  document.addEventListener('astro:page-load', initFilters);
+  // Close any open menu on an outside click or Escape
+  document.addEventListener('click', (e) => {
+    document.querySelectorAll<HTMLDetailsElement>('details[data-filter-menu][open]').forEach((d) => { if (!d.contains(e.target as Node)) d.open = false; });
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll<HTMLDetailsElement>('details[data-filter-menu][open]').forEach((d) => { d.open = false; d.querySelector('summary')?.focus(); });
+  });
+</script>

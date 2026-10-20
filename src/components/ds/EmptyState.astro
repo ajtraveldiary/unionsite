@@ -1,0 +1,13 @@
+---
+/** Shown when a list has nothing yet: one icon, one line of what and why, optional action. */
+import Icon from '~/components/ui/Icon.astro';
+
+interface Props { icon?: string; title: string; text?: string; compact?: boolean; class?: string }
+const { icon = 'Inbox', title, text, compact = false, class: cls = '' } = Astro.props;
+---
+<div lang="en" class:list={['rounded-[var(--radius-card)] border border-dashed border-line-strong text-center', compact ? 'p-4' : 'p-8', cls]}>
+  {!compact && <span class="mx-auto mb-2 grid size-11 place-items-center rounded-full bg-bg-subtle text-ink-3"><Icon name={icon as any} size={20} /></span>}
+  <p class:list={['font-semibold', compact && 'text-sm']}>{title}</p>
+  {text && <p class="mx-auto mt-1 max-w-sm text-sm text-ink-3">{text}</p>}
+  <slot />
+</div>

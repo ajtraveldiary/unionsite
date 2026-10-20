@@ -1,0 +1,227 @@
+/*
+ * Kerala NGO Union — design system ("civic newsroom")
+ * Calm, flat, content first. One accent (union red) for actions, active states and
+ * important badges; blue only for links and information. Built from scratch for the
+ * redesign; nothing here comes from the prototype's global.css.
+ *
+ * Contrast (WCAG AA, checked): every text token is at least 5.2:1 on its background
+ * in both themes; white on the red accent is 5.9:1.
+ */
+@import "tailwindcss";
+@import "@fontsource-variable/noto-sans-malayalam/wght.css";
+@import "@fontsource-variable/anek-malayalam/wdth.css";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ---------- Tokens ---------- */
+/* Light is the default; the attribute form lets a light block sit inside a dark page */
+:root, [data-theme="light"] {
+  /* Surfaces */
+  --bg: #ffffff;
+  --bg-subtle: #f5f5f3;      /* section wash, tiles without photos */
+  --surface: #ffffff;        /* cards */
+  --surface-hover: #f7f7f5;
+  --line: #e6e4df;
+  --line-strong: #cfccc5;
+  /* Text */
+  --ink: #18181b;
+  --ink-2: #45454d;          /* secondary text */
+  --ink-3: #66666f;          /* meta: dates, counts */
+  /* Accent: union red */
+  --accent: #c8102e;         /* fills: primary buttons, active marks */
+  --accent-hover: #a90d27;
+  --accent-ink: #b00d27;     /* red text on light backgrounds */
+  --accent-soft: #fdecef;
+  --on-accent: #ffffff;
+  /* Functional */
+  --link: #1d5bb0;
+  --focus: #1d5bb0;
+  --success: #1e7a4c;
+  --warning: #965800;
+  --warning-soft: #fdf3e2;
+  /* Elevation: only for things that float (menus, dialogs, sticky header) */
+  --shadow-float: 0 10px 30px -10px rgb(15 15 20 / 0.25), 0 2px 6px -2px rgb(15 15 20 / 0.08);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #111113;
+  --bg-subtle: #18181b;
+  --surface: #1c1c20;
+  --surface-hover: #232328;
+  --line: #2e2e35;
+  --line-strong: #43434c;
+  --ink: #f3f3f4;
+  --ink-2: #c8c8ce;
+  --ink-3: #9d9da6;
+  --accent: #c8102e;
+  --accent-hover: #e0203f;
+  --accent-ink: #ff7385;
+  --accent-soft: #3a1820;
+  --on-accent: #ffffff;
+  --link: #8ab8f7;
+  --focus: #8ab8f7;
+  --success: #4cc38a;
+  --warning: #f0a33a;
+  --warning-soft: #2c2210;
+  --shadow-float: 0 12px 32px -10px rgb(0 0 0 / 0.6), 0 2px 6px -2px rgb(0 0 0 / 0.4);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-link: var(--link);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --shadow-float: var(--shadow-float);
+
+  --font-sans: "Noto Sans Malayalam Variable", "Noto Sans Malayalam", ui-sans-serif, system-ui, sans-serif;
+  --font-title: "Anek Malayalam Variable", "Noto Sans Malayalam Variable", ui-sans-serif, sans-serif;
+
+  /* Radius: controls 8, cards 12, pills full */
+  --radius-control: 8px;
+  --radius-card: 12px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------- Base ---------- */
+@layer base {
+  html { -webkit-text-size-adjust: 100%; scroll-padding-top: 80px; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    /* Long Malayalam compound words break only when they would otherwise overflow */
+    overflow-wrap: break-word;
+  }
+  /* Malayalam needs taller lines for stacked conjuncts and vowel signs */
+  :lang(ml) { line-height: 1.75; }
+  a { color: inherit; text-decoration: none; }
+  button { cursor: pointer; }
+  img, svg { display: block; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+  ::selection { background: var(--accent); color: var(--on-accent); }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  }
+}
+
+/* ---------- Typography ----------
+ * Titles: Anek Malayalam drawn 16% taller at the same width (size x1.16, width axis 86%).
+ * Text: Noto Sans Malayalam. Levels differ by size and weight only.
+ *   display 700  page titles         h1 700  section titles
+ *   h2      650  column/card heads   h3 600  story titles
+ *   body    400  16px                meta 400 13px   label 600 12px uppercase
+ */
+@layer components {
+  .t-display, .t-h1, .t-h2, .t-h3, .t-title { font-family: var(--font-title); font-stretch: 86%; }
+  .t-display { font-weight: 700; font-size: calc(clamp(1.75rem, 1.2rem + 2.2vw, 2.5rem) * 1.16); line-height: 1.1; letter-spacing: -0.01em; }
+  .t-h1 { font-weight: 700; font-size: calc(clamp(1.4rem, 1.2rem + 0.8vw, 1.75rem) * 1.16); line-height: 1.15; }
+  .t-h2 { font-weight: 650; font-size: calc(clamp(1.15rem, 1.08rem + 0.4vw, 1.35rem) * 1.16); line-height: 1.25; }
+  .t-h3 { font-weight: 600; font-size: calc(1.05rem * 1.16); line-height: 1.3; }
+  :lang(ml) :is(.t-display, .t-h1), :is(.t-display, .t-h1):lang(ml) { line-height: 1.18; letter-spacing: 0; }
+  :lang(ml) :is(.t-title, .t-h2, .t-h3), :is(.t-title, .t-h2, .t-h3):lang(ml) { line-height: 1.25; }
+  /* Links and spans inside a title follow the title's spacing, not the body's */
+  :is(.t-display, .t-h1, .t-h2, .t-h3, .t-title) * { line-height: inherit; }
+
+  .t-meta { font-size: 0.8125rem; line-height: 1.5; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .t-label { font-size: 0.75rem; line-height: 1.4; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
+
+  /* Long-form reading */
+  .prose { max-width: 68ch; font-size: 1.125rem; }
+  .prose p { margin-block: 0 1.1em; }
+  .prose:lang(ml), .prose :lang(ml) { line-height: 1.85; }
+  .prose a { color: var(--link); text-decoration: underline; text-underline-offset: 3px; }
+
+  .clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .tabular { font-variant-numeric: tabular-nums; }
+}
+
+/* ---------- Layout ---------- */
+@layer components {
+  .wrap { width: 100%; max-width: 1200px; margin-inline: auto; padding-inline: 16px; }
+  @media (min-width: 768px) { .wrap { padding-inline: 24px; } }
+  .section { margin-top: 48px; }
+  @media (min-width: 1024px) { .section { margin-top: 64px; } }
+  /* A whole card clickable while the title stays the accessible link */
+  .stretched::after { content: ""; position: absolute; inset: 0; z-index: 1; }
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  /* Grid children may shrink below their content's width. Without this, a line-clamped
+     headline asks for its full one-line width and pushes the page sideways on phones. */
+  :where(.grid) > * { min-width: 0; }
+}
+
+/* ---------- Controls ---------- */
+@layer components {
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;
+    min-height: 44px; padding: 0 1.1rem; border-radius: var(--radius-control);
+    font-size: 0.9375rem; font-weight: 600; line-height: 1; white-space: nowrap;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .btn:disabled, .btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: var(--on-accent); }
+  .btn-primary:not(:disabled):hover { background: var(--accent-hover); }
+  .btn-secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); }
+  .btn-secondary:not(:disabled):hover { border-color: var(--ink-3); background: var(--surface-hover); }
+  .btn-ghost { color: var(--ink-2); }
+  .btn-ghost:not(:disabled):hover { background: var(--bg-subtle); color: var(--ink); }
+  .btn-sm { min-height: 36px; padding: 0 0.8rem; font-size: 0.875rem; }
+  .btn-icon { min-width: 44px; padding: 0; }
+  .btn-sm.btn-icon { min-width: 36px; }
+
+  .link { color: var(--link); font-weight: 600; font-size: 0.875rem; }
+  .link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 0.35rem; min-height: 36px; padding: 0 0.85rem;
+    border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface);
+    font-size: 0.875rem; font-weight: 500; color: var(--ink-2); white-space: nowrap;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .chip:hover { border-color: var(--ink-3); color: var(--ink); }
+  .chip[aria-pressed="true"], .chip[aria-selected="true"], .chip[aria-current] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 0.3rem; height: 22px; padding: 0 0.5rem;
+    border-radius: 6px; font-size: 0.75rem; font-weight: 600; white-space: nowrap;
+  }
+  .badge-neutral { background: var(--bg-subtle); color: var(--ink-2); border: 1px solid var(--line); }
+  .badge-accent { background: var(--accent-soft); color: var(--accent-ink); }
+  .badge-warning { background: var(--warning-soft); color: var(--warning); }
+
+  .field {
+    width: 100%; min-height: 44px; padding: 0 0.9rem; border-radius: var(--radius-control);
+    border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font-size: 1rem;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field::placeholder { color: var(--ink-3); }
+  .field:focus { outline: none; border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in oklab, var(--focus) 25%, transparent); }
+  select.field { appearance: none; padding-right: 2.25rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2366666f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.7rem center; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); }
+  .card-hover { transition: border-color 0.15s, background-color 0.15s; }
+  .card-hover:hover { border-color: var(--line-strong); background: var(--surface-hover); }
+
+  .popover { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); box-shadow: var(--shadow-float); }
+}

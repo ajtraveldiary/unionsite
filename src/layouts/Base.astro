@@ -43,7 +43,8 @@ const canonical = new URL(lang === 'en' ? alt.en : alt.ml, site);
     <meta property="og:url" content={canonical} />
     <meta property="og:locale" content={lang === 'ml' ? 'ml_IN' : 'en_IN'} />
     <meta name="theme-color" content="#C8102E" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preload" href={notoMl} as="font" type="font/woff2" crossorigin />
     <link rel="preload" href={notoLatin} as="font" type="font/woff2" crossorigin />
     <script is:inline>

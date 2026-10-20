@@ -1,0 +1,74 @@
+---
+/**
+ * Page frame for the redesigned site (design system in styles/app.css).
+ * Pages move onto this layout one by one in Phase C; Base.astro serves the prototype until then.
+ */
+import '~/styles/app.css';
+import Header from '~/components/ds/Header.astro';
+import BottomNav from '~/components/ds/BottomNav.astro';
+import Footer from '~/components/ds/Footer.astro';
+import { altPath } from '~/lib/i18n';
+import type { Lang } from '~/lib/types';
+import notoMl from '@fontsource-variable/noto-sans-malayalam/files/noto-sans-malayalam-malayalam-wght-normal.woff2?url';
+import notoLatin from '@fontsource-variable/noto-sans-malayalam/files/noto-sans-malayalam-latin-wght-normal.woff2?url';
+
+interface Props { title?: string; description?: string; lang: Lang; noindex?: boolean }
+const { title, description = 'Kerala NGO Union: news, government orders, district committees and the Kerala Service magazine.', lang, noindex = false } = Astro.props;
+const fullTitle = title ? `${title} · Kerala NGO Union` : 'Kerala NGO Union · കേരള എൻ.ജി.ഒ യൂണിയൻ';
+const alt = altPath(Astro.url.pathname);
+const canonical = new URL(lang === 'en' ? alt.en : alt.ml, Astro.site);
+---
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="ml" href={new URL(alt.ml, Astro.site)} />
+    <link rel="alternate" hreflang="en" href={new URL(alt.en, Astro.site)} />
+    {noindex && <meta name="robots" content="noindex" />}
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111113" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preload" href={notoMl} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={notoLatin} as="font" type="font/woff2" crossorigin />
+    <!-- Theme: the device setting, unless the reader picked one (saved on this device only) -->
+    <script is:inline>
+      (() => {
+        let theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        try { theme = localStorage.getItem('theme') || theme; } catch {}
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+  </head>
+  <body class="min-h-dvh">
+    <a href="#main" lang="en" class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-bg">Skip to content</a>
+    <Header lang={lang} />
+    <main id="main" class="pb-20 lg:pb-0">
+      <slot />
+    </main>
+    <Footer lang={lang} />
+    <BottomNav lang={lang} />
+  </body>
+</html>
+
+<script>
+  const root = document.documentElement;
+  document.addEventListener('click', (e) => {
+    const el = e.target as HTMLElement;
+    if (el.closest('[data-theme-toggle]')) {
+      const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      root.dataset.theme = next;
+      try { localStorage.setItem('theme', next); } catch {}
+    } else if (el.closest('[data-open-search]')) {
+      document.querySelector<HTMLDialogElement>('#search-dialog')?.showModal();
+    } else if (el.closest('[data-close-dialog]')) {
+      el.closest('dialog')?.close();
+    } else if (el instanceof HTMLDialogElement && el.open) {
+      el.close(); // click on the dialog backdrop
+    }
+  });
+</script>

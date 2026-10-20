@@ -1,0 +1,34 @@
+---
+/**
+ * One story in a list. `thumb` adds the image spot on the left (photo or topic tile);
+ * `meta` chooses what leads the small line above the title.
+ */
+import Media from './Media.astro';
+import type { Lang, Post } from '~/lib/types';
+import { t, langOf, formatDate } from '~/lib/i18n';
+import { postUrl } from '~/lib/content';
+import { topicBySlug, districtBySlug } from '~/data/districts';
+
+interface Props {
+  post: Post;
+  lang: Lang;
+  thumb?: boolean;
+  meta?: 'topic' | 'district' | 'date';
+  headingLevel?: 'h3' | 'h4';
+  class?: string;
+}
+const { post, lang, thumb = true, meta = 'topic', headingLevel = 'h3', class: cls = '' } = Astro.props;
+const H = headingLevel;
+const lead =
+  meta === 'topic' ? topicBySlug[post.topic]?.name.en :
+  meta === 'district' && post.district ? districtBySlug[post.district]?.name.en.replace('Thiruvananthapuram', 'TVM') : '';
+---
+<article class:list={['group relative flex gap-3', cls]}>
+  {thumb && <Media post={post} lang={lang} class="w-20 shrink-0 self-start sm:w-24" />}
+  <div class="min-w-0 flex-1">
+    <p lang="en" class="t-meta">{lead && <span class="font-semibold text-ink-2">{lead}</span>}{lead && ' · '}{formatDate(post.date, 'en', 'short')}</p>
+    <H lang={langOf(post.title, lang)} class:list={['mt-0.5', thumb ? 't-h3 clamp-3' : 'clamp-2 font-semibold leading-snug']}>
+      <a href={postUrl(post, lang)} class="stretched group-hover:text-accent-ink">{t(post.title, lang)}</a>
+    </H>
+  </div>
+</article>

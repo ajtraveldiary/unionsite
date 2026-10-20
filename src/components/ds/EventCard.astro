@@ -1,0 +1,25 @@
+---
+/** An upcoming event: date block, optional district, title and venue. */
+import type { Lang, UnionEvent } from '~/lib/types';
+import { t, langOf, dateParts, href } from '~/lib/i18n';
+import { districtBySlug } from '~/data/districts';
+
+interface Props { event: UnionEvent; lang: Lang; showDistrict?: boolean; class?: string }
+const { event: e, lang, showDistrict = false, class: cls = '' } = Astro.props;
+const d = dateParts(e.start);
+const end = e.end ? dateParts(e.end) : undefined;
+const district = e.district ? districtBySlug[e.district] : undefined;
+---
+<article class:list={['card card-hover group relative flex gap-3 p-3', cls]}>
+  <div lang="en" class="w-14 shrink-0 rounded-lg bg-bg-subtle py-1.5 text-center leading-tight">
+    <p class="text-[0.6875rem] font-semibold uppercase tracking-wide text-accent-ink">{d.monthShort}</p>
+    <p class="text-xl font-bold tabular">{d.d}{end && end.d !== d.d && <span class="text-sm font-semibold text-ink-3">–{end.d}</span>}</p>
+  </div>
+  <div class="min-w-0 flex-1">
+    {showDistrict && district && <p lang="en" class="t-meta font-semibold !text-ink-2">{district.name.en.replace('Thiruvananthapuram', 'TVM')}</p>}
+    <h3 lang={langOf(e.title, lang)} class="font-semibold leading-snug">
+      <a href={href(lang, `/events#${e.slug}`)} class="stretched group-hover:text-accent-ink">{t(e.title, lang)}</a>
+    </h3>
+    <p lang={langOf(e.venue, lang)} class="t-meta">{t(e.venue, lang)}</p>
+  </div>
+</article>

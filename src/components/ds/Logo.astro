@@ -1,0 +1,17 @@
+---
+/**
+ * The union's logo (public/brand, from the union's own artwork) with the Malayalam
+ * wordmark in the title face. `stacked` puts the name on two lines for narrow headers.
+ */
+interface Props { size?: number; stacked?: boolean; inverse?: boolean; class?: string }
+const { size = 40, stacked = false, inverse = false, class: cls = '' } = Astro.props;
+---
+<span class:list={['inline-flex items-center gap-2.5', cls]}>
+  <img src="/brand/logo-128.webp" width={size} height={size} alt="" class="shrink-0 rounded-[22%]" decoding="async" />
+  <span class="leading-none">
+    <span lang="ml" class:list={['t-title block font-bold', inverse ? 'text-white' : 'text-accent-ink']} style={`font-size:${stacked ? 1.06 : 1.2}rem;line-height:1.12`}>
+      {stacked ? <Fragment>കേരള എൻ.ജി.ഒ<br />യൂണിയൻ</Fragment> : 'കേരള എൻ.ജി.ഒ യൂണിയൻ'}
+    </span>
+    {!stacked && <span lang="en" class:list={['mt-0.5 block text-[0.6875rem] font-semibold uppercase tracking-[0.18em]', inverse ? 'text-white/60' : 'text-ink-3']}>Kerala NGO Union</span>}
+  </span>
+</span>

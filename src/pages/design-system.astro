@@ -1,0 +1,314 @@
+---
+/**
+ * Phase B style guide: every token and component of the new design system, in their
+ * states (empty, long text, no photo). For review only; not linked from the site.
+ */
+import AppLayout from '~/layouts/AppLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import SectionHead from '~/components/ds/SectionHead.astro';
+import StoryLead from '~/components/ds/StoryLead.astro';
+import StoryRow from '~/components/ds/StoryRow.astro';
+import OrderRow from '~/components/ds/OrderRow.astro';
+import EventCard from '~/components/ds/EventCard.astro';
+import ToolTile from '~/components/ds/ToolTile.astro';
+import DistrictTile from '~/components/ds/DistrictTile.astro';
+import Notice from '~/components/ds/Notice.astro';
+import FilterMenu from '~/components/ds/FilterMenu.astro';
+import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
+import EmptyState from '~/components/ds/EmptyState.astro';
+import Tabs from '~/components/ds/Tabs.astro';
+import Logo from '~/components/ds/Logo.astro';
+import { allPosts, allOrders, allEvents, sortedDistricts, postsForDistrict } from '~/lib/content';
+import type { Post, UnionEvent } from '~/lib/types';
+
+const lang = 'ml' as const;
+const posts = allPosts();
+
+// A photo stand-in (real photos arrive with the import), to show the photo variants
+const photo = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9aa6b2"/><stop offset="1" stop-color="#4f5b66"/></linearGradient></defs><rect width="1600" height="900" fill="url(#g)"/><circle cx="1180" cy="260" r="150" fill="#d9c9a3" opacity=".55"/><path d="M0 700 L380 430 L640 640 L980 360 L1600 760 V900 H0Z" fill="#2f3a44" opacity=".6"/><text x="800" y="470" font-family="sans-serif" font-size="44" fill="#fff" fill-opacity=".55" text-anchor="middle">Photo</text></svg>`)}`;
+const withPhoto = (p: Post): Post => ({ ...p, cover: { kind: 'photo', src: photo, alt: { ml: 'ചിത്രം', en: 'Photo' } } });
+
+const lead = withPhoto(posts.find((p) => p.featured) ?? posts[0]);
+const rowPhoto = withPhoto(posts.find((p) => p.topic === 'fseto' && !p.featured)!);
+const rowTile = posts.find((p) => p.sample)!;
+const longTitle: Post = {
+  ...rowTile, id: 9999,
+  title: { ml: 'സംസ്ഥാന ജീവനക്കാരുടെയും അധ്യാപകരുടെയും ന്യായമായ ആവശ്യങ്ങൾ ഉന്നയിച്ച് സെക്രട്ടറിയേറ്റിന് മുന്നിലും എല്ലാ ജില്ലാ കേന്ദ്രങ്ങളിലും താലൂക്ക് കേന്ദ്രങ്ങളിലും പ്രതിഷേധ പ്രകടനവും ധർണയും സംഘടിപ്പിച്ചു' },
+};
+const orders = allOrders();
+const important = orders.find((o) => o.important)!;
+const plain = orders.find((o) => !o.important)!;
+const events = allEvents();
+const multiDay = events.find((e) => e.end) ?? events[0];
+const withDistrict = events.find((e) => e.district) ?? events[0];
+const longEvent: UnionEvent = { ...events[0], slug: 'long', title: { ml: 'ജീവനക്കാരുടെ സാമൂഹിക സുരക്ഷാ പദ്ധതികളെക്കുറിച്ചുള്ള സംസ്ഥാനതല പഠന ക്യാമ്പും സെമിനാറും' } };
+const districts = sortedDistricts().map((d) => ({ d, count: postsForDistrict(d.slug).length }));
+const districtPosts = posts.filter((p) => p.district);
+const tools = [
+  { name: 'DA arrears', kind: 'Calculator', icon: 'Calculator' },
+  { name: 'Pay fixation', kind: 'Calculator', icon: 'Calculator' },
+  { name: 'Leave surrender', kind: 'Calculator', icon: 'Calculator' },
+  { name: 'Pension & DCRG', kind: 'Calculator', icon: 'Calculator' },
+  { name: 'MEDISEP claim', kind: 'Guide', icon: 'BookOpen' },
+  { name: 'Apply for HBA', kind: 'Guide', icon: 'BookOpen' },
+  { name: 'GPF withdrawal', kind: 'Guide', icon: 'BookOpen' },
+  { name: 'Forms & downloads', kind: 'PDFs', icon: 'FileDown' },
+  { name: 'SPARK & portals', kind: 'Links', icon: 'ExternalLink' },
+];
+
+const colours = [
+  { token: '--bg', name: 'Background', use: 'Page' },
+  { token: '--bg-subtle', name: 'Subtle', use: 'Section wash, no-photo tiles' },
+  { token: '--surface', name: 'Surface', use: 'Cards' },
+  { token: '--line', name: 'Line', use: 'Dividers, card borders' },
+  { token: '--line-strong', name: 'Line strong', use: 'Inputs, buttons' },
+  { token: '--ink', name: 'Ink', use: 'Headlines, body' },
+  { token: '--ink-2', name: 'Ink 2', use: 'Secondary text' },
+  { token: '--ink-3', name: 'Ink 3', use: 'Dates, counts' },
+  { token: '--accent', name: 'Union red', use: 'Primary buttons, active marks' },
+  { token: '--accent-ink', name: 'Red text', use: 'Red text and hover' },
+  { token: '--accent-soft', name: 'Red tint', use: 'Badges, icon wells' },
+  { token: '--link', name: 'Link blue', use: 'Links, focus ring' },
+  { token: '--success', name: 'Success', use: 'Confirmations' },
+  { token: '--warning', name: 'Warning', use: 'Notices' },
+];
+const sectionNav = ['Colour', 'Type', 'Spacing', 'Controls', 'Stories', 'Orders', 'Events', 'Tools', 'Districts', 'Notices & tabs', 'Empty states'];
+const slug = (s: string) => s.toLowerCase().replace(/[^a-z]+/g, '-');
+---
+<AppLayout lang={lang} title="Design system" noindex>
+  <div class="border-b border-line bg-bg-subtle">
+    <div class="wrap py-8 lg:py-10" lang="en">
+      <Breadcrumbs lang={lang} items={[{ label: 'Design system' }]} />
+      <h1 class="t-display mt-3">Design system</h1>
+      <p class="mt-2 max-w-2xl text-lg text-ink-2">"Civic newsroom": calm, flat and content first. One accent, union red, for actions and what matters most. Blue only for links. Titles in Anek Malayalam drawn 16% taller; text in Noto Sans Malayalam. Use the moon button in the header to see dark mode.</p>
+      <nav aria-label="Sections" class="no-scrollbar -mx-4 mt-5 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
+        {sectionNav.map((s) => <a href={`#${slug(s)}`} class="chip">{s}</a>)}
+      </nav>
+    </div>
+  </div>
+
+  <div class="wrap" lang="en">
+    <!-- Colour -->
+    <section class="section" aria-labelledby="colour">
+      <SectionHead title="Colour" id="colour" />
+      <p class="mb-4 max-w-2xl text-ink-2">Every text colour passes WCAG AA (4.5:1) on its background in both themes; the lowest pair is 5.2:1. White on union red is 5.9:1.</p>
+      <div class="grid gap-4 md:grid-cols-2">
+        {['light', 'dark'].map((theme) => (
+          <div data-theme={theme} class="rounded-[var(--radius-card)] border border-line bg-bg p-4 text-ink">
+            <p class="t-label mb-3">{theme === 'light' ? 'Light' : 'Dark'}</p>
+            <ul class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {colours.map((c) => (
+                <li class="overflow-hidden rounded-lg border border-line">
+                  <div class="h-12" style={`background: var(${c.token})`}></div>
+                  <div class="bg-surface p-2">
+                    <p class="text-sm font-semibold">{c.name}</p>
+                    <p class="t-meta">{c.use}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Type -->
+    <section class="section" aria-labelledby="type">
+      <SectionHead title="Type" id="type" />
+      <div class="card divide-y divide-line">
+        {[
+          ['Display · Anek 700', 't-display', 'ml', 'സെക്രട്ടറിയേറ്റിന് മുമ്പിലും ജില്ലാ കേന്ദ്രങ്ങളിലും പ്രതിഷേധ പ്രകടനം'],
+          ['H1 · Anek 700', 't-h1', 'en', 'Latest orders'],
+          ['H2 · Anek 650', 't-h2', 'ml', 'സെക്രട്ടറിയുടെ പേജ്'],
+          ['H3 · Anek 600', 't-h3', 'ml', 'രക്തദാന ക്യാമ്പ് സംഘടിപ്പിച്ചു'],
+          ['Body · Noto 400, 16px', '', 'ml', 'ജീവനക്കാരുടെ ആവശ്യങ്ങൾ ഉന്നയിച്ച് സംസ്ഥാനത്തുടനീളം ജീവനക്കാർ പ്രകടനമായി അണിനിരന്നു.'],
+          ['Body · Noto 400, 16px', '', 'en', 'Employees across the state marched to press their demands.'],
+          ['Reading · Noto 400, 18px', 'prose', 'ml', 'ഉച്ചഭക്ഷണ സമയത്ത് നടന്ന പ്രകടനങ്ങളിൽ വിവിധ വകുപ്പുകളിലെ ജീവനക്കാർ പങ്കെടുത്തു.'],
+          ['Meta · 13px', 't-meta', 'en', 'FSETO · 11 Oct 2026'],
+          ['Label · 12px caps', 't-label', 'en', 'Coming up'],
+        ].map(([name, cls, l, sample]) => (
+          <div class="grid gap-2 p-4 sm:grid-cols-[180px_1fr] sm:p-5">
+            <span class="t-meta pt-1">{name}</span>
+            <p lang={l} class={cls}>{sample}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Spacing -->
+    <section class="section" aria-labelledby="spacing">
+      <SectionHead title="Spacing, corners, elevation" id="spacing" />
+      <div class="grid gap-6 md:grid-cols-3">
+        <div class="card p-5">
+          <p class="t-label mb-3">8 px grid</p>
+          {[4, 8, 12, 16, 24, 32, 48, 64].map((n) => (
+            <div class="mb-1.5 flex items-center gap-3"><span class="t-meta w-10">{n}</span><span class="h-3 rounded-sm bg-accent" style={`width:${n * 2}px`}></span></div>
+          ))}
+          <p class="t-meta mt-3">Sections 48 px apart (64 on laptops); card padding 16–24 px.</p>
+        </div>
+        <div class="card p-5">
+          <p class="t-label mb-3">Corners</p>
+          <div class="flex flex-wrap items-end gap-3">
+            <div class="text-center"><div class="size-16 rounded-[var(--radius-control)] border border-line-strong bg-bg-subtle"></div><p class="t-meta mt-1">8 · controls</p></div>
+            <div class="text-center"><div class="size-16 rounded-[var(--radius-card)] border border-line-strong bg-bg-subtle"></div><p class="t-meta mt-1">12 · cards</p></div>
+            <div class="text-center"><div class="h-9 w-20 rounded-full border border-line-strong bg-bg-subtle"></div><p class="t-meta mt-1">Full · chips</p></div>
+          </div>
+        </div>
+        <div class="card p-5">
+          <p class="t-label mb-3">Elevation</p>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="card p-3 text-sm">Flat card<br /><span class="t-meta">1 px border</span></div>
+            <div class="popover p-3 text-sm">Floating<br /><span class="t-meta">menus, dialogs</span></div>
+          </div>
+          <p class="t-meta mt-3">Only things that float get a shadow. Motion stays under 200 ms and switches off when the device asks for less motion.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Controls -->
+    <section class="section" aria-labelledby="controls">
+      <SectionHead title="Controls" id="controls" />
+      <div class="grid gap-6 lg:grid-cols-2">
+        <div class="card space-y-4 p-5">
+          <p class="t-label">Buttons</p>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" class="btn btn-primary"><Icon name="FileText" size={18} /> Primary</button>
+            <button type="button" class="btn btn-secondary">Secondary</button>
+            <button type="button" class="btn btn-ghost">Ghost</button>
+            <button type="button" class="btn btn-primary" disabled>Disabled</button>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" class="btn btn-secondary btn-sm">Small</button>
+            <button type="button" class="btn btn-secondary btn-sm btn-icon" aria-label="Previous"><Icon name="ChevronLeft" size={18} /></button>
+            <button type="button" class="btn btn-secondary btn-sm btn-icon" aria-label="Next"><Icon name="ChevronRight" size={18} /></button>
+            <a href="#controls" class="link">Text link</a>
+          </div>
+          <p class="t-meta">Buttons are at least 44 px tall (36 px small), the recommended size for tapping on phones.</p>
+        </div>
+        <div class="card space-y-4 p-5">
+          <p class="t-label">Chips, badges, fields</p>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="chip" aria-pressed="true">All</button>
+            <button type="button" class="chip" aria-pressed="false">DA</button>
+            <button type="button" class="chip" aria-pressed="false">Pay Revision</button>
+            <button type="button" class="chip" aria-pressed="false">Pension</button>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <span class="badge badge-accent">Important</span>
+            <span class="badge badge-neutral">FSETO</span>
+            <span class="badge badge-warning">Notice</span>
+          </div>
+          <div class="grid gap-2 sm:grid-cols-2">
+            <div class="relative">
+              <Icon name="Search" size={18} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
+              <input type="search" class="field pl-9" placeholder="Search orders" aria-label="Search orders (example)" />
+            </div>
+            <select class="field" aria-label="Subject (example)"><option>All subjects</option><option>DA</option><option>Pension</option></select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stories -->
+    <section class="section" aria-labelledby="stories">
+      <SectionHead title="Stories" id="stories" />
+      <div class="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <div>
+          <p class="t-label mb-2">Lead · headline over photo on laptops, under it on phones</p>
+          <StoryLead post={lead} lang={lang} />
+        </div>
+        <div class="space-y-5">
+          <div><p class="t-label mb-2">Row with photo</p><StoryRow post={rowPhoto} lang={lang} /></div>
+          <div><p class="t-label mb-2">Row without photo · topic tile</p><StoryRow post={rowTile} lang={lang} /></div>
+          <div><p class="t-label mb-2">Very long headline · stops at 3 lines</p><StoryRow post={longTitle} lang={lang} /></div>
+          <div><p class="t-label mb-2">Text-only row · district first</p><StoryRow post={districtPosts[0]} lang={lang} thumb={false} meta="district" /></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Orders -->
+    <section class="section" aria-labelledby="orders">
+      <SectionHead title="Orders" id="orders" />
+      <ul class="max-w-3xl divide-y divide-line">
+        <li class="py-3 first:pt-0"><OrderRow order={important} lang={lang} /></li>
+        <li class="py-3"><OrderRow order={plain} lang={lang} /></li>
+        <li class="py-3"><OrderRow order={orders[orders.length - 1]} lang={lang} /></li>
+      </ul>
+      <p class="t-meta mt-2">The number sits in a document icon (type, number, year). The full GO number is read out first to screen readers.</p>
+    </section>
+
+    <!-- Events -->
+    <section class="section" aria-labelledby="events">
+      <SectionHead title="Events" id="events" />
+      <div class="grid gap-3 md:grid-cols-3">
+        <div><p class="t-label mb-2">Multi-day</p><EventCard event={multiDay} lang={lang} /></div>
+        <div><p class="t-label mb-2">With district</p><EventCard event={withDistrict} lang={lang} showDistrict /></div>
+        <div><p class="t-label mb-2">Long title</p><EventCard event={longEvent} lang={lang} /></div>
+      </div>
+    </section>
+
+    <!-- Tools -->
+    <section class="section" aria-labelledby="tools">
+      <SectionHead title="Tools & guides" id="tools" />
+      <ul class="grid max-w-md grid-cols-3 gap-2">
+        {tools.map((tl) => <li><ToolTile name={tl.name} kind={tl.kind} icon={tl.icon} href="#tools" /></li>)}
+      </ul>
+    </section>
+
+    <!-- Districts -->
+    <section class="section" aria-labelledby="districts">
+      <SectionHead title="Districts" id="districts" />
+      <div class="grid grid-cols-[minmax(0,1fr)] gap-8 md:grid-cols-2">
+        <div data-filterable data-limit="4">
+          <SectionHead title="District news" level="h3" size="h2">
+            <FilterMenu label="Filter district news by district" options={districts.map(({ d }) => ({ value: d.slug, label: d.name.en, short: d.name.en.replace('Thiruvananthapuram', 'TVM') }))} />
+          </SectionHead>
+          <ul class="divide-y divide-line">
+            {districtPosts.map((p, i) => <li data-filter-item data-value={p.district} hidden={i >= 4} class="py-3 first:pt-0"><StoryRow post={p} lang={lang} meta="district" /></li>)}
+          </ul>
+          <div data-filter-empty hidden><EmptyState compact title="No news yet" text="This district hasn't posted yet." /><span data-filter-name class="sr-only"></span></div>
+          <p class="t-meta mt-2">Try the filter: Idukki has no news, so the empty state appears.</p>
+        </div>
+        <div>
+          <SectionHead title="All districts" level="h3" size="h2" />
+          <ul class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {districts.map(({ d, count }) => <li><DistrictTile district={d} lang={lang} count={count} /></li>)}
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Notices & tabs -->
+    <section class="section" aria-labelledby="notices-tabs">
+      <SectionHead title="Notices & tabs" id="notices-tabs" />
+      <div class="space-y-6">
+        <Notice text="Example notice: a one- or two-line announcement, shown on the home page only while it is active." href="#notices-tabs" />
+        <div>
+          <Tabs tabs={['News', 'Office-bearers', 'Offices', 'Gallery']} idPrefix="demo" label="District sections (example)" />
+          {['News', 'Office-bearers', 'Offices', 'Gallery'].map((tb, i) => (
+            <div role="tabpanel" id={`demo-panel-${i}`} aria-labelledby={`demo-tab-${i}`} hidden={i !== 0} class="py-4 text-ink-2">{tb} panel. Arrow keys move between tabs.</div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- Empty states -->
+    <section class="section" aria-labelledby="empty-states">
+      <SectionHead title="Empty states" id="empty-states" />
+      <div class="grid gap-4 md:grid-cols-2">
+        <EmptyState icon="Newspaper" title="No district news yet" text="The district admin posts news here once the admin panel is live." />
+        <EmptyState icon="CalendarDays" title="Nothing scheduled" text="New events appear here as soon as they are added." />
+      </div>
+    </section>
+
+    <!-- Logo -->
+    <section class="section" aria-labelledby="logo">
+      <SectionHead title="Logo" id="logo" />
+      <div class="flex flex-wrap items-center gap-8">
+        <Logo />
+        <Logo size={36} stacked />
+        <div data-theme="dark" class="rounded-[var(--radius-card)] bg-bg p-4"><Logo inverse /></div>
+      </div>
+    </section>
+  </div>
+</AppLayout>

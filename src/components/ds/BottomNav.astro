@@ -1,0 +1,49 @@
+---
+/** Phone bottom bar: Home · News · Search · Orders · Districts. Search opens a full-width dialog. */
+import Icon from '~/components/ui/Icon.astro';
+import type { Lang } from '~/lib/types';
+import { href } from '~/lib/i18n';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const path = Astro.url.pathname.replace(/^\/en(?=\/|$)/, '') || '/';
+const tabs = [
+  { label: 'Home', path: '/', icon: 'House' },
+  { label: 'News', path: '/news', icon: 'Newspaper' },
+  { label: 'Search', path: '', icon: 'Search' },
+  { label: 'Orders', path: '/orders', icon: 'FileText' },
+  { label: 'Districts', path: '/districts', icon: 'MapPinned' },
+];
+const active = (p: string) => (p === '/' ? path === '/' : !!p && path.startsWith(p));
+---
+<nav lang="en" aria-label="Mobile" class="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/95 backdrop-blur lg:hidden">
+  <ul class="grid grid-cols-5 pb-[env(safe-area-inset-bottom)]">
+    {tabs.map((tb) => (
+      <li>
+        {tb.path ? (
+          <a href={href(lang, tb.path)} aria-current={active(tb.path) ? 'page' : undefined}
+            class:list={['flex flex-col items-center gap-0.5 py-2 text-[0.6875rem]', active(tb.path) ? 'font-semibold text-accent-ink' : 'text-ink-2']}>
+            <Icon name={tb.icon as any} size={22} stroke={active(tb.path) ? 2.2 : 1.75} />{tb.label}
+          </a>
+        ) : (
+          <button type="button" data-open-search class="flex w-full flex-col items-center gap-0.5 py-2 text-[0.6875rem] text-ink-2">
+            <Icon name={tb.icon as any} size={22} />{tb.label}
+          </button>
+        )}
+      </li>
+    ))}
+  </ul>
+</nav>
+
+<dialog id="search-dialog" lang="en" class="m-0 mt-0 h-auto max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-black/40" aria-label="Search">
+  <div class="border-b border-line bg-bg p-4">
+    <form action={href(lang, '/search')} role="search" class="flex gap-2">
+      <div class="relative flex-1">
+        <Icon name="Search" size={18} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
+        <input name="q" type="search" class="field pl-9" placeholder="Search orders, news, districts" aria-label="Search the site" autofocus />
+      </div>
+      <button type="button" data-close-dialog class="btn btn-ghost btn-icon" aria-label="Close search"><Icon name="X" size={20} /></button>
+    </form>
+    <p class="t-meta mt-2">Try a GO number like 112/2026, or a subject like DA or MEDISEP.</p>
+  </div>
+</dialog>

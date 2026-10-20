@@ -1,0 +1,55 @@
+---
+/**
+ * Underlined tab bar. Pass the tabs; write the panels yourself with
+ * `role="tabpanel" id="{idPrefix}-panel-{i}"` and `hidden` on all but the first.
+ * Arrow keys move between tabs (ARIA tabs pattern).
+ */
+interface Props { tabs: string[]; idPrefix: string; label: string }
+const { tabs, idPrefix, label } = Astro.props;
+---
+<div lang="en" role="tablist" aria-label={label} data-tabs class="no-scrollbar -mx-4 flex gap-1 overflow-x-auto border-b border-line px-4 md:mx-0 md:px-0">
+  {tabs.map((tb, i) => (
+    <button
+      type="button"
+      role="tab"
+      id={`${idPrefix}-tab-${i}`}
+      aria-controls={`${idPrefix}-panel-${i}`}
+      aria-selected={i === 0 ? 'true' : 'false'}
+      tabindex={i === 0 ? 0 : -1}
+      class="-mb-px whitespace-nowrap border-b-2 border-transparent px-3 py-2.5 text-[0.9375rem] text-ink-2 hover:text-ink aria-selected:border-accent aria-selected:font-semibold aria-selected:text-ink"
+    >{tb}</button>
+  ))}
+</div>
+
+<script>
+  function initTabs() {
+    document.querySelectorAll<HTMLElement>('[data-tabs]').forEach((list) => {
+      if (list.dataset.ready) return;
+      list.dataset.ready = '1';
+      const tabs = [...list.querySelectorAll<HTMLButtonElement>('[role=tab]')];
+      const select = (tab: HTMLButtonElement, focus = false) => {
+        for (const t of tabs) {
+          const on = t === tab;
+          t.setAttribute('aria-selected', String(on));
+          t.tabIndex = on ? 0 : -1;
+          const panel = document.getElementById(t.getAttribute('aria-controls')!);
+          if (panel) panel.hidden = !on;
+        }
+        if (focus) tab.focus();
+      };
+      list.addEventListener('click', (e) => {
+        const tab = (e.target as HTMLElement).closest<HTMLButtonElement>('[role=tab]');
+        if (tab) select(tab);
+      });
+      list.addEventListener('keydown', (e) => {
+        const i = tabs.indexOf(document.activeElement as HTMLButtonElement);
+        const next = ({ ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 } as Record<string, number>)[e.key];
+        if (i < 0 || next === undefined) return;
+        e.preventDefault();
+        select(tabs[(next + tabs.length) % tabs.length], true);
+      });
+    });
+  }
+  initTabs();
+  document.addEventListener('astro:page-load', initTabs);
+</script>
