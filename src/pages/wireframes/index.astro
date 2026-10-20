@@ -12,9 +12,9 @@ import type { Post } from '~/lib/types';
 const lang = 'ml' as const;
 const posts = allPosts();
 
-// 1 · Top news: the lead plus the next six stories
+// 1 · Top news: the lead plus up to four stories beside it
 const lead = posts.find((p) => p.featured) ?? posts[0];
-const topRest = posts.filter((p) => p !== lead).slice(0, 6);
+const topRest = posts.filter((p) => p !== lead).slice(0, 4);
 const used = new Set<Post>([lead, ...topRest]);
 
 // 2 · From the union: three columns, each continuing where Top news stops, so nothing repeats
@@ -30,7 +30,7 @@ const columns = [
 columns.unshift({ name: 'NGO Union News', more: '', posts: fresh(posts.filter((p) => p.topic !== 'secretary' && p.topic !== 'fseto'), 4) });
 
 const orders = latestOrders(5);
-const events = upcomingEvents(3);
+const events = upcomingEvents(50); // every upcoming event; the slider shows 3 at a time
 const popular = ['DA', 'Pay Revision', 'Pension', 'MEDISEP', 'Leave surrender', 'Bonus'];
 const districts = sortedDistricts().map((d) => ({ d, posts: postsForDistrict(d.slug) }));
 const issue = magazineIssues[0];
@@ -54,10 +54,10 @@ const meta = (p: Post) => `${topicBySlug[p.topic].name.en} · ${formatDate(p.dat
     </div>
   </div>
 
-  <!-- 1 · Top news: 1 lead + 6 with thumbnails -->
+  <!-- 1 · Top news: lead + up to 4 beside it, then the next 3 events -->
   <section class="wf-wrap mt-6" aria-labelledby="top-news">
     <div class="wf-section-head"><h2 id="top-news" lang="en" class="t-h1">Top news</h2><a href="/wireframes/news" lang="en" class="wf-link">All news</a></div>
-    <Note n={2}>Top news opens the page (search stays in the header). The lead's headline sits over its photo on laptops so the whole story fits the first screen, and under it on phones. Six more stories follow with thumbnails. Stories without a photo (here, the sample posts) show a neutral tile with their topic instead.</Note>
+    <Note n={2}>Top news opens the page (search stays in the header). The lead's headline sits over its photo on laptops so the whole story fits the first screen, and under it on phones. Up to four stories sit beside it; the fourth shows only where it fits next to the lead (laptops), so phones get three. Stories without a photo (here, the sample posts) show a neutral tile with their topic instead. The row underneath is a slider of all upcoming events: three in view on laptops, swipe on phones, with arrows only when there are more.</Note>
     <div class="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
       <!-- Lead: headline over the photo on laptops so the whole story fits the first screen; under it on phones -->
       <article class="relative overflow-hidden rounded-[10px]">
@@ -69,8 +69,8 @@ const meta = (p: Post) => `${topicBySlug[p.topic].name.en} · ${formatDate(p.dat
         </div>
       </article>
       <ul class="divide-y divide-zinc-200">
-        {topRest.slice(0, 3).map((p) => (
-          <li class="relative flex gap-3 py-3 first:pt-0">
+        {topRest.map((p, i) => (
+          <li class:list={['relative gap-3 py-3 first:pt-0', i === 3 ? 'hidden lg:flex' : 'flex']}>
             <Thumb post={p} class="w-24 shrink-0 self-start sm:w-28" />
             <div class="min-w-0">
               <p lang="en" class="t-meta">{meta(p)}</p>
@@ -80,17 +80,34 @@ const meta = (p: Post) => `${topicBySlug[p.topic].name.en} · ${formatDate(p.dat
         ))}
       </ul>
     </div>
-    <ul class="mt-6 grid gap-x-8 gap-y-4 border-t border-zinc-200 pt-6 sm:grid-cols-3">
-      {topRest.slice(3).map((p) => (
-        <li class="relative flex gap-3">
-          <Thumb post={p} class="w-24 shrink-0 self-start sm:w-28" />
-          <div class="min-w-0">
-            <p lang="en" class="t-meta">{meta(p)}</p>
-            <h3 lang={langOf(p.title, lang)} class="t-h3 clamp-3 mt-0.5"><a href={ARTICLE} class="stretched">{t(p.title, lang)}</a></h3>
-          </div>
-        </li>
-      ))}
-    </ul>
+    <div class="mt-6 border-t border-zinc-200 pt-5">
+      <div lang="en" class="mb-3 flex items-center justify-between gap-4">
+        <h2 class="t-label">Coming up</h2>
+        <div class="flex items-center gap-2">
+          <!-- Arrows appear only when there are more events than fit -->
+          <button type="button" data-ev-prev class="wf-btn wf-btn-line hidden !min-h-9 !px-3" aria-label="Previous events">‹</button>
+          <button type="button" data-ev-next class="wf-btn wf-btn-line hidden !min-h-9 !px-3" aria-label="Next events">›</button>
+          <a href="#" class="wf-link">Calendar</a>
+        </div>
+      </div>
+      <!-- Slider: every upcoming event; 3 per view on laptops, swipe on phones -->
+      <ul data-ev-track class="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 md:mx-0 md:px-0">
+        {events.map((e) => {
+          const d = dateParts(e.start);
+          return (
+            <li class="wf-box relative flex w-[85%] shrink-0 snap-start gap-4 p-3 sm:w-[calc((100%-0.75rem)/2)] lg:w-[calc((100%-1.5rem)/3)]">
+              <div lang="en" class="w-14 shrink-0 rounded-lg bg-zinc-100 py-1.5 text-center leading-tight">
+                <p class="text-xs font-semibold uppercase">{d.monthShort}</p><p class="text-xl font-bold tabular-nums">{d.d}</p>
+              </div>
+              <div class="min-w-0">
+                <a href="#" lang={langOf(e.title, lang)} class="stretched font-semibold leading-snug">{t(e.title, lang)}</a>
+                <p lang={langOf(e.venue, lang)} class="t-meta mt-0.5">{t(e.venue, lang)}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   </section>
 
   <!-- 2 · From the union -->
@@ -125,11 +142,11 @@ const meta = (p: Post) => `${topicBySlug[p.topic].name.en} · ${formatDate(p.dat
     </div>
   </section>
 
-  <!-- 3 · Orders & events -->
-  <section class="wf-wrap mt-12 grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+  <!-- 3 · Latest orders (events moved up under Top news) -->
+  <section class="wf-wrap mt-12">
     <div>
       <div class="wf-section-head"><h2 lang="en" class="t-h1">Latest orders</h2><a href="/wireframes/orders" lang="en" class="wf-link">All orders</a></div>
-      <Note n={4}>Popular subjects sit above the orders as quick filters, each opening the Orders page already filtered. GO number and date lead each row.</Note>
+      <Note n={4}>Orders now take the full width. Popular subjects sit above them as quick filters, each opening the Orders page already filtered. GO number and date lead each row.</Note>
       <div lang="en" class="no-scrollbar -mx-4 mb-2 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
         {popular.map((c) => <a href="/wireframes/orders" class="wf-chip">{c}</a>)}
       </div>
@@ -147,25 +164,6 @@ const meta = (p: Post) => `${topicBySlug[p.topic].name.en} · ${formatDate(p.dat
             </div>
           </li>
         ))}
-      </ul>
-    </div>
-    <div>
-      <div class="wf-section-head"><h2 lang="en" class="t-h1">Events</h2><a href="#" lang="en" class="wf-link">Calendar</a></div>
-      <ul class="space-y-3">
-        {events.map((e) => {
-          const d = dateParts(e.start);
-          return (
-            <li class="wf-box relative flex gap-4 p-3">
-              <div lang="en" class="w-14 shrink-0 rounded-lg bg-zinc-100 py-1.5 text-center leading-tight">
-                <p class="text-xs font-semibold uppercase">{d.monthShort}</p><p class="text-xl font-bold tabular-nums">{d.d}</p>
-              </div>
-              <div class="min-w-0">
-                <a href="#" lang={langOf(e.title, lang)} class="stretched font-semibold leading-snug">{t(e.title, lang)}</a>
-                <p lang={langOf(e.venue, lang)} class="t-meta mt-0.5">{t(e.venue, lang)}</p>
-              </div>
-            </li>
-          );
-        })}
       </ul>
     </div>
   </section>
@@ -210,3 +208,24 @@ const meta = (p: Post) => `${topicBySlug[p.topic].name.en} · ${formatDate(p.dat
     </div>
   </section>
 </WireLayout>
+
+<script>
+  // Events slider: show the arrows only when the track overflows, and page by one view
+  const track = document.querySelector<HTMLElement>('[data-ev-track]');
+  const prev = document.querySelector<HTMLButtonElement>('[data-ev-prev]');
+  const next = document.querySelector<HTMLButtonElement>('[data-ev-next]');
+  if (track && prev && next) {
+    const sync = () => {
+      const more = track.scrollWidth > track.clientWidth + 2;
+      prev.classList.toggle('hidden', !more);
+      next.classList.toggle('hidden', !more);
+      prev.disabled = track.scrollLeft <= 2;
+      next.disabled = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2;
+    };
+    prev.addEventListener('click', () => track.scrollBy({ left: -track.clientWidth, behavior: 'smooth' }));
+    next.addEventListener('click', () => track.scrollBy({ left: track.clientWidth, behavior: 'smooth' }));
+    track.addEventListener('scroll', sync, { passive: true });
+    addEventListener('resize', sync);
+    sync();
+  }
+</script>
