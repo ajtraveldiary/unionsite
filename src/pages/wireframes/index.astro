@@ -54,10 +54,10 @@ const NEWS_LIMIT = 5;
 const shortName = (en: string) => en.replace('Thiruvananthapuram', 'TVM');
 const issue = magazineIssues[0];
 const ARTICLE = '/wireframes/article';
-// "G.O.(P) No.112/2026/Fin" -> number "112/2026" and kind "G.O.(P) · Fin", so the number reads first
-const goShort = (go: string) => {
-  const m = go.match(/^(.*?)\s*No\.\s*(\d+\/\d+)\/?(.*)$/);
-  return m ? { num: m[2], kind: [m[1], m[3]].filter(Boolean).join(' · ') } : { num: go, kind: '' };
+// "G.O.(P) No.112/2026/Fin" -> type "G.O.(P)", number "112", year "2026", department "Fin"
+const goParts = (go: string) => {
+  const m = go.match(/^(.*?)\s*No\.\s*(\d+)\/(\d+)\/?(.*)$/);
+  return m ? { type: m[1], n: m[2], year: m[3], dept: m[4] } : { type: '', n: go, year: '', dept: '' };
 };
 const meta = (p: Post) => `${topicBySlug[p.topic].name.en} · ${formatDate(p.date, 'en', 'short')}`;
 ---
@@ -165,24 +165,28 @@ const meta = (p: Post) => `${topicBySlug[p.topic].name.en} · ${formatDate(p.dat
   <section class="wf-wrap mt-12 grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
     <div>
       <div class="wf-section-head"><h2 lang="en" class="t-h1">Latest orders</h2><a href="/wireframes/orders" lang="en" class="wf-link">All orders</a></div>
-      <Note n={4}>Orders on the left, tools and guides for employees on the right. Popular subjects sit above the orders as quick filters, each opening the Orders page already filtered. GO number and date lead each row.</Note>
+      <Note n={4}>Orders on the left, tools and guides for employees on the right. Popular subjects sit above the orders as quick filters, each opening the Orders page already filtered. Each order number sits inside a small document icon (type, number, year), with the date, department and subject under the title.</Note>
       <div lang="en" class="no-scrollbar -mx-4 mb-2 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
         {popular.map((c) => <a href="/wireframes/orders" class="wf-chip">{c}</a>)}
       </div>
       <ul class="divide-y divide-zinc-200">
-        {orders.map((o) => (
-          <li class="relative flex gap-4 py-3">
-            <div lang="en" class="w-28 shrink-0 text-sm sm:w-32">
-              <p class="text-[1.05rem] font-bold tabular-nums">{goShort(o.goNumber).num}</p>
-              <p class="t-meta">{goShort(o.goNumber).kind}</p>
-              <p class="t-meta">{formatDate(o.goDate, 'en', 'short')}</p>
-            </div>
-            <div class="min-w-0">
-              <a href="/wireframes/orders" lang={langOf(o.title, lang)} class="stretched clamp-2 font-medium leading-snug">{t(o.title, lang)}</a>
-              <p lang="en" class="t-meta mt-0.5">{subjectName(o.subject)?.en}{o.important && ' · Important'}</p>
-            </div>
-          </li>
-        ))}
+        {orders.map((o) => {
+          const g = goParts(o.goNumber);
+          return (
+            <li class="relative flex items-center gap-4 py-3">
+              <!-- Document icon carrying the order number: type, number, year -->
+              <div lang="en" class="wf-doc" aria-hidden="true">
+                <span class="text-[0.5625rem] font-semibold uppercase tracking-wide text-zinc-500">{g.type}</span>
+                <span class="text-[1.25rem] font-bold leading-none tabular-nums">{g.n}</span>
+                <span class="text-[0.6875rem] font-medium tabular-nums text-zinc-600">{g.year}</span>
+              </div>
+              <div class="min-w-0">
+                <a href="/wireframes/orders" lang={langOf(o.title, lang)} class="stretched clamp-2 font-medium leading-snug"><span class="sr-only" lang="en">{o.goNumber}: </span>{t(o.title, lang)}</a>
+                <p lang="en" class="t-meta mt-0.5">{formatDate(o.goDate, 'en', 'short')}{g.dept && ` · ${g.dept}`} · {subjectName(o.subject)?.en}{o.important && ' · Important'}</p>
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
     <div>
