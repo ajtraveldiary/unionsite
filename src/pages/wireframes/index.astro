@@ -5,7 +5,7 @@ import Ph from '~/components/wire/Ph.astro';
 import Thumb from '~/components/wire/Thumb.astro';
 import { allPosts, latestOrders, upcomingEvents, sortedDistricts, postsForDistrict, subjectName } from '~/lib/content';
 import { t, langOf, formatDate, dateParts, monthName } from '~/lib/i18n';
-import { topicBySlug } from '~/data/districts';
+import { topicBySlug, districtBySlug } from '~/data/districts';
 import { magazineIssues, videos } from '~/data/site';
 import type { Post } from '~/lib/types';
 
@@ -32,7 +32,26 @@ columns.unshift({ name: 'NGO Union News', more: '', posts: fresh(posts.filter((p
 const orders = latestOrders(5);
 const events = upcomingEvents(50); // every upcoming event; the slider shows 3 at a time
 const popular = ['DA', 'Pay Revision', 'Pension', 'MEDISEP', 'Leave surrender', 'Bonus'];
-const districts = sortedDistricts().map((d) => ({ d, posts: postsForDistrict(d.slug) }));
+// Tools & guides beside the orders: calculators, how-to guides, forms and portals (3x3)
+const tools = [
+  { name: 'DA arrears', kind: 'Calculator' },
+  { name: 'Pay fixation', kind: 'Calculator' },
+  { name: 'Leave surrender', kind: 'Calculator' },
+  { name: 'Pension & DCRG', kind: 'Calculator' },
+  { name: 'MEDISEP claim', kind: 'Guide' },
+  { name: 'Apply for HBA', kind: 'Guide' },
+  { name: 'GPF withdrawal', kind: 'Guide' },
+  { name: 'Forms & downloads', kind: 'PDFs' },
+  { name: 'SPARK & portals', kind: 'Links' },
+];
+// Districts: events and news from every district (each column filterable by district),
+// then all 15 districts as links to their pages
+const districts = sortedDistricts().map((d) => ({ d, count: postsForDistrict(d.slug).length }));
+const districtEvents = upcomingEvents(50).filter((e) => e.district);
+const districtPosts = posts.filter((p) => p.district);
+const EVENT_LIMIT = 4;
+const NEWS_LIMIT = 5;
+const shortName = (en: string) => en.replace('Thiruvananthapuram', 'TVM');
 const issue = magazineIssues[0];
 const ARTICLE = '/wireframes/article';
 // "G.O.(P) No.112/2026/Fin" -> number "112/2026" and kind "G.O.(P) · Fin", so the number reads first
@@ -142,18 +161,18 @@ const meta = (p: Post) => `${topicBySlug[p.topic].name.en} · ${formatDate(p.dat
     </div>
   </section>
 
-  <!-- 3 · Latest orders (events moved up under Top news) -->
-  <section class="wf-wrap mt-12">
+  <!-- 3 · Latest orders + Tools & guides -->
+  <section class="wf-wrap mt-12 grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
     <div>
       <div class="wf-section-head"><h2 lang="en" class="t-h1">Latest orders</h2><a href="/wireframes/orders" lang="en" class="wf-link">All orders</a></div>
-      <Note n={4}>Orders now take the full width. Popular subjects sit above them as quick filters, each opening the Orders page already filtered. GO number and date lead each row.</Note>
+      <Note n={4}>Orders on the left, tools and guides for employees on the right. Popular subjects sit above the orders as quick filters, each opening the Orders page already filtered. GO number and date lead each row.</Note>
       <div lang="en" class="no-scrollbar -mx-4 mb-2 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
         {popular.map((c) => <a href="/wireframes/orders" class="wf-chip">{c}</a>)}
       </div>
       <ul class="divide-y divide-zinc-200">
         {orders.map((o) => (
           <li class="relative flex gap-4 py-3">
-            <div lang="en" class="w-24 shrink-0 text-sm sm:w-28">
+            <div lang="en" class="w-28 shrink-0 text-sm sm:w-32">
               <p class="text-[1.05rem] font-bold tabular-nums">{goShort(o.goNumber).num}</p>
               <p class="t-meta">{goShort(o.goNumber).kind}</p>
               <p class="t-meta">{formatDate(o.goDate, 'en', 'short')}</p>
@@ -166,29 +185,112 @@ const meta = (p: Post) => `${topicBySlug[p.topic].name.en} · ${formatDate(p.dat
         ))}
       </ul>
     </div>
+    <div>
+      <div class="wf-section-head"><h2 lang="en" class="t-h1">Tools &amp; guides</h2><a href="#" lang="en" class="wf-link">All tools</a></div>
+      <Note n={5}>A 3×3 grid of icons: calculators, how-to guides, forms and Govt portals. Calculators are new features to build in a later phase.</Note>
+      <ul lang="en" class="grid grid-cols-3 gap-2">
+        {tools.map((tl) => (
+          <li class="wf-box relative flex aspect-square flex-col items-center justify-center gap-1.5 p-2 text-center hover:bg-zinc-50">
+            <span class="grid size-10 place-items-center rounded-lg border-2 border-zinc-300 text-[0.625rem] font-semibold text-zinc-500" aria-hidden="true">icon</span>
+            <a href="#" class="stretched text-[0.8125rem] font-semibold leading-tight">{tl.name}</a>
+            <span class="text-[0.6875rem] text-zinc-500">{tl.kind}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   </section>
 
-  <!-- 4 · Districts -->
+  <!-- 4 · Districts: events and news from every district, then all 15 districts -->
   <section class="wf-wrap mt-12" aria-labelledby="districts">
     <div class="wf-section-head"><h2 id="districts" lang="en" class="t-h1">Districts</h2><a href="/wireframes/district" lang="en" class="wf-link">Map of districts</a></div>
-    <Note n={5}>All 15 districts with their latest post. The interactive map lives on the Districts page.</Note>
-    <ul class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-      {districts.map(({ d, posts: ps }) => (
-        <li class="wf-box relative p-3">
-          <a href="/wireframes/district" lang="en" class="stretched font-semibold">{d.name.en.replace('Thiruvananthapuram', 'TVM')}</a>
-          {ps[0]
-            ? <p lang={langOf(ps[0].title, lang)} class="clamp-2 mt-1 text-sm text-zinc-600">{t(ps[0].title, lang)}</p>
-            : <p lang="en" class="t-meta mt-1">No news yet</p>}
-        </li>
-      ))}
-    </ul>
+    <Note n={6}>Three columns. Events and news from all districts, each with a filter button to narrow it to one district. Then all 15 districts, each linking to its own page.</Note>
+    <div class="grid grid-cols-[minmax(0,1fr)] gap-8 md:grid-cols-2 lg:grid-cols-3">
+      <!-- Events from all districts -->
+      <div data-dfilter data-limit={EVENT_LIMIT}>
+        <div class="mb-3 flex items-center justify-between gap-3 border-b-2 border-zinc-800 pb-1">
+          <h3 lang="en" class="t-h2">District events</h3>
+          <details class="relative" data-dfilter-menu>
+            <summary lang="en" class="flex cursor-pointer list-none items-center gap-1.5 rounded-lg border border-zinc-300 px-2.5 py-1 text-sm hover:bg-zinc-50" aria-label="Filter events by district">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" /></svg>
+              <span data-dfilter-label class="max-w-28 truncate">All</span>
+            </summary>
+            <div lang="en" class="absolute right-0 z-20 mt-1 max-h-72 w-56 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-1 shadow-lg">
+              <button type="button" data-dfilter-pick="" aria-pressed="true" class="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-zinc-100 aria-pressed:font-semibold">All districts</button>
+              {districts.map(({ d }) => <button type="button" data-dfilter-pick={d.slug} aria-pressed="false" class="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-zinc-100 aria-pressed:font-semibold">{d.name.en}</button>)}
+            </div>
+          </details>
+        </div>
+        <ul data-dfilter-list class="space-y-2">
+          {districtEvents.map((e, i) => {
+            const d = dateParts(e.start);
+            return (
+              <li data-district={e.district} hidden={i >= EVENT_LIMIT} class="wf-box relative flex gap-3 p-3">
+                <div lang="en" class="w-12 shrink-0 rounded-lg bg-zinc-100 py-1 text-center leading-tight">
+                  <p class="text-[0.6875rem] font-semibold uppercase">{d.monthShort}</p><p class="text-lg font-bold tabular-nums">{d.d}</p>
+                </div>
+                <div class="min-w-0">
+                  <p lang="en" class="t-meta font-semibold !text-zinc-700">{shortName(districtBySlug[e.district!].name.en)}</p>
+                  <a href="#" lang={langOf(e.title, lang)} class="stretched font-semibold leading-snug">{t(e.title, lang)}</a>
+                  <p lang={langOf(e.venue, lang)} class="t-meta">{t(e.venue, lang)}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        <p lang="en" data-dfilter-empty hidden={districtEvents.length > 0} class="rounded-xl border border-dashed border-zinc-300 p-4 text-sm text-zinc-500">No upcoming events<span data-dfilter-name></span>.</p>
+        <a href="#" lang="en" class="wf-link mt-3 inline-block">All events</a>
+      </div>
+
+      <!-- News from all districts -->
+      <div data-dfilter data-limit={NEWS_LIMIT}>
+        <div class="mb-3 flex items-center justify-between gap-3 border-b-2 border-zinc-800 pb-1">
+          <h3 lang="en" class="t-h2">District news</h3>
+          <details class="relative" data-dfilter-menu>
+            <summary lang="en" class="flex cursor-pointer list-none items-center gap-1.5 rounded-lg border border-zinc-300 px-2.5 py-1 text-sm hover:bg-zinc-50" aria-label="Filter news by district">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" /></svg>
+              <span data-dfilter-label class="max-w-28 truncate">All</span>
+            </summary>
+            <div lang="en" class="absolute right-0 z-20 mt-1 max-h-72 w-56 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-1 shadow-lg">
+              <button type="button" data-dfilter-pick="" aria-pressed="true" class="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-zinc-100 aria-pressed:font-semibold">All districts</button>
+              {districts.map(({ d }) => <button type="button" data-dfilter-pick={d.slug} aria-pressed="false" class="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-zinc-100 aria-pressed:font-semibold">{d.name.en}</button>)}
+            </div>
+          </details>
+        </div>
+        <ul data-dfilter-list class="divide-y divide-zinc-200">
+          {districtPosts.map((p, i) => (
+            <li data-district={p.district} hidden={i >= NEWS_LIMIT} class="relative flex gap-3 py-3 first:pt-0">
+              <Thumb post={p} class="w-20 shrink-0 self-start" />
+              <div class="min-w-0">
+                <p lang="en" class="t-meta"><span class="font-semibold text-zinc-700">{shortName(districtBySlug[p.district!].name.en)}</span> · {formatDate(p.date, 'en', 'short')}</p>
+                <a href={ARTICLE} lang={langOf(p.title, lang)} class="stretched t-h3 clamp-2 mt-0.5 block">{t(p.title, lang)}</a>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p lang="en" data-dfilter-empty hidden={districtPosts.length > 0} class="rounded-xl border border-dashed border-zinc-300 p-4 text-sm text-zinc-500">No news<span data-dfilter-name></span> yet.</p>
+        <a href="/wireframes/news" lang="en" class="wf-link mt-3 inline-block">All district news</a>
+      </div>
+
+      <!-- All districts -->
+      <div class="md:col-span-2 lg:col-span-1">
+        <h3 lang="en" class="t-h2 mb-3 border-b-2 border-zinc-800 pb-1">All districts</h3>
+        <ul lang="en" class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
+          {districts.map(({ d, count }) => (
+            <li class="wf-box relative px-3 py-2 hover:bg-zinc-50">
+              <a href="/wireframes/district" class="stretched block text-sm font-semibold leading-snug">{shortName(d.name.en)}</a>
+              <span class="t-meta">{count ? `${count} post${count === 1 ? '' : 's'}` : 'No posts yet'}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
   </section>
 
   <!-- 5 · Read & watch -->
   <section class="wf-wrap mt-12 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
     <div>
       <div class="wf-section-head"><h2 lang="en" class="t-h1">Kerala Service</h2><a href="#" lang="en" class="wf-link">Archive</a></div>
-      <Note n={6}>The current magazine issue and the three latest videos close the page. Videos load only when tapped.</Note>
+      <Note n={7}>The current magazine issue and the three latest videos close the page. Videos load only when tapped.</Note>
       <div class="flex gap-4">
         <Ph label="Cover" ratio="210/297" class="w-28 shrink-0" />
         <div lang="en">
@@ -210,6 +312,32 @@ const meta = (p: Post) => `${topicBySlug[p.topic].name.en} · ${formatDate(p.dat
 </WireLayout>
 
 <script>
+  // District columns: the filter button narrows a column to one district
+  document.querySelectorAll<HTMLElement>('[data-dfilter]').forEach((box) => {
+    const limit = Number(box.dataset.limit) || 5;
+    const items = [...box.querySelectorAll<HTMLElement>('[data-dfilter-list] > li')];
+    const empty = box.querySelector<HTMLElement>('[data-dfilter-empty]')!;
+    const label = box.querySelector<HTMLElement>('[data-dfilter-label]')!;
+    const menu = box.querySelector<HTMLDetailsElement>('[data-dfilter-menu]')!;
+    box.addEventListener('click', (e) => {
+      const pick = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-dfilter-pick]');
+      if (!pick) return;
+      const slug = pick.dataset.dfilterPick!;
+      const name = pick.textContent!.trim();
+      let shown = 0;
+      for (const li of items) {
+        const ok = (!slug || li.dataset.district === slug) && shown < limit;
+        li.hidden = !ok;
+        if (ok) shown++;
+      }
+      empty.hidden = shown > 0;
+      empty.querySelector('[data-dfilter-name]')!.textContent = slug ? ` in ${name}` : '';
+      label.textContent = slug ? name.replace('Thiruvananthapuram', 'TVM') : 'All';
+      box.querySelectorAll('[data-dfilter-pick]').forEach((b) => b.setAttribute('aria-pressed', String(b === pick)));
+      menu.open = false;
+    });
+  });
+
   // Events slider: show the arrows only when the track overflows, and page by one view
   const track = document.querySelector<HTMLElement>('[data-ev-track]');
   const prev = document.querySelector<HTMLButtonElement>('[data-ev-prev]');
