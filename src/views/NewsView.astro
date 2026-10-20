@@ -1,70 +1,224 @@
 ---
-import Base from '~/layouts/Base.astro';
-import PageHero from '~/components/PageHero.astro';
-import StoryCard from '~/components/StoryCard.astro';
-import type { Lang } from '~/lib/types';
-import { allPosts, sortedDistricts } from '~/lib/content';
-import { topics } from '~/data/districts';
+/**
+ * News (redesign, Phase C): search within news, topic chips and a district menu over a
+ * text-first feed grouped by month, with "Load more". The newest story leads while no
+ * filter is on. Filters live in the URL (?topic=&district=&q=), so a filtered view can be
+ * shared and the home page's "More from…" links open it ready-filtered.
+ *
+ * Every post is in the page and filtered in the browser, which is fine for the prototype's
+ * sample set; with the full archive (Phase 2) the same URLs are answered by the server.
+ */
+import AppLayout from '~/layouts/AppLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
+import SectionHead from '~/components/ds/SectionHead.astro';
+import StoryLead from '~/components/ds/StoryLead.astro';
+import StoryItem from '~/components/ds/StoryItem.astro';
+import EventCard from '~/components/ds/EventCard.astro';
+import EmptyState from '~/components/ds/EmptyState.astro';
+import type { Lang, Post } from '~/lib/types';
+import { href, monthName } from '~/lib/i18n';
+import { allPosts, sortedDistricts, upcomingEvents } from '~/lib/content';
+import { topics, topicBySlug, districtBySlug } from '~/data/districts';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
-const list = allPosts();
+const L = (p: string) => href(lang, p);
+const posts = allPosts();
+const lead = posts[0];
+const PAGE = 12;
+
+// Months of the newest year, then whole years before it
+const newestYear = Number(lead.date.slice(0, 4));
+const groupOf = (p: Post) => {
+  const y = Number(p.date.slice(0, 4));
+  return y === newestYear ? `${monthName(Number(p.date.slice(5, 7)), 'en')} ${y}` : String(y);
+};
+const groups: { label: string; items: Post[] }[] = [];
+for (const p of posts) {
+  const label = groupOf(p);
+  if (groups.at(-1)?.label !== label) groups.push({ label, items: [] });
+  groups.at(-1)!.items.push(p);
+}
+// Text the search box matches against, in both languages
+const searchText = (p: Post) =>
+  [p.title.ml, p.title.en, p.summary.ml, p.summary.en, topicBySlug[p.topic]?.name.en, p.district && districtBySlug[p.district]?.name.en]
+    .filter(Boolean).join(' ').toLowerCase();
+
+const usedTopics = topics.filter((tp) => posts.some((p) => p.topic === tp.slug));
+const events = upcomingEvents(3);
+// Items shown before any script runs: the first page, without the lead (it shows above)
+const firstPage = new Set(posts.slice(1, PAGE + 1).map((p) => p.id));
 ---
-<Base lang={lang} title="News" description="News from the Kerala NGO Union and its 15 district committees.">
-  <PageHero lang={lang} eyebrow="Newsroom" title="Union news" sub="Struggles, campaigns, social work and district activity — as it happens." crumbs={[{ label: 'News' }]} />
-  <div class="container-x py-8 lg:py-12">
-    <div class="mb-8 flex flex-col gap-3 lg:flex-row lg:items-center" data-news-filters>
-      <div class="no-scrollbar -mx-4 flex flex-1 gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0" role="toolbar" aria-label="Topic">
-        <button type="button" class="chip" aria-pressed="true" data-f-topic="all" lang="en">All topics</button>
-        {topics.filter((tp) => list.some((p) => p.topic === tp.slug)).map((tp) => (
-          <button type="button" class="chip" aria-pressed="false" data-f-topic={tp.slug} lang="en">{tp.name.en}</button>
-        ))}
-      </div>
-      <label lang="en" class="flex items-center gap-2 text-sm font-semibold">
-        District
-        <select data-f-district class="h-10 rounded-xl border border-line-strong bg-surface px-3 font-medium">
-          <option value="all">All · state & districts</option>
+<AppLayout lang={lang} title="News" description="News from the Kerala NGO Union and its 15 district committees.">
+  <div class="wrap pt-5 lg:pt-8" lang="en">
+    <Breadcrumbs lang={lang} items={[{ label: 'News' }]} />
+    <h1 class="t-display mt-2">News</h1>
+    <p class="mt-1 text-ink-2">From the union and its 15 district committees.</p>
+
+    <form data-news-filters role="search" aria-label="Filter news" class="mt-5">
+      <div class="flex flex-col gap-3 md:flex-row">
+        <div class="relative min-w-0 flex-1 md:max-w-md">
+          <Icon name="Search" size={18} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
+          <input name="q" type="search" data-news-q class="field pl-9" placeholder="Search news" aria-label="Search news" autocomplete="off" />
+        </div>
+        <select name="district" data-news-district class="field md:w-60" aria-label="District">
+          <option value="all">All districts</option>
           <option value="state">State level only</option>
           {sortedDistricts().map((d) => <option value={d.slug}>{d.name.en}</option>)}
         </select>
-      </label>
-    </div>
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6" data-news-grid>
-      {list.map((p) => (
-        <div data-topic={p.topic} data-district={p.district ?? 'state'} class="news-item flex">
-          <StoryCard post={p} lang={lang} class="w-full" headingLevel="h2" />
-        </div>
-      ))}
-    </div>
-    <p lang="en" class="hidden py-16 text-center text-ink-3" data-news-empty>No stories match these filters yet.</p>
+      </div>
+      <div role="toolbar" aria-label="Topic" class="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
+        <button type="button" class="chip" aria-pressed="true" data-news-topic="all">All</button>
+        {usedTopics.map((tp) => <button type="button" class="chip" aria-pressed="false" data-news-topic={tp.slug}>{tp.name.en}</button>)}
+      </div>
+    </form>
   </div>
-</Base>
+
+  <div class="wrap mt-8 grid gap-x-12 gap-y-14 lg:grid-cols-[minmax(0,1fr)_300px]">
+    <div>
+      <div data-news-lead class="mb-8">
+        <StoryLead post={lead} lang={lang} headingLevel="h2" ratio="2/1" />
+      </div>
+      <p class="sr-only" aria-live="polite" data-news-status></p>
+
+      {groups.map((g) => (
+        <section data-news-group class="mb-8" aria-label={g.label} hidden={!g.items.some((p) => firstPage.has(p.id))}>
+          <h2 lang="en" class="t-label mb-1">{g.label}</h2>
+          <ul class="divide-y divide-line border-t border-line">
+            {g.items.map((p) => (
+              <li data-news-item data-topic={p.topic} data-district={p.district ?? 'state'} data-text={searchText(p)} data-lead={p === lead ? '' : undefined} hidden={!firstPage.has(p.id)} class="py-4">
+                <StoryItem post={p} lang={lang} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+
+      <div data-news-empty hidden>
+        <EmptyState icon="Newspaper" title="No stories match" text="Try another topic or district, or clear the search.">
+          <button type="button" data-news-clear class="btn btn-secondary btn-sm mt-4">Clear filters</button>
+        </EmptyState>
+      </div>
+      <div lang="en" class="text-center">
+        <p class="t-meta" data-news-count>Showing {Math.min(PAGE, posts.length - 1)} of {posts.length - 1}</p>
+        <button type="button" data-news-more data-page={PAGE} class="btn btn-secondary mt-2" hidden={posts.length - 1 <= PAGE}>Load more</button>
+      </div>
+    </div>
+
+    <aside lang="en" class="space-y-10">
+      {events.length > 0 && (
+        <section aria-labelledby="news-events">
+          <SectionHead title="Coming up" id="news-events" size="h2" href={L('/events')} linkLabel="All events" />
+          <ul class="space-y-2">
+            {events.map((e) => <li><EventCard event={e} lang={lang} showDistrict /></li>)}
+          </ul>
+        </section>
+      )}
+      <section aria-labelledby="news-topics">
+        <SectionHead title="Topics" id="news-topics" size="h2" />
+        <ul class="divide-y divide-line text-sm">
+          {usedTopics.map((tp) => (
+            <li>
+              <a href={L(`/news?topic=${tp.slug}`)} data-news-topic-link={tp.slug} class="flex items-center justify-between gap-3 py-2 hover:text-accent-ink">
+                <span class="font-medium">{tp.name.en}</span>
+                <span class="t-meta">{posts.filter((p) => p.topic === tp.slug).length}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </aside>
+  </div>
+</AppLayout>
 
 <script>
-  document.addEventListener('astro:page-load', () => {
-    const root = document.querySelector<HTMLElement>('[data-news-filters]');
-    if (!root) return;
-    let topic = 'all', district = 'all';
+  function initNews() {
+    const form = document.querySelector<HTMLFormElement>('[data-news-filters]');
+    if (!form || form.dataset.ready) return;
+    form.dataset.ready = '1';
+    const q = form.querySelector<HTMLInputElement>('[data-news-q]')!;
+    const sel = form.querySelector<HTMLSelectElement>('[data-news-district]')!;
+    const chips = [...form.querySelectorAll<HTMLButtonElement>('[data-news-topic]')];
+    const lead = document.querySelector<HTMLElement>('[data-news-lead]')!;
+    const items = [...document.querySelectorAll<HTMLElement>('[data-news-item]')];
+    const groups = [...document.querySelectorAll<HTMLElement>('[data-news-group]')];
+    const empty = document.querySelector<HTMLElement>('[data-news-empty]')!;
+    const count = document.querySelector<HTMLElement>('[data-news-count]')!;
+    const more = document.querySelector<HTMLButtonElement>('[data-news-more]')!;
+    const status = document.querySelector<HTMLElement>('[data-news-status]')!;
+    const PAGE = Number(more.dataset.page) || 12;
+
     const params = new URLSearchParams(location.search);
-    const apply = () => {
-      let shown = 0;
-      document.querySelectorAll<HTMLElement>('.news-item').forEach((el) => {
-        const ok = (topic === 'all' || el.dataset.topic === topic) && (district === 'all' || el.dataset.district === district);
-        el.hidden = !ok;
-        if (ok) shown++;
-      });
-      document.querySelector('[data-news-empty]')?.classList.toggle('hidden', shown > 0);
-      root.querySelectorAll<HTMLButtonElement>('[data-f-topic]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.fTopic === topic)));
+    let topic = chips.some((c) => c.dataset.newsTopic === params.get('topic')) ? params.get('topic')! : 'all';
+    let district = params.get('district') ?? 'all';
+    if (![...sel.options].some((o) => o.value === district)) district = 'all';
+    q.value = params.get('q') ?? '';
+    sel.value = district;
+    let limit = PAGE;
+
+    const apply = (announce = false) => {
+      const term = q.value.trim().toLowerCase();
+      const filtered = topic !== 'all' || district !== 'all' || !!term;
+      lead.hidden = filtered;
+      let matches = 0, shown = 0;
+      for (const li of items) {
+        const ok = (topic === 'all' || li.dataset.topic === topic)
+          && (district === 'all' || li.dataset.district === district)
+          && (!term || li.dataset.text!.includes(term))
+          && (filtered || !li.hasAttribute('data-lead'));
+        if (ok) matches++;
+        const visible = ok && shown < limit;
+        if (visible) shown++;
+        li.hidden = !visible;
+      }
+      groups.forEach((g) => { g.hidden = !g.querySelector('[data-news-item]:not([hidden])'); });
+      empty.hidden = matches > 0;
+      count.hidden = matches === 0;
+      count.textContent = `Showing ${shown} of ${matches}`;
+      more.hidden = shown >= matches;
+      chips.forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.newsTopic === topic)));
+      if (announce) status.textContent = matches ? `${matches} ${matches === 1 ? 'story' : 'stories'}` : 'No stories match';
+
+      // Keep the URL in step so the view can be shared
+      const p = new URLSearchParams();
+      if (topic !== 'all') p.set('topic', topic);
+      if (district !== 'all') p.set('district', district);
+      if (term) p.set('q', q.value.trim());
+      const qs = p.toString();
+      history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
     };
-    const run = () => ('startViewTransition' in document && !matchMedia('(prefers-reduced-motion: reduce)').matches ? document.startViewTransition(apply) : apply());
-    root.addEventListener('click', (e) => {
-      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-f-topic]');
-      if (b) { topic = b.dataset.fTopic!; run(); }
+    const refilter = () => { limit = PAGE; apply(true); };
+
+    form.addEventListener('submit', (e) => e.preventDefault());
+    form.addEventListener('click', (e) => {
+      const chip = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-news-topic]');
+      if (chip) { topic = chip.dataset.newsTopic!; refilter(); }
     });
-    const sel = root.querySelector<HTMLSelectElement>('[data-f-district]')!;
-    sel.addEventListener('change', () => { district = sel.value; run(); });
-    if (params.get('district')) { district = params.get('district')!; sel.value = district; }
-    if (params.get('topic')) topic = params.get('topic')!;
+    sel.addEventListener('change', () => { district = sel.value; refilter(); });
+    let timer: number | undefined;
+    q.addEventListener('input', () => { clearTimeout(timer); timer = window.setTimeout(refilter, 150); });
+
+    // Topic links in the side column filter in place instead of reloading
+    document.querySelectorAll<HTMLAnchorElement>('[data-news-topic-link]').forEach((a) => a.addEventListener('click', (e) => {
+      e.preventDefault();
+      topic = a.dataset.newsTopicLink!;
+      refilter();
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }));
+    document.querySelector('[data-news-clear]')?.addEventListener('click', () => {
+      topic = 'all'; district = 'all'; q.value = ''; sel.value = 'all';
+      refilter();
+    });
+    more.addEventListener('click', () => {
+      const before = items.filter((li) => !li.hidden).length;
+      limit += PAGE;
+      apply();
+      // Move focus to the first newly shown story so keyboard users carry on from there
+      items.filter((li) => !li.hidden)[before]?.querySelector('a')?.focus();
+    });
     apply();
-  });
+  }
+  initNews();
+  document.addEventListener('astro:page-load', initNews);
 </script>

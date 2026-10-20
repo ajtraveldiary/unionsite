@@ -3,7 +3,7 @@
  * Lead story. On laptops the headline and summary sit on a dark fade at the bottom of the
  * photo, so the whole story fits the first screen; on phones they go under the photo.
  * Without a photo it becomes a calm text-led panel: the topic's icon at the top, the
- * headline at the bottom, in normal ink (no dark fade over an empty tile).
+ * headline at the bottom, in normal ink (no dark fade over an empty tile), sized by its text.
  *
  * Balance: on laptops the lead is at least 16:9 but stretches to the height of its row,
  * so when a taller list sits beside it the two still end on the same line (the photo is
@@ -17,8 +17,9 @@ import { postUrl } from '~/lib/content';
 import { topicBySlug } from '~/data/districts';
 import { topicIcon } from '~/lib/topic-icons';
 
-interface Props { post: Post; lang: Lang; headingLevel?: 'h2' | 'h3' }
-const { post, lang, headingLevel = 'h3' } = Astro.props;
+/** `ratio`: a photo lead's minimum shape on laptops (wider = shorter), e.g. '2/1' above a feed */
+interface Props { post: Post; lang: Lang; headingLevel?: 'h2' | 'h3'; ratio?: string }
+const { post, lang, headingLevel = 'h3', ratio = '16/9' } = Astro.props;
 const H = headingLevel;
 const photo = post.cover.kind === 'photo';
 const topic = topicBySlug[post.topic]?.name.en;
@@ -26,8 +27,8 @@ const titleSize = '!text-[calc(clamp(1.45rem,1.1rem+1.2vw,2rem)*1.16)]';
 ---
 {photo ? (
   <article class="group relative overflow-hidden rounded-[var(--radius-card)] lg:h-full">
-    <!-- Sets the minimum 16:9 height on laptops; the photo then fills whatever height the row has -->
-    <div class="hidden lg:block" style="aspect-ratio:16/9" aria-hidden="true"></div>
+    <!-- Sets the minimum height on laptops (16:9 by default); the photo then fills whatever height the row has -->
+    <div class="hidden lg:block" style={`aspect-ratio:${ratio}`} aria-hidden="true"></div>
     <Media post={post} lang={lang} ratio="16/9" size="lg" eager class="w-full lg:absolute lg:inset-0 lg:h-full lg:![aspect-ratio:auto] lg:!rounded-none lg:!border-0" />
     <div class="lg:absolute lg:inset-x-0 lg:bottom-0 lg:bg-gradient-to-t lg:from-black/90 lg:via-black/65 lg:to-transparent lg:px-6 lg:pb-5 lg:pt-24">
       <p lang="en" class="t-meta mt-3 lg:mt-0 lg:!text-white/75">{topic} · {formatDate(post.date, 'en')}</p>
@@ -38,9 +39,9 @@ const titleSize = '!text-[calc(clamp(1.45rem,1.1rem+1.2vw,2rem)*1.16)]';
     </div>
   </article>
 ) : (
-  <article class="group relative overflow-hidden rounded-[var(--radius-card)] border border-line bg-bg-subtle lg:h-full">
-    <div class="hidden lg:block" style="aspect-ratio:16/9" aria-hidden="true"></div>
-    <div class="flex flex-col gap-6 p-5 sm:p-6 lg:absolute lg:inset-0 lg:justify-between lg:p-8">
+  <article class="group relative flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-bg-subtle lg:h-full lg:min-h-[18rem]">
+    <!-- Sized by its text (at least 18rem on laptops); in a grid row it still stretches to its neighbour -->
+    <div class="flex flex-1 flex-col justify-between gap-6 p-5 sm:p-6 lg:p-8">
       <p lang="en" class="flex items-center gap-2.5 text-sm font-semibold text-ink-2">
         <span class="grid size-11 place-items-center rounded-full bg-accent-soft text-accent-ink" aria-hidden="true"><Icon name={(topicIcon[post.topic] ?? 'Newspaper') as any} size={22} /></span>
         {topic}

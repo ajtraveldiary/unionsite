@@ -1,0 +1,26 @@
+---
+/**
+ * A story in a news feed: topic, district and date, then the title and a two-line summary.
+ * Text first: a photo shows on the right only when the post has one (no topic tile here).
+ */
+import Media from './Media.astro';
+import type { Lang, Post } from '~/lib/types';
+import { t, langOf, formatDate } from '~/lib/i18n';
+import { postUrl } from '~/lib/content';
+import { topicBySlug, districtBySlug } from '~/data/districts';
+
+interface Props { post: Post; lang: Lang; headingLevel?: 'h2' | 'h3' }
+const { post, lang, headingLevel = 'h3' } = Astro.props;
+const H = headingLevel;
+const district = post.district ? districtBySlug[post.district]?.name.en.replace('Thiruvananthapuram', 'TVM') : undefined;
+---
+<article class="group relative flex gap-4">
+  <div class="min-w-0 flex-1">
+    <p lang="en" class="t-meta"><span class="font-semibold text-ink-2">{topicBySlug[post.topic]?.name.en}</span>{district && ` · ${district}`} · {formatDate(post.date, 'en', 'short')}</p>
+    <H lang={langOf(post.title, lang)} class="t-h3 mt-0.5">
+      <a href={postUrl(post, lang)} class="stretched group-hover:text-accent-ink">{t(post.title, lang)}</a>
+    </H>
+    <p lang={langOf(post.summary, lang)} class="clamp-2 mt-1 text-sm text-ink-2">{t(post.summary, lang)}</p>
+  </div>
+  {post.cover.kind === 'photo' && <Media post={post} lang={lang} class="w-24 shrink-0 self-start sm:w-36" />}
+</article>
