@@ -31,6 +31,8 @@ const withPhoto = (p: Post): Post => ({ ...p, cover: { kind: 'photo', src: photo
 const lead = withPhoto(posts.find((p) => p.featured) ?? posts[0]);
 const rowPhoto = withPhoto(posts.find((p) => p.topic === 'fseto' && !p.featured)!);
 const rowTile = posts.find((p) => p.sample)!;
+// Four stories beside the lead, mixing photos and topic tiles
+const sideList = [rowPhoto, ...posts.filter((p) => p.id !== rowPhoto.id && !p.featured).slice(0, 3)].map((p, i) => (i === 2 ? withPhoto(p) : p));
 const longTitle: Post = {
   ...rowTile, id: 9999,
   title: { ml: 'സംസ്ഥാന ജീവനക്കാരുടെയും അധ്യാപകരുടെയും ന്യായമായ ആവശ്യങ്ങൾ ഉന്നയിച്ച് സെക്രട്ടറിയേറ്റിന് മുന്നിലും എല്ലാ ജില്ലാ കേന്ദ്രങ്ങളിലും താലൂക്ക് കേന്ദ്രങ്ങളിലും പ്രതിഷേധ പ്രകടനവും ധർണയും സംഘടിപ്പിച്ചു' },
@@ -212,17 +214,21 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z]+/g, '-');
     <!-- Stories -->
     <section class="section" aria-labelledby="stories">
       <SectionHead title="Stories" id="stories" />
+      <p class="t-label mb-2">Lead + list · both end on the same line</p>
       <div class="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-        <div>
-          <p class="t-label mb-2">Lead · headline over photo on laptops, under it on phones</p>
-          <StoryLead post={lead} lang={lang} />
-        </div>
-        <div class="space-y-5">
-          <div><p class="t-label mb-2">Row with photo</p><StoryRow post={rowPhoto} lang={lang} /></div>
-          <div><p class="t-label mb-2">Row without photo · topic tile</p><StoryRow post={rowTile} lang={lang} /></div>
-          <div><p class="t-label mb-2">Very long headline · stops at 3 lines</p><StoryRow post={longTitle} lang={lang} /></div>
-          <div><p class="t-label mb-2">Text-only row · district first</p><StoryRow post={districtPosts[0]} lang={lang} thumb={false} meta="district" /></div>
-        </div>
+        <StoryLead post={lead} lang={lang} />
+        <ul class="balance-list divide-y divide-line">
+          {sideList.map((p) => <li class="py-3 first:pt-0 last:pb-0"><StoryRow post={p} lang={lang} /></li>)}
+        </ul>
+      </div>
+      <p class="t-meta mt-3 max-w-2xl">On laptops the lead is at least 16:9 and stretches to its row; the list beside it spreads its items to the same height. Whichever side is taller, both end on one line. On phones they stack.</p>
+
+      <p class="t-label mb-2 mt-10">Story rows</p>
+      <div class="grid gap-6 md:grid-cols-2">
+        <div><p class="t-meta mb-2">With photo</p><StoryRow post={rowPhoto} lang={lang} /></div>
+        <div><p class="t-meta mb-2">Without photo · topic tile</p><StoryRow post={rowTile} lang={lang} /></div>
+        <div><p class="t-meta mb-2">Very long headline · stops at 3 lines</p><StoryRow post={longTitle} lang={lang} /></div>
+        <div><p class="t-meta mb-2">Text only · district first</p><StoryRow post={districtPosts[0]} lang={lang} thumb={false} meta="district" /></div>
       </div>
     </section>
 
@@ -259,7 +265,7 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z]+/g, '-');
     <section class="section" aria-labelledby="districts">
       <SectionHead title="Districts" id="districts" />
       <div class="grid grid-cols-[minmax(0,1fr)] gap-8 md:grid-cols-2">
-        <div data-filterable data-limit="4">
+        <div data-filterable data-limit="4" class="col">
           <SectionHead title="District news" level="h3" size="h2">
             <FilterMenu label="Filter district news by district" options={districts.map(({ d }) => ({ value: d.slug, label: d.name.en, short: d.name.en.replace('Thiruvananthapuram', 'TVM') }))} />
           </SectionHead>
@@ -268,12 +274,14 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z]+/g, '-');
           </ul>
           <div data-filter-empty hidden><EmptyState compact title="No news yet" text="This district hasn't posted yet." /><span data-filter-name class="sr-only"></span></div>
           <p class="t-meta mt-2">Try the filter: Idukki has no news, so the empty state appears.</p>
+          <a href="#districts" class="link col-foot">All district news</a>
         </div>
-        <div>
+        <div class="col">
           <SectionHead title="All districts" level="h3" size="h2" />
           <ul class="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {districts.map(({ d, count }) => <li><DistrictTile district={d} lang={lang} count={count} /></li>)}
           </ul>
+          <a href="#districts" class="link col-foot">Map of districts</a>
         </div>
       </div>
     </section>

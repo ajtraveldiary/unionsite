@@ -169,6 +169,17 @@
   /* Grid children may shrink below their content's width. Without this, a line-clamped
      headline asks for its full one-line width and pushes the page sideways on phones. */
   :where(.grid) > * { min-width: 0; }
+
+  /* Balanced rows: columns side by side end on the same line.
+     .col        a column that fills its row's height (grid items stretch by default)
+     .col-foot   its "See all" link, pushed to the bottom so links line up across columns
+     .balance-list  a list beside a lead story: on laptops its items spread to the
+                    lead's height (the lead itself stretches if the list is taller) */
+  .col { display: flex; flex-direction: column; }
+  .col-foot { margin-top: auto; padding-top: 0.75rem; }
+  @media (min-width: 1024px) {
+    .balance-list { display: flex; flex-direction: column; justify-content: space-between; height: 100%; }
+  }
 }
 
 /* ---------- Controls ---------- */

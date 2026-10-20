@@ -2,6 +2,10 @@
 /**
  * Lead story. On laptops the headline and summary sit on a dark fade at the bottom of the
  * photo, so the whole story fits the first screen; on phones they go under the photo.
+ *
+ * Balance: on laptops the lead is at least 16:9 but stretches to the height of its row,
+ * so when a taller list sits beside it the two still end on the same line (the photo is
+ * cropped a little more instead of leaving a gap).
  */
 import Media from './Media.astro';
 import type { Lang, Post } from '~/lib/types';
@@ -13,12 +17,14 @@ interface Props { post: Post; lang: Lang; headingLevel?: 'h2' | 'h3' }
 const { post, lang, headingLevel = 'h3' } = Astro.props;
 const H = headingLevel;
 ---
-<article class="group relative overflow-hidden rounded-[var(--radius-card)]">
-  <Media post={post} lang={lang} ratio="16/9" size="lg" eager class="w-full lg:!rounded-none lg:!border-0" />
+<article class="group relative overflow-hidden rounded-[var(--radius-card)] lg:h-full">
+  <!-- Sets the minimum 16:9 height on laptops; the photo then fills whatever height the row has -->
+  <div class="hidden lg:block" style="aspect-ratio:16/9" aria-hidden="true"></div>
+  <Media post={post} lang={lang} ratio="16/9" size="lg" eager class="w-full lg:absolute lg:inset-0 lg:h-full lg:![aspect-ratio:auto] lg:!rounded-none lg:!border-0" />
   <div class="lg:absolute lg:inset-x-0 lg:bottom-0 lg:bg-gradient-to-t lg:from-black/90 lg:via-black/65 lg:to-transparent lg:px-6 lg:pb-5 lg:pt-24">
     <p lang="en" class="t-meta mt-3 lg:mt-0 lg:!text-white/75">{topicBySlug[post.topic]?.name.en} · {formatDate(post.date, 'en')}</p>
     <H lang={langOf(post.title, lang)} class="t-display mt-1 !text-[calc(clamp(1.45rem,1.1rem+1.2vw,2rem)*1.16)] lg:text-white">
-      <a href={postUrl(post, lang)} class="stretched group-hover:underline decoration-2 underline-offset-4">{t(post.title, lang)}</a>
+      <a href={postUrl(post, lang)} class="stretched decoration-2 underline-offset-4 group-hover:underline">{t(post.title, lang)}</a>
     </H>
     <p lang={langOf(post.summary, lang)} class="clamp-2 mt-2 text-ink-2 lg:text-white/85">{t(post.summary, lang)}</p>
   </div>
