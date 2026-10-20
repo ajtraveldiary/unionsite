@@ -28,7 +28,11 @@
   .t-h1 { font-weight: 700; font-size: calc(clamp(1.4rem, 1.2rem + 0.8vw, 1.75rem) * 1.16); line-height: 1.2; }
   .t-h2 { font-weight: 650; font-size: calc(clamp(1.15rem, 1.08rem + 0.4vw, 1.35rem) * 1.16); line-height: 1.28; }
   .t-h3 { font-weight: 600; font-size: calc(1.05rem * 1.16); line-height: 1.32; }
-  :lang(ml) :is(.t-title, .t-display, .t-h1, .t-h2, .t-h3), :is(.t-title, .t-display, .t-h1, .t-h2, .t-h3):lang(ml) { line-height: 1.4; }
+  /* Malayalam titles: tight enough to read as one block, with room for stacked conjuncts (പ്ര, ക്ര) */
+  :lang(ml) :is(.t-display, .t-h1), :is(.t-display, .t-h1):lang(ml) { line-height: 1.18; }
+  :lang(ml) :is(.t-title, .t-h2, .t-h3), :is(.t-title, .t-h2, .t-h3):lang(ml) { line-height: 1.25; }
+  /* Links and spans inside a title follow the title's spacing, not the body's 1.75 */
+  :is(.t-title, .t-display, .t-h1, .t-h2, .t-h3) * { line-height: inherit; }
   .t-meta { font-size: 0.8125rem; color: #71717a; font-variant-numeric: tabular-nums; }
   .t-label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #52525b; }
 
