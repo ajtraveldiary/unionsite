@@ -1,107 +1,108 @@
 ---
-import Base from '~/layouts/Base.astro';
+/**
+ * Article (redesign, Phase C), as in the wireframe: one meta line, the headline, a short
+ * summary, then share right where people look for it. Comfortable reading width (about
+ * 68 characters, 18 px text). The photo shows only when the post has one. Related stories
+ * close the page as text cards.
+ */
+import AppLayout from '~/layouts/AppLayout.astro';
 import Icon from '~/components/ui/Icon.astro';
-import Brand from '~/components/ui/Brand.astro';
-import Poster from '~/components/ui/Poster.astro';
-import StoryCard from '~/components/StoryCard.astro';
+import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
+import SectionHead from '~/components/ds/SectionHead.astro';
+import Media from '~/components/ds/Media.astro';
+import ShareBar from '~/components/ds/ShareBar.astro';
+import StoryRow from '~/components/ds/StoryRow.astro';
 import type { Lang } from '~/lib/types';
 import { t, langOf, href, formatDate, readingMinutes, formatViews, hasEn, ui } from '~/lib/i18n';
 import { posts } from '~/data/news';
-import { postPath, relatedPosts } from '~/lib/content';
+import { postPath, relatedPosts, districtUrl } from '~/lib/content';
 import { topicBySlug, districtBySlug } from '~/data/districts';
+import { site } from '~/data/site';
 
 interface Props { lang: Lang; id: number }
 const { lang, id } = Astro.props;
+const L = (p: string) => href(lang, p);
 const p = posts.find((x) => x.id === id)!;
 const topic = topicBySlug[p.topic];
 const district = p.district ? districtBySlug[p.district] : undefined;
+// The English site shows Malayalam (and says so) until a reviewed English version exists
 const enMissing = lang === 'en' && !hasEn(p.title);
-const useEnBody = lang === 'en' && p.body?.en && !enMissing;
+const useEnBody = lang === 'en' && !!p.body?.en && !enMissing;
 const body = useEnBody ? p.body!.en! : p.body?.ml;
 const bodyLang = useEnBody ? 'en' : 'ml';
-const pageUrl = new URL(href(lang, postPath(p)), Astro.site).toString();
+const title = t(p.title, lang);
+const pageUrl = new URL(L(postPath(p)), Astro.site).toString();
+const related = relatedPosts(p, 3);
+const sameTopic = related.every((r) => r.topic === p.topic);
+const photo = p.cover.kind === 'photo' ? p.cover : undefined;
+const jsonLd = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'NewsArticle',
+  headline: title,
+  description: t(p.summary, lang),
+  datePublished: p.date,
+  inLanguage: langOf(p.title, lang),
+  mainEntityOfPage: pageUrl,
+  publisher: { '@type': 'Organization', name: site.name.en },
+}).replace(/</g, '\\u003c');
 ---
-<Base lang={lang} title={p.title.en ?? p.title.ml} description={t(p.summary, lang)} noindex={enMissing}>
-  <div class="read-progress fixed inset-x-0 top-0 z-[60] h-[3px] origin-left bg-brand-solid" aria-hidden="true"></div>
+<AppLayout lang={lang} title={p.title.en ?? p.title.ml} description={t(p.summary, lang)} noindex={enMissing}>
+  <script type="application/ld+json" set:html={jsonLd} />
 
-  <article>
-    <header class="container-x max-w-[880px] pt-6 lg:pt-12">
-      <nav aria-label="Breadcrumb" lang="en" class="mb-6 text-sm text-ink-3">
-        <a href={href(lang, '/')} class="hover:underline">Home</a> / <a href={href(lang, '/news')} class="hover:underline">News</a>
-      </nav>
-      <div class="mb-4 flex flex-wrap gap-2">
-        <span lang="en" class="badge badge-brand">{topic.name.en}</span>
-        {district && <a href={href(lang, `/districts/${district.slug}`)} lang="en" class="badge badge-ink hover:border-ink-3"><Icon name="MapPin" size={12} /> {district.name.en}</a>}
-        {p.sample && <span lang="en" class="badge badge-ink">Sample post</span>}
-      </div>
-      <h1 lang={langOf(p.title, lang)} class="display !text-[clamp(1.9rem,1.1rem+2.6vw,3.1rem)]" style="view-transition-name: article-title">{t(p.title, lang)}</h1>
-      <p lang={langOf(p.summary, lang)} class="mt-4 text-xl leading-relaxed text-ink-2">{t(p.summary, lang)}</p>
-      <div lang="en" class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-line py-3 text-sm text-ink-3">
-        <span class="flex items-center gap-1.5"><Icon name="Calendar" size={15} /><time datetime={p.date}>{formatDate(p.date, 'en')}</time></span>
-        <span class="flex items-center gap-1.5"><Icon name="Clock" size={15} />{readingMinutes(body)} min read</span>
-        {p.views && p.views >= 50 && <span class="flex items-center gap-1.5"><Icon name="Eye" size={15} />{formatViews(p.views)} views</span>}
-        <span class="ml-auto hidden items-center gap-1 sm:flex">
-          <a href={`https://wa.me/?text=${encodeURIComponent(`${t(p.title, lang)}\n${pageUrl}`)}`} target="_blank" rel="noopener" class="grid size-9 place-items-center rounded-full hover:bg-paper-2 hover:text-[#1f9d55]" aria-label="Share on WhatsApp"><Brand name="whatsapp" size={18} /></a>
-          <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`} target="_blank" rel="noopener" class="grid size-9 place-items-center rounded-full hover:bg-paper-2 hover:text-[#1877f2]" aria-label="Share on Facebook"><Brand name="facebook" size={18} /></a>
-          <button type="button" data-copy={pageUrl} class="grid size-9 place-items-center rounded-full hover:bg-paper-2 hover:text-ink" aria-label="Copy link"><Icon name="Link" size={17} /></button>
-        </span>
+  <article class="wrap max-w-[800px] pt-5 lg:pt-8">
+    <Breadcrumbs lang={lang} items={[{ label: 'News', path: '/news' }, { label: topic.name.en }]} />
+
+    <header class="mt-5">
+      <p lang="en" class="flex flex-wrap items-center gap-2">
+        <a href={L(`/news?topic=${topic.slug}`)} class="t-label !text-accent-ink hover:underline underline-offset-2">{topic.name.en}</a>
+        {district && <a href={districtUrl(district.slug, lang)} class="badge badge-neutral hover:border-line-strong"><Icon name="MapPin" size={12} /> {district.name.en}</a>}
+        {p.sample && <span class="badge badge-warning">Sample post</span>}
+      </p>
+      <h1 lang={langOf(p.title, lang)} class="t-display mt-2">{title}</h1>
+      <p lang={langOf(p.summary, lang)} class="mt-3 text-lg text-ink-2">{t(p.summary, lang)}</p>
+      <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-y border-line py-3">
+        <p lang="en" class="t-meta">
+          <time datetime={p.date}>{formatDate(p.date, 'en')}</time> · {readingMinutes(body)} min read{(p.views ?? 0) >= 50 ? ` · ${formatViews(p.views)} views` : ''}
+        </p>
+        <ShareBar url={pageUrl} title={title} />
       </div>
       {enMissing && (
-        <p lang="en" class="mt-4 flex items-center gap-2 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm font-medium text-warning"><Icon name="Info" size={17} /> {ui.enMissing}</p>
+        <p lang="en" class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
+          <Icon name="Info" size={17} class="mt-0.5 shrink-0" /> {ui.enMissing}
+        </p>
       )}
     </header>
 
-    <figure class="container-x mt-8 max-w-[1040px]">
-      <div class="overflow-hidden rounded-2xl">
-        {p.cover.kind === 'poster' && <Poster cover={p.cover} seed={p.id} lang={lang} hero class="aspect-[16/9] w-full" label={t(p.title, lang)} />}
-      </div>
-    </figure>
+    {photo && (
+      <figure class="mt-6">
+        <Media post={p} lang={lang} ratio="16/9" size="lg" eager />
+        <figcaption lang={langOf(photo.alt, lang)} class="t-meta mt-2">{t(photo.alt, lang)}</figcaption>
+      </figure>
+    )}
 
-    <div class="container-x mt-10 max-w-[880px]">
-      <div lang={bodyLang} class="prose-union mx-auto text-[1.12rem]">
-        {body ? body.map((para) => <p>{para}</p>) : <p class="text-ink-2">{t(p.summary, lang)}</p>}
-      </div>
-      {p.sample || !p.body ? (
-        <p lang="en" class="mx-auto mt-8 max-w-[68ch] rounded-xl border border-dashed border-line-strong p-4 text-sm text-ink-3">
-          Placeholder text — the full article, photos and gallery are brought over by the Phase 2 crawl of the current site.
-        </p>
-      ) : null}
+    <div lang={bodyLang} class="prose mt-8">
+      {body ? body.map((para) => <p>{para}</p>) : <p>{t(p.summary, lang)}</p>}
+    </div>
+    {(p.sample || !p.body) && (
+      <p lang="en" class="mt-6 max-w-[68ch] rounded-[var(--radius-card)] border border-dashed border-line-strong p-4 text-sm text-ink-3">
+        Placeholder: the full article, photos and gallery come across with the import from the current site.
+      </p>
+    )}
 
-      <div lang="en" class="mx-auto mt-10 flex max-w-[68ch] flex-wrap items-center gap-2 border-t border-line pt-6">
-        <span class="mr-2 text-sm font-semibold">Share</span>
-        <a href={`https://wa.me/?text=${encodeURIComponent(`${t(p.title, lang)}\n${pageUrl}`)}`} target="_blank" rel="noopener" class="btn bg-[#1f9d55] text-white hover:bg-[#178246]"><Brand name="whatsapp" size={17} /> WhatsApp</a>
-        <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`} target="_blank" rel="noopener" class="btn btn-ghost"><Brand name="facebook" size={17} /> Facebook</a>
-        <button type="button" data-copy={pageUrl} class="btn btn-ghost"><Icon name="Link" size={16} /> <span data-copy-label>Copy link</span></button>
-      </div>
+    <div class="mt-10 flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-line pt-5">
+      <p lang="en" class="text-sm font-semibold">Share this story</p>
+      <ShareBar url={pageUrl} title={title} />
     </div>
   </article>
 
-  <!-- Native share on phones -->
-  <button type="button" data-native-share={pageUrl} data-title={t(p.title, lang)} class="fixed bottom-28 right-4 z-30 hidden size-14 place-items-center rounded-full bg-ink text-paper shadow-xl active:scale-95 lg:!hidden" aria-label="Share">
-    <Icon name="Share2" size={22} />
-  </button>
-
-  <section class="container-x mt-20" aria-labelledby="related-title">
-    <h2 id="related-title" lang="en" class="h2 mb-6">More stories</h2>
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
-      {relatedPosts(p).map((r) => <StoryCard post={r} lang={lang} />)}
-    </div>
-  </section>
-</Base>
-
-<script>
-  document.addEventListener('astro:page-load', () => {
-    document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((b) => {
-      b.onclick = async () => {
-        try { await navigator.clipboard.writeText(b.dataset.copy!); } catch {}
-        const l = b.querySelector('[data-copy-label]');
-        if (l) { l.textContent = 'Copied!'; setTimeout(() => (l.textContent = 'Copy link'), 1800); }
-      };
-    });
-    const share = document.querySelector<HTMLButtonElement>('[data-native-share]');
-    if (share && 'share' in navigator) {
-      share.style.display = 'grid';
-      share.onclick = () => navigator.share({ title: share.dataset.title, url: share.dataset.nativeShare }).catch(() => {});
-    }
-  });
-</script>
+  {related.length > 0 && (
+    <section class="wrap section max-w-[1000px]" aria-labelledby="related">
+      <SectionHead title={sameTopic ? `More on ${topic.name.en}` : 'More stories'} id="related" href={L(sameTopic ? `/news?topic=${topic.slug}` : '/news')} linkLabel={sameTopic ? `All ${topic.name.en}` : 'All news'} />
+      <ul class="grid gap-x-8 gap-y-6 md:grid-cols-3">
+        {related.map((r) => (
+          <li class="border-t-2 border-ink pt-3"><StoryRow post={r} lang={lang} thumb={false} meta={sameTopic ? 'date' : 'topic'} headingLevel="h3" /></li>
+        ))}
+      </ul>
+    </section>
+  )}
+</AppLayout>

@@ -1,0 +1,56 @@
+---
+/**
+ * Share buttons: WhatsApp first (how most members pass things on), Facebook, copy link.
+ * Where the device has a system share sheet, a "Share" button appears as well; on phones it
+ * then replaces Facebook and copy link (the sheet offers both), so the row stays one line.
+ */
+import Icon from '~/components/ui/Icon.astro';
+import Brand from '~/components/ui/Brand.astro';
+
+interface Props { url: string; title: string; class?: string }
+const { url, title, class: cls = '' } = Astro.props;
+const wa = `https://wa.me/?text=${encodeURIComponent(`${title}\n${url}`)}`;
+const fb = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+---
+<div lang="en" class:list={['flex flex-wrap items-center gap-2', cls]} data-share>
+  <button type="button" data-share-native data-url={url} data-title={title} class="btn btn-secondary btn-sm" hidden><Icon name="Share2" size={16} /> Share</button>
+  <a href={wa} target="_blank" rel="noopener" class="btn btn-secondary btn-sm"><Brand name="whatsapp" size={16} /> WhatsApp</a>
+  <a href={fb} target="_blank" rel="noopener" class="share-extra btn btn-secondary btn-sm max-sm:w-9 max-sm:px-0" aria-label="Share on Facebook"><Brand name="facebook" size={16} /><span class="max-sm:hidden">Facebook</span></a>
+  <button type="button" data-share-copy={url} class="share-extra btn btn-secondary btn-sm"><Icon name="Link" size={16} /> <span data-share-label>Copy link</span></button>
+</div>
+
+<style>
+  @media (max-width: 639px) {
+    [data-share][data-native] .share-extra { display: none; }
+  }
+</style>
+
+<script>
+  function initShare() {
+    if (!('share' in navigator)) return;
+    document.querySelectorAll<HTMLElement>('[data-share]').forEach((bar) => {
+      bar.dataset.native = '';
+      bar.querySelector<HTMLButtonElement>('[data-share-native]')!.hidden = false;
+    });
+  }
+  initShare();
+  document.addEventListener('astro:page-load', initShare);
+  document.addEventListener('click', async (e) => {
+    const el = e.target as HTMLElement;
+    const native = el.closest<HTMLButtonElement>('[data-share-native]');
+    if (native) {
+      navigator.share({ title: native.dataset.title, url: native.dataset.url }).catch(() => {});
+      return;
+    }
+    const copy = el.closest<HTMLButtonElement>('[data-share-copy]');
+    if (!copy) return;
+    const label = copy.querySelector('[data-share-label]')!;
+    try {
+      await navigator.clipboard.writeText(copy.dataset.shareCopy!);
+      label.textContent = 'Link copied';
+    } catch {
+      label.textContent = 'Copy failed';
+    }
+    setTimeout(() => { label.textContent = 'Copy link'; }, 2000);
+  });
+</script>
