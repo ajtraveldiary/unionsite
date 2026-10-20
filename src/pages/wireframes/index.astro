@@ -2,18 +2,36 @@
 import WireLayout from '~/components/wire/WireLayout.astro';
 import Note from '~/components/wire/Note.astro';
 import Ph from '~/components/wire/Ph.astro';
-import { allPosts, postsForTopic, latestOrders, upcomingEvents, sortedDistricts, postsForDistrict, subjectName } from '~/lib/content';
+import Thumb from '~/components/wire/Thumb.astro';
+import { allPosts, latestOrders, upcomingEvents, sortedDistricts, postsForDistrict, subjectName } from '~/lib/content';
 import { t, langOf, formatDate, dateParts, monthName } from '~/lib/i18n';
 import { topicBySlug } from '~/data/districts';
 import { magazineIssues, videos } from '~/data/site';
+import type { Post } from '~/lib/types';
 
 const lang = 'ml' as const;
 const posts = allPosts();
+
+// 1 · Top news: the lead plus the next six stories
 const lead = posts.find((p) => p.featured) ?? posts[0];
-const latest = posts.filter((p) => p !== lead && p.topic !== 'secretary').slice(0, 4);
+const topRest = posts.filter((p) => p !== lead).slice(0, 6);
+const used = new Set<Post>([lead, ...topRest]);
+
+// 2 · From the union: three columns, each continuing where Top news stops, so nothing repeats
+const fresh = (list: Post[], n: number) => {
+  const out = list.filter((p) => !used.has(p)).slice(0, n);
+  out.forEach((p) => used.add(p));
+  return out;
+};
+const columns = [
+  { name: 'Secretary’s page', more: 'secretary', posts: fresh(posts.filter((p) => p.topic === 'secretary'), 4) },
+  { name: 'FSETO', more: 'fseto', posts: fresh(posts.filter((p) => p.topic === 'fseto'), 4) },
+];
+columns.unshift({ name: 'NGO Union News', more: '', posts: fresh(posts.filter((p) => p.topic !== 'secretary' && p.topic !== 'fseto'), 4) });
+
 const orders = latestOrders(5);
 const events = upcomingEvents(3);
-const columns = ['secretary', 'fseto', 'janapaksha'].map((slug) => ({ slug, name: topicBySlug[slug].name.en, posts: postsForTopic(slug).slice(0, 3) }));
+const popular = ['DA', 'Pay Revision', 'Pension', 'MEDISEP', 'Leave surrender', 'Bonus'];
 const districts = sortedDistricts().map((d) => ({ d, posts: postsForDistrict(d.slug) }));
 const issue = magazineIssues[0];
 const ARTICLE = '/wireframes/article';
@@ -22,51 +40,99 @@ const goShort = (go: string) => {
   const m = go.match(/^(.*?)\s*No\.\s*(\d+\/\d+)\/?(.*)$/);
   return m ? { num: m[2], kind: [m[1], m[3]].filter(Boolean).join(' · ') } : { num: go, kind: '' };
 };
+const meta = (p: Post) => `${topicBySlug[p.topic].name.en} · ${formatDate(p.date, 'en', 'short')}`;
 ---
 <WireLayout title="Home" page="home">
-  <!-- 1 · Search -->
-  <section class="border-b border-zinc-200 bg-zinc-50">
-    <div class="wf-wrap py-8 lg:py-12">
-      <Note n={1}>Search leads the page because most visits are to find an order. One box searches orders, news, districts and pages; the chips are the most searched subjects.</Note>
-      <h1 lang="en" class="t-display max-w-[18ch]">Orders, news and your district, in one place</h1>
-      <form id="search" action="/wireframes/orders" class="mt-5 flex max-w-2xl gap-2" role="search">
-        <input name="q" class="wf-input !min-h-14 text-[1.05rem]" placeholder="Find an order, news or district" aria-label="Search" lang="en" />
-        <button class="wf-btn wf-btn-dark !min-h-14 px-6" lang="en">Search</button>
-      </form>
-      <div lang="en" class="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
-        <span class="t-meta self-center pr-1">Popular:</span>
-        {['DA', 'Pay Revision', 'Pension', 'MEDISEP', 'Leave surrender', 'Bonus'].map((c) => <a href="/wireframes/orders" class="wf-chip">{c}</a>)}
-      </div>
-    </div>
-  </section>
+  <h1 class="sr-only">Kerala NGO Union</h1>
 
-  <!-- 2 · Top news -->
-  <section class="wf-wrap mt-10" aria-labelledby="top-news">
+  <!-- Notices strip: home page only, shown only while a notice is active -->
+  <div class="wf-wrap mt-6">
+    <Note n={1}>Notices strip, home page only. It appears only while the office has an active notice (a strike call, a deadline) and disappears when the notice expires.</Note>
+    <div lang="en" class="flex items-start gap-3 rounded-xl border border-zinc-300 bg-zinc-100 px-4 py-3">
+      <span class="t-label shrink-0 pt-0.5">Notice</span>
+      <p class="min-w-0 flex-1 text-sm"><span class="font-semibold">Example notice:</span> a one- or two-line announcement with a link to the full post. <a href={ARTICLE} class="wf-link">Read more</a></p>
+    </div>
+  </div>
+
+  <!-- 1 · Top news: 1 lead + 6 with thumbnails -->
+  <section class="wf-wrap mt-6" aria-labelledby="top-news">
     <div class="wf-section-head"><h2 id="top-news" lang="en" class="t-h1">Top news</h2><a href="/wireframes/news" lang="en" class="wf-link">All news</a></div>
-    <Note n={2}>One lead story with a real photo, then the four latest headlines as plain text. No repeats anywhere else on the page.</Note>
-    <div class="grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-      <article class="relative">
-        <Ph ratio="16/9" />
-        <p lang="en" class="t-meta mt-3">{topicBySlug[lead.topic].name.en} · {formatDate(lead.date, 'en')}</p>
-        <h3 lang={langOf(lead.title, lang)} class="t-display mt-1 !text-[calc(clamp(1.45rem,1.1rem+1.2vw,2rem)*1.16)]"><a href={ARTICLE} class="stretched">{t(lead.title, lang)}</a></h3>
-        <p lang={langOf(lead.summary, lang)} class="mt-2 text-zinc-600">{t(lead.summary, lang)}</p>
+    <Note n={2}>Top news opens the page (search stays in the header). The lead's headline sits over its photo on laptops so the whole story fits the first screen, and under it on phones. Six more stories follow with thumbnails. Stories without a photo (here, the sample posts) show a neutral tile with their topic instead.</Note>
+    <div class="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <!-- Lead: headline over the photo on laptops so the whole story fits the first screen; under it on phones -->
+      <article class="relative overflow-hidden rounded-[10px]">
+        <Thumb post={lead} ratio="16/9" class="lg:!rounded-none lg:!border-0" />
+        <div class="lg:absolute lg:inset-x-0 lg:bottom-0 lg:bg-gradient-to-t lg:from-zinc-900/95 lg:via-zinc-900/70 lg:to-transparent lg:px-6 lg:pb-5 lg:pt-20">
+          <p lang="en" class="t-meta mt-3 lg:mt-0 lg:!text-zinc-300">{meta(lead)}</p>
+          <h3 lang={langOf(lead.title, lang)} class="t-display mt-1 !text-[calc(clamp(1.45rem,1.1rem+1.2vw,2rem)*1.16)] lg:text-white"><a href={ARTICLE} class="stretched">{t(lead.title, lang)}</a></h3>
+          <p lang={langOf(lead.summary, lang)} class="clamp-2 mt-2 text-zinc-600 lg:text-zinc-200">{t(lead.summary, lang)}</p>
+        </div>
       </article>
-      <ol class="divide-y divide-zinc-200 border-y border-zinc-200 lg:border-t-0">
-        {latest.map((p) => (
-          <li class="relative py-4 first:pt-0 lg:first:pt-0">
-            <p lang="en" class="t-meta">{topicBySlug[p.topic].name.en} · {formatDate(p.date, 'en', 'short')}</p>
-            <h3 lang={langOf(p.title, lang)} class="t-h3 mt-0.5 clamp-3"><a href={ARTICLE} class="stretched">{t(p.title, lang)}</a></h3>
+      <ul class="divide-y divide-zinc-200">
+        {topRest.slice(0, 3).map((p) => (
+          <li class="relative flex gap-3 py-3 first:pt-0">
+            <Thumb post={p} class="w-24 shrink-0 self-start sm:w-28" />
+            <div class="min-w-0">
+              <p lang="en" class="t-meta">{meta(p)}</p>
+              <h3 lang={langOf(p.title, lang)} class="t-h3 clamp-3 mt-0.5"><a href={ARTICLE} class="stretched">{t(p.title, lang)}</a></h3>
+            </div>
           </li>
         ))}
-      </ol>
+      </ul>
+    </div>
+    <ul class="mt-6 grid gap-x-8 gap-y-4 border-t border-zinc-200 pt-6 sm:grid-cols-3">
+      {topRest.slice(3).map((p) => (
+        <li class="relative flex gap-3">
+          <Thumb post={p} class="w-24 shrink-0 self-start sm:w-28" />
+          <div class="min-w-0">
+            <p lang="en" class="t-meta">{meta(p)}</p>
+            <h3 lang={langOf(p.title, lang)} class="t-h3 clamp-3 mt-0.5"><a href={ARTICLE} class="stretched">{t(p.title, lang)}</a></h3>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <!-- 2 · From the union -->
+  <section class="wf-wrap mt-12" aria-labelledby="from-union">
+    <div class="wf-section-head"><h2 id="from-union" lang="en" class="t-h1">From the union</h2></div>
+    <Note n={3}>Three columns: NGO Union News carries on from where Top news stops, then Secretary's page and FSETO. Each opens with one photo story and lists three more as text. Nothing repeats from Top news.</Note>
+    <div class="grid gap-8 md:grid-cols-3">
+      {columns.map((c) => {
+        const [first, ...rest] = c.posts;
+        return (
+          <div>
+            <h3 lang="en" class="t-h2 border-b-2 border-zinc-800 pb-1">{c.name}</h3>
+            {first && (
+              <article class="relative mt-3">
+                <Thumb post={first} ratio="16/9" />
+                <p lang="en" class="t-meta mt-2">{formatDate(first.date, 'en', 'short')}</p>
+                <a href={ARTICLE} lang={langOf(first.title, lang)} class="stretched t-h3 clamp-3 mt-0.5 block">{t(first.title, lang)}</a>
+              </article>
+            )}
+            <ul class="mt-2 divide-y divide-zinc-200 border-t border-zinc-200">
+              {rest.map((p) => (
+                <li class="relative py-3">
+                  <a href={ARTICLE} lang={langOf(p.title, lang)} class="stretched clamp-2 font-medium leading-snug">{t(p.title, lang)}</a>
+                  <p lang="en" class="t-meta mt-1">{formatDate(p.date, 'en', 'short')}</p>
+                </li>
+              ))}
+            </ul>
+            <a href="/wireframes/news" lang="en" class="wf-link">More from {c.name}</a>
+          </div>
+        );
+      })}
     </div>
   </section>
 
   <!-- 3 · Orders & events -->
-  <section class="wf-wrap mt-12 grid gap-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+  <section class="wf-wrap mt-12 grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
     <div>
       <div class="wf-section-head"><h2 lang="en" class="t-h1">Latest orders</h2><a href="/wireframes/orders" lang="en" class="wf-link">All orders</a></div>
-      <Note n={3}>GO number and date first, so people can spot the order they were told about. Tapping a row opens the order page with the PDF.</Note>
+      <Note n={4}>Popular subjects sit above the orders as quick filters, each opening the Orders page already filtered. GO number and date lead each row.</Note>
+      <div lang="en" class="no-scrollbar -mx-4 mb-2 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
+        {popular.map((c) => <a href="/wireframes/orders" class="wf-chip">{c}</a>)}
+      </div>
       <ul class="divide-y divide-zinc-200">
         {orders.map((o) => (
           <li class="relative flex gap-4 py-3">
@@ -104,32 +170,10 @@ const goShort = (go: string) => {
     </div>
   </section>
 
-  <!-- 4 · From the union -->
-  <section class="wf-wrap mt-12" aria-labelledby="from-union">
-    <div class="wf-section-head"><h2 id="from-union" lang="en" class="t-h1">From the union</h2></div>
-    <Note n={4}>The old site's topic sections as three slim text columns. No images, so they stay compact and quick to scan.</Note>
-    <div class="grid gap-8 md:grid-cols-3">
-      {columns.map((c) => (
-        <div>
-          <h3 lang="en" class="t-h2 border-b-2 border-zinc-800 pb-1">{c.name}</h3>
-          <ul class="divide-y divide-zinc-200">
-            {c.posts.map((p) => (
-              <li class="relative py-3">
-                <a href={ARTICLE} lang={langOf(p.title, lang)} class="stretched clamp-3 font-medium leading-snug">{t(p.title, lang)}</a>
-                <p lang="en" class="t-meta mt-1">{formatDate(p.date, 'en', 'short')}</p>
-              </li>
-            ))}
-          </ul>
-          <a href="/wireframes/news" lang="en" class="wf-link">More from {c.name}</a>
-        </div>
-      ))}
-    </div>
-  </section>
-
-  <!-- 5 · Districts -->
+  <!-- 4 · Districts -->
   <section class="wf-wrap mt-12" aria-labelledby="districts">
     <div class="wf-section-head"><h2 id="districts" lang="en" class="t-h1">Districts</h2><a href="/wireframes/district" lang="en" class="wf-link">Map of districts</a></div>
-    <Note n={5}>All 15 districts at a glance with their latest post. The big interactive map moves to the Districts page.</Note>
+    <Note n={5}>All 15 districts with their latest post. The interactive map lives on the Districts page.</Note>
     <ul class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
       {districts.map(({ d, posts: ps }) => (
         <li class="wf-box relative p-3">
@@ -142,11 +186,11 @@ const goShort = (go: string) => {
     </ul>
   </section>
 
-  <!-- 6 · Read & watch -->
+  <!-- 5 · Read & watch -->
   <section class="wf-wrap mt-12 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
     <div>
       <div class="wf-section-head"><h2 lang="en" class="t-h1">Kerala Service</h2><a href="#" lang="en" class="wf-link">Archive</a></div>
-      <Note n={6}>The current magazine issue and the latest videos close the page. Videos load only when tapped.</Note>
+      <Note n={6}>The current magazine issue and the three latest videos close the page. Videos load only when tapped.</Note>
       <div class="flex gap-4">
         <Ph label="Cover" ratio="210/297" class="w-28 shrink-0" />
         <div lang="en">

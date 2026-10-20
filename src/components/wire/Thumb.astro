@@ -1,0 +1,21 @@
+---
+/**
+ * Story image spot for the wireframes. Posts imported from the current site have photos
+ * there, so they get a photo placeholder; posts without one get the agreed fallback:
+ * a neutral tile with the topic name and a small icon.
+ */
+import type { Post } from '~/lib/types';
+import { topicBySlug } from '~/data/districts';
+
+interface Props { post: Post; ratio?: string; class?: string; label?: string }
+const { post, ratio = '4/3', class: cls = '', label = 'Photo' } = Astro.props;
+const hasPhoto = !post.sample;
+---
+{hasPhoto ? (
+  <div class:list={['wf-ph', cls]} style={`aspect-ratio:${ratio}`} aria-hidden="true"><span>{label}</span></div>
+) : (
+  <div class:list={['flex flex-col items-center justify-center gap-1 rounded-[10px] border border-zinc-200 bg-zinc-100 p-2 text-center', cls]} style={`aspect-ratio:${ratio}`} aria-hidden="true" lang="en">
+    <span class="size-5 rounded border-2 border-zinc-400"></span>
+    <span class="text-[0.6875rem] font-semibold leading-tight text-zinc-500">{topicBySlug[post.topic].name.en}</span>
+  </div>
+)}
