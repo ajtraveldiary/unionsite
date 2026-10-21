@@ -47,7 +47,8 @@ const canonical = new URL(lang === 'en' ? alt.en : alt.ml, Astro.site);
   <body class="min-h-dvh">
     <a href="#main" lang="en" class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-bg">Skip to content</a>
     <Header lang={lang} />
-    <main id="main" class="pb-20 lg:pb-0">
+    <!-- The footer's own bottom padding clears the phone tab bar, so main needs none -->
+    <main id="main">
       <slot />
     </main>
     <Footer lang={lang} />

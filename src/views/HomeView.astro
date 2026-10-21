@@ -164,7 +164,7 @@ const oldest = issues.at(-1)!;
   </section>
 
   <!-- 4 · Latest orders beside Tools & guides -->
-  <section class="wrap section grid gap-x-10 gap-y-12 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+  <section class="wrap section grid gap-x-10 gap-y-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
     <div class="col">
       <SectionHead title="Latest orders" href={L('/orders')} linkLabel="All orders" />
       <nav aria-label="Popular subjects" lang="en" class="no-scrollbar -mx-4 mb-3 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
@@ -231,7 +231,7 @@ const oldest = issues.at(-1)!;
   </section>
 
   <!-- 6 · Kerala Service and videos -->
-  <section class="wrap section grid gap-x-10 gap-y-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+  <section class="wrap section grid gap-x-10 gap-y-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
     <div class="col">
       <SectionHead title="Kerala Service" href={L('/kerala-service')} linkLabel="Archive" />
       <div class="flex flex-1 gap-5">
@@ -248,8 +248,9 @@ const oldest = issues.at(-1)!;
     </div>
     <div class="col">
       <SectionHead title="Videos" href={site.social.youtube} linkLabel="YouTube channel" />
-      <ul class="grid gap-x-4 gap-y-6 sm:grid-cols-3">
-        {videos.slice(0, 3).map((v) => <li><VideoCard video={v} lang={lang} /></li>)}
+      <!-- Phones: a swipe row with the next video peeking in; from tablets up, three side by side -->
+      <ul class="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
+        {videos.slice(0, 3).map((v) => <li class="w-[78%] shrink-0 snap-start sm:w-auto"><VideoCard video={v} lang={lang} /></li>)}
       </ul>
     </div>
   </section>
