@@ -1,0 +1,45 @@
+---
+/**
+ * The campaign banner on the home page's red wave: a label, the title, one line and a button,
+ * set as real text (readable, sharp, translatable) over an optional photo. A dark fade sits
+ * under the text so it stays readable on any photo; without a photo it's a white card. The
+ * button on a photo is white in both themes, so it keeps the light theme's ink (data-theme).
+ * One banner at a time, no carousel.
+ */
+import Icon from '~/components/ui/Icon.astro';
+import type { CampaignBanner, Lang } from '~/lib/types';
+import { t, langOf, href } from '~/lib/i18n';
+
+interface Props { banner: CampaignBanner; lang: Lang }
+const { banner: b, lang } = Astro.props;
+const link = b.path && (b.path.startsWith('/') ? href(lang, b.path) : b.path);
+const external = !!b.path && !b.path.startsWith('/');
+---
+{b.image ? (
+  <article class="relative isolate flex min-h-[220px] overflow-hidden rounded-2xl bg-ink shadow-float sm:min-h-[240px] lg:min-h-[260px]">
+    <img src={b.image} alt="" loading="eager" fetchpriority="high" decoding="async" class="absolute inset-0 -z-10 size-full object-cover" />
+    <!-- Phones: fade up from the bottom, where the text sits; wider screens: fade in from the left -->
+    <div class="absolute inset-0 -z-10 bg-gradient-to-t from-black/90 via-black/70 to-black/20 sm:bg-gradient-to-r sm:from-black/85 sm:via-black/70 sm:to-transparent" aria-hidden="true"></div>
+    <div class="flex max-w-xl flex-col justify-end gap-1.5 p-5 sm:justify-center sm:p-8 lg:max-w-2xl lg:px-10">
+      <p lang="en" class="t-label !text-white/90">{b.label}</p>
+      <h2 lang={langOf(b.title, lang)} class="t-h1 text-white">{t(b.title, lang)}</h2>
+      {b.text && <p lang={langOf(b.text, lang)} class="clamp-2 text-white/90">{t(b.text, lang)}</p>}
+      {link && b.cta && (
+        <a href={link} lang="en" data-theme="light" class="btn btn-sm mt-2 self-start bg-white text-ink hover:bg-white/90" {...(external && { target: '_blank', rel: 'noopener' })}>
+          {b.cta} <Icon name="ArrowRight" size={16} />
+        </a>
+      )}
+    </div>
+  </article>
+) : (
+  <article class="flex min-h-[200px] flex-col justify-center gap-1.5 rounded-2xl border border-line bg-surface p-5 shadow-float sm:p-8 lg:px-10">
+    <p lang="en" class="t-label !text-accent-ink">{b.label}</p>
+    <h2 lang={langOf(b.title, lang)} class="t-h1 max-w-2xl">{t(b.title, lang)}</h2>
+    {b.text && <p lang={langOf(b.text, lang)} class="clamp-2 max-w-2xl text-ink-2">{t(b.text, lang)}</p>}
+    {link && b.cta && (
+      <a href={link} lang="en" class="btn btn-primary btn-sm mt-2 self-start" {...(external && { target: '_blank', rel: 'noopener' })}>
+        {b.cta} <Icon name="ArrowRight" size={16} />
+      </a>
+    )}
+  </article>
+)}

@@ -47,7 +47,14 @@ in light and dark themes.
 
 ## Design rules (agreed with the owner; ask before changing any)
 
-- Direction is "civic newsroom": calm, flat, content first, one union-red accent. Not campaign-bold.
+- Direction is "civic newsroom": calm, flat, content first, one union-red accent. Since the header
+  redesign, the union's red also carries the brand in two places only: the red header strip on
+  every page (sticky, always the same height, shadow once scrolled) and the home page's red wave.
+  Below them pages stay calm and white; don't add other red blocks.
+- The home page has at most one campaign banner (`banner` in `src/data/site.ts`): real text over an
+  optional photo, never a picture of text, no carousel. Without one, the wave is a short band.
+- Strip colours come from `--brand-bar` / `--on-brand` / `--on-brand-2` (a shade deeper than
+  `--accent`, so its softer white passes); focus rings turn white inside `.on-brand`.
 - **Interface text is English only** on both sites. Only content (titles, summaries, names,
   addresses) switches language. Logo, artwork and the മല/EN switch stay bilingual.
 - Mark every content block with its real language: `lang={langOf(text, lang)}`; UI blocks get `lang="en"`.

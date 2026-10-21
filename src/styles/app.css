@@ -33,6 +33,11 @@
   --accent-ink: #b00d27;     /* red text on light backgrounds */
   --accent-soft: #fdecef;
   --on-accent: #ffffff;
+  /* Brand strip: the red header and the home page wave. A shade deeper than --accent so the
+     softer white of inactive menu items still passes (white 7.2:1, 90 % white 6.0:1) */
+  --brand-bar: #b00d27;
+  --on-brand: #ffffff;
+  --on-brand-2: rgb(255 255 255 / 0.9);
   /* Functional */
   --link: #1d5bb0;
   --focus: #1d5bb0;
@@ -59,6 +64,9 @@
   --accent-ink: #ff7385;
   --accent-soft: #3a1820;
   --on-accent: #ffffff;
+  --brand-bar: #8e0a1f;      /* deeper so it doesn't glare on the dark page (white 9.5:1) */
+  --on-brand: #ffffff;
+  --on-brand-2: rgb(255 255 255 / 0.9);
   --link: #8ab8f7;
   --focus: #8ab8f7;
   --success: #4cc38a;
@@ -69,6 +77,9 @@
 }
 
 @theme inline {
+  --color-brand-bar: var(--brand-bar);
+  --color-on-brand: var(--on-brand);
+  --color-on-brand-2: var(--on-brand-2);
   --color-bg: var(--bg);
   --color-bg-subtle: var(--bg-subtle);
   --color-surface: var(--surface);
@@ -118,6 +129,8 @@
   button { cursor: pointer; }
   img, svg { display: block; }
   :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+  /* On the red strip and wave the blue ring would disappear, so it turns white there */
+  .on-brand :focus-visible { outline-color: var(--on-brand); }
   ::selection { background: var(--accent); color: var(--on-accent); }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }

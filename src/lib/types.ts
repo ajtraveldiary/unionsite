@@ -109,6 +109,21 @@ export interface UnionEvent {
   sample?: boolean;
 }
 
+/** The home page's campaign banner: real text over an optional photo, never a picture of text. */
+export interface CampaignBanner {
+  /** Small line above the title, in English like all labels ("Campaign", "Strike call") */
+  label: string;
+  title: L10n;
+  text?: L10n;
+  /** Button text (English) and where it goes: a site path ("/news/…") or a full URL */
+  cta?: string;
+  path?: string;
+  /** Photo behind the text; without one the banner is a white card */
+  image?: string;
+  /** Last day to show it (inclusive, India time); after that the home page drops it */
+  until?: string;
+}
+
 export interface MagazineIssue {
   year: number;
   month: number; // 1-12
