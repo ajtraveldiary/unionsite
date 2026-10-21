@@ -14,7 +14,7 @@ events are sample data. The admin panel, database and file storage are not built
 
 - `npm run dev`: dev server on port 4321 (in the desktop app, start it with the "site" entry in `.claude/launch.json`)
 - `npm run check`: Astro/TypeScript check. Must show 0 errors, 0 warnings.
-- `npm run build`: builds every page (about 4,320 with the crawled archive, ~75 s). Run it after changing pages or data.
+- `npm run build`: builds every page (about 4,330 with the crawled archive, ~75 s). Run it after changing pages or data.
 - `npm run map`: regenerates `src/data/geo/kerala-map.json` from the district GeoJSON (rarely needed)
 - `node scripts/crawl.mjs`: reads the current site into `scripts/.cache/` (one request at a time,
   cached; a full run from scratch takes hours because the old server is slow). `--cache-only` builds
