@@ -3,8 +3,8 @@
 import { posts } from '~/data/news';
 import { orders, subjectBySlug } from '~/data/orders';
 import { districts } from '~/data/districts';
-import { events, notice, magazineIssues } from '~/data/site';
-import type { Lang, Order, Post } from './types';
+import { events, banner, magazineIssues } from '~/data/site';
+import type { L10n, Lang, Order, Post, UnionEvent } from './types';
 import { href } from './i18n';
 
 const byDateDesc = <T extends { date: string }>(a: T, b: T) => b.date.localeCompare(a.date) || 0;
@@ -50,9 +50,21 @@ export const allEvents = () => [...events].sort((a, b) => a.start.localeCompare(
 export const isUpcoming = (e: { start: string; end?: string }) => new Date(e.end ?? e.start) >= NOW();
 export const eventsForDistrict = (slug: string) => allEvents().filter((e) => e.district === slug && isUpcoming(e));
 
-/** The home-page notice, if there is one and it hasn't expired. */
-export const activeNotice = () =>
-  notice && (!notice.until || new Date(`${notice.until}T23:59:59+05:30`) >= NOW()) ? notice : null;
+export type ActiveBanner =
+  | { kind: 'post'; post: Post; headline?: L10n }
+  | { kind: 'event'; event: UnionEvent; headline?: L10n };
+
+/** The home-page banner's post or event, or null when there's none (or it no longer exists). */
+export function activeBanner(): ActiveBanner | null {
+  if (!banner) return null;
+  if ('post' in banner) {
+    const post = postById(banner.post);
+    return post ? { kind: 'post', post, headline: banner.headline } : null;
+  }
+  const slug = banner.event;
+  const event = events.find((e) => e.slug === slug);
+  return event ? { kind: 'event', event, headline: banner.headline } : null;
+}
 
 /** Kerala Service issues, newest first */
 export const allIssues = () => [...magazineIssues].sort((a, b) => b.year - a.year || b.month - a.month);

@@ -12,7 +12,7 @@ import OrderRow from '~/components/ds/OrderRow.astro';
 import EventCard from '~/components/ds/EventCard.astro';
 import ToolTile from '~/components/ds/ToolTile.astro';
 import DistrictTile from '~/components/ds/DistrictTile.astro';
-import Notice from '~/components/ds/Notice.astro';
+import Banner from '~/components/ds/Banner.astro';
 import FilterMenu from '~/components/ds/FilterMenu.astro';
 import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
 import EmptyState from '~/components/ds/EmptyState.astro';
@@ -72,9 +72,9 @@ const colours = [
   { token: '--accent-soft', name: 'Red tint', use: 'Badges, icon wells' },
   { token: '--link', name: 'Link blue', use: 'Links, focus ring' },
   { token: '--success', name: 'Success', use: 'Confirmations' },
-  { token: '--warning', name: 'Warning', use: 'Notices' },
+  { token: '--warning', name: 'Warning', use: 'Sample and draft labels' },
 ];
-const sectionNav = ['Colour', 'Type', 'Spacing', 'Controls', 'Stories', 'Orders', 'Events', 'Tools', 'Districts', 'Notices & tabs', 'Empty states'];
+const sectionNav = ['Colour', 'Type', 'Spacing', 'Controls', 'Stories', 'Orders', 'Events', 'Tools', 'Districts', 'Banner & tabs', 'Empty states'];
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z]+/g, '-');
 ---
 <AppLayout lang={lang} title="Design system" noindex>
@@ -198,7 +198,7 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z]+/g, '-');
           <div class="flex flex-wrap gap-2">
             <span class="badge badge-accent">Important</span>
             <span class="badge badge-neutral">FSETO</span>
-            <span class="badge badge-warning">Notice</span>
+            <span class="badge badge-warning">Sample</span>
           </div>
           <div class="grid gap-2 sm:grid-cols-2">
             <div class="relative">
@@ -286,11 +286,13 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z]+/g, '-');
       </div>
     </section>
 
-    <!-- Notices & tabs -->
-    <section class="section" aria-labelledby="notices-tabs">
-      <SectionHead title="Notices & tabs" id="notices-tabs" />
+    <!-- Banner & tabs -->
+    <section class="section" aria-labelledby="banner-tabs">
+      <SectionHead title="Banner & tabs" id="banner-tabs" />
       <div class="space-y-6">
-        <Notice text="Example notice: a one- or two-line announcement, shown on the home page only while it is active." href="#notices-tabs" />
+        <p class="t-meta">Home-page banner: one post or event chosen by a state editor. With a photo (behind the text, faint) and without.</p>
+        <Banner banner={{ kind: 'post', post: lead }} lang={lang} id="demo-banner-photo" />
+        <Banner banner={{ kind: 'post', post: rowTile }} lang={lang} id="demo-banner-plain" />
         <div>
           <Tabs tabs={['News', 'Office-bearers', 'Offices', 'Gallery']} idPrefix="demo" label="District sections (example)" />
           {['News', 'Office-bearers', 'Offices', 'Gallery'].map((tb, i) => (

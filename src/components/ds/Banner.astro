@@ -1,0 +1,64 @@
+---
+/**
+ * Home-page banner: one news post or event, chosen by a state editor, above Top news. Real
+ * text on a panel in the logo's red, the same in both themes: a warm-yellow label, a white headline
+ * (two lines at most), one white summary line and Read more (beside the text on laptops,
+ * below it on phones). A post's photo sits behind in black and white, multiplied into the red:
+ * it can only darken the panel, so the text keeps its contrast over any photo.
+ * The whole panel opens the item; Read more is its one link.
+ */
+import Icon from '~/components/ui/Icon.astro';
+import type { Lang } from '~/lib/types';
+import { t, langOf, href, formatDate, formatTime } from '~/lib/i18n';
+import { postUrl, type ActiveBanner } from '~/lib/content';
+import { topicBySlug, districtBySlug } from '~/data/districts';
+
+interface Props { banner: ActiveBanner; lang: Lang; class?: string; id?: string }
+const { banner: b, lang, class: cls = '', id = 'banner' } = Astro.props;
+
+const item = b.kind === 'post'
+  ? {
+    label: `${topicBySlug[b.post.topic]?.name.en} · ${formatDate(b.post.date, 'en')}`,
+    title: b.headline ?? b.post.title,
+    summary: b.post.summary,
+    url: postUrl(b.post, lang),
+    photo: b.post.cover.kind === 'photo' ? b.post.cover : undefined,
+  }
+  : {
+    label: ['Event', formatDate(b.event.start, 'en'), b.event.district && districtBySlug[b.event.district]?.name.en].filter(Boolean).join(' · '),
+    title: b.headline ?? b.event.title,
+    summary: { ml: `${t(b.event.venue, 'ml')} · ${formatTime(b.event.start)}`, en: b.event.venue.en && `${b.event.venue.en} · ${formatTime(b.event.start)}` },
+    url: href(lang, `/events#${b.event.slug}`),
+    photo: undefined,
+  };
+// Many crawled posts open with their own title; drop it so the summary line adds something
+const fullTitle = t(b.kind === 'post' ? b.post.title : b.event.title, lang);
+let summary = t(item.summary, lang);
+if (summary.startsWith(fullTitle)) summary = summary.slice(fullTitle.length).replace(/^[\s.,:;–-]+/, '');
+if (summary.replace(/…$/, '').trim().length < 20) summary = '';
+---
+<section class:list={['group relative isolate overflow-hidden rounded-[var(--radius-card)] bg-banner text-on-banner', cls]} aria-labelledby={`${id}-title`}>
+  {item.photo && (
+    <img
+      src={item.photo.src}
+      srcset={item.photo.srcset || undefined}
+      sizes="100vw"
+      alt=""
+      loading="eager"
+      decoding="async"
+      class="absolute inset-0 -z-10 size-full object-cover opacity-40 mix-blend-multiply grayscale"
+      style={item.photo.focal ? `object-position:${item.photo.focal[0] * 100}% ${item.photo.focal[1] * 100}%` : undefined}
+    />
+  )}
+  <!-- Phones and tablets: text, then the button below. Laptops: the button sits to the right, so the panel stays low -->
+  <div class="flex flex-col gap-4 p-6 sm:p-8 lg:flex-row lg:items-end lg:justify-between lg:gap-10 lg:px-10">
+    <div class="min-w-0 max-w-4xl">
+      <p lang="en" class="t-label !text-banner-ink">{item.label}</p>
+      <h2 id={`${id}-title`} lang={langOf(item.title, lang)} class="t-h1 clamp-2 mt-1">{t(item.title, lang)}</h2>
+      {summary && <p lang={langOf(item.summary, lang)} class="mt-1 line-clamp-1">{summary}</p>}
+    </div>
+    <p lang="en" class="shrink-0">
+      <a href={item.url} class="stretched btn border border-banner-ink text-banner-ink hover:bg-banner-ink hover:text-banner focus-visible:outline-banner-ink max-lg:w-full sm:max-lg:w-auto">Read more <Icon name="ArrowRight" size={18} /></a>
+    </p>
+  </div>
+</section>

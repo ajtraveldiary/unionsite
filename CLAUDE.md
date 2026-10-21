@@ -6,7 +6,8 @@ code comments that say "plan, section N" refer to it.
 
 Right now the site is a **preview**. News, GO orders and Kerala Service are real content crawled
 from the current keralangounion.in (`src/data/live/*.json`; photos and PDFs are still linked from
-the old site). Events, videos and the state committee are hand-written in `src/data/site.ts`;
+the old site). Events, videos, the state committee and the home-page `banner` (one post or event, set by a state
+editor; it stays until replaced) are hand-written in `src/data/site.ts`;
 events are sample data. The admin panel, database and file storage are not built yet.
 
 ## Commands

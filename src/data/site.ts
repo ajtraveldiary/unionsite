@@ -1,4 +1,4 @@
-import type { MagazineIssue, Person, UnionEvent, Video } from '~/lib/types';
+import type { L10n, MagazineIssue, Person, UnionEvent, Video } from '~/lib/types';
 import liveIssues from './live/issues.json';
 
 export const site = {
@@ -19,10 +19,14 @@ export const site = {
 };
 
 /**
- * Home-page notice strip (a strike call, a deadline). Shown only while active: set `until`
- * to the last day it should show (inclusive), or set the notice to null when there is none.
+ * The home-page banner: one news post (by id) or one event (by slug), chosen by a state editor.
+ * It stays until it's replaced; `headline` optionally shortens the title to fit two lines.
+ * Set it to null for no banner. The admin panel's "Show in banner" sets this later.
  */
-export const notice: { text: string; textLang?: 'ml' | 'en'; href?: string; until?: string } | null = null;
+export const banner: ({ post: number } | { event: string }) & { headline?: L10n } | null = {
+  post: 18024,
+  headline: { ml: 'നവംബർ 21 സെക്രട്ടറിയേറ്റ് വളയൽ വിജയിപ്പിക്കുക' },
+};
 
 export const usefulLinks = [
   { label: 'SPARK', url: 'https://www.spark.gov.in/', note: 'Salary & service' },

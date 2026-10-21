@@ -39,6 +39,10 @@
   --success: #1e7a4c;
   --warning: #965800;
   --warning-soft: #fdf3e2;
+  /* Home banner: the logo's red in both themes, with white (7.2:1) and warm-yellow (5.3:1) text */
+  --banner: #b00d27;
+  --on-banner: #ffffff;
+  --banner-ink: #ffd970;
   /* Elevation: only for things that float (menus, dialogs, sticky header) */
   --shadow-float: 0 10px 30px -10px rgb(15 15 20 / 0.25), 0 2px 6px -2px rgb(15 15 20 / 0.08);
   color-scheme: light;
@@ -87,6 +91,9 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
+  --color-banner: var(--banner);
+  --color-on-banner: var(--on-banner);
+  --color-banner-ink: var(--banner-ink);
   --shadow-float: var(--shadow-float);
 
   --font-sans: "Noto Sans Malayalam Variable", "Noto Sans Malayalam", ui-sans-serif, system-ui, sans-serif;
