@@ -22,9 +22,7 @@ export const site = {
  * Home-page notice strip (a strike call, a deadline). Shown only while active: set `until`
  * to the last day it should show (inclusive), or set the notice to null when there is none.
  */
-export const notice: { text: string; textLang?: 'ml' | 'en'; href?: string; until?: string } | null = {
-  text: 'This is a preview of the new website. News, orders and Kerala Service come from the current site; events are sample data.',
-};
+export const notice: { text: string; textLang?: 'ml' | 'en'; href?: string; until?: string } | null = null;
 
 export const usefulLinks = [
   { label: 'SPARK', url: 'https://www.spark.gov.in/', note: 'Salary & service' },
