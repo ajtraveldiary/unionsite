@@ -24,13 +24,13 @@ import type { Post, UnionEvent } from '~/lib/types';
 const lang = 'ml' as const;
 const posts = allPosts();
 
-// A photo stand-in (real photos arrive with the import), to show the photo variants
+// A neutral photo stand-in, so the photo variants look the same whatever the latest news is
 const photo = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9aa6b2"/><stop offset="1" stop-color="#4f5b66"/></linearGradient></defs><rect width="1600" height="900" fill="url(#g)"/><circle cx="1180" cy="260" r="150" fill="#d9c9a3" opacity=".55"/><path d="M0 700 L380 430 L640 640 L980 360 L1600 760 V900 H0Z" fill="#2f3a44" opacity=".6"/><text x="800" y="470" font-family="sans-serif" font-size="44" fill="#fff" fill-opacity=".55" text-anchor="middle">Photo</text></svg>`)}`;
 const withPhoto = (p: Post): Post => ({ ...p, cover: { kind: 'photo', src: photo, alt: { ml: 'ചിത്രം', en: 'Photo' } } });
 
 const lead = withPhoto(posts.find((p) => p.featured) ?? posts[0]);
 const rowPhoto = withPhoto(posts.find((p) => p.topic === 'fseto' && !p.featured)!);
-const rowTile = posts.find((p) => p.sample)!;
+const rowTile = posts.find((p) => p.cover.kind === 'none') ?? posts[0];
 // Four stories beside the lead, mixing photos and topic tiles
 const sideList = [rowPhoto, ...posts.filter((p) => p.id !== rowPhoto.id && !p.featured).slice(0, 3)].map((p, i) => (i === 2 ? withPhoto(p) : p));
 const longTitle: Post = {
@@ -38,8 +38,8 @@ const longTitle: Post = {
   title: { ml: 'സംസ്ഥാന ജീവനക്കാരുടെയും അധ്യാപകരുടെയും ന്യായമായ ആവശ്യങ്ങൾ ഉന്നയിച്ച് സെക്രട്ടറിയേറ്റിന് മുന്നിലും എല്ലാ ജില്ലാ കേന്ദ്രങ്ങളിലും താലൂക്ക് കേന്ദ്രങ്ങളിലും പ്രതിഷേധ പ്രകടനവും ധർണയും സംഘടിപ്പിച്ചു' },
 };
 const orders = allOrders();
-const important = orders.find((o) => o.important)!;
-const plain = orders.find((o) => !o.important)!;
+const important = orders.find((o) => o.important) ?? orders[0];
+const plain = orders.find((o) => !o.important && o.goNumber) ?? orders[1];
 const events = allEvents();
 const multiDay = events.find((e) => e.end) ?? events[0];
 const withDistrict = events.find((e) => e.district) ?? events[0];

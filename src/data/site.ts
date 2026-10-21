@@ -1,4 +1,5 @@
 import type { MagazineIssue, Person, UnionEvent, Video } from '~/lib/types';
+import liveIssues from './live/issues.json';
 
 export const site = {
   name: { ml: 'കേരള എൻ.ജി.ഒ യൂണിയൻ', en: 'Kerala NGO Union' },
@@ -22,7 +23,7 @@ export const site = {
  * to the last day it should show (inclusive), or set the notice to null when there is none.
  */
 export const notice: { text: string; textLang?: 'ml' | 'en'; href?: string; until?: string } | null = {
-  text: 'This is a preview of the new website. Orders, events and posts marked “sample” are placeholder data.',
+  text: 'This is a preview of the new website. News, orders and Kerala Service come from the current site; events are sample data.',
 };
 
 export const usefulLinks = [
@@ -88,16 +89,8 @@ export const events: UnionEvent[] = [
   { slug: 'ernakulam-women-convention-2026', title: { ml: 'വനിതാ കൺവെൻഷൻ', en: 'Women’s convention' }, start: '2026-11-14T10:00:00+05:30', venue: { ml: 'എറണാകുളം', en: 'Ernakulam' }, district: 'ernakulam', sample: true },
 ];
 
-// Kerala Service archive runs from Nov 2014 to Mar 2026 on the old site.
-export const magazineIssues: MagazineIssue[] = (() => {
-  const out: MagazineIssue[] = [];
-  let [y, m] = [2026, 3];
-  while (y > 2014 || (y === 2014 && m >= 11)) {
-    out.push({ year: y, month: m });
-    if (--m === 0) [y, m] = [y - 1, 12];
-  }
-  return out;
-})();
+// Kerala Service issues crawled from the old site's flipbooks (newest first), with PDF and cover.
+export const magazineIssues = liveIssues as MagazineIssue[];
 
 // Latest uploads from the union's YouTube channel feed (fetched 4 Oct 2026).
 export const videos: Video[] = [

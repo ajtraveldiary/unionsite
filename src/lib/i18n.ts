@@ -15,9 +15,13 @@ export function t(text: L10n | undefined, lang: Lang): string {
   return lang === 'en' && text.en ? text.en : text.ml;
 }
 
-/** Language the text will actually render in — used for the `lang` attribute on content blocks. */
+/**
+ * Language the text will actually render in — used for the `lang` attribute on content blocks.
+ * Text with no Malayalam letters is English, wherever it sits (many GO titles are English only).
+ */
 export function langOf(text: L10n | undefined, lang: Lang): Lang {
-  return lang === 'en' && text?.en ? 'en' : 'ml';
+  if (lang === 'en' && text?.en) return 'en';
+  return text && !/[ഀ-ൿ]/.test(text.ml) ? 'en' : 'ml';
 }
 
 export function hasEn(text: L10n | undefined) {

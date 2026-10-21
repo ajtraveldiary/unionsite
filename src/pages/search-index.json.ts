@@ -1,9 +1,8 @@
 import type { APIRoute } from 'astro';
-import { allOrders, allPosts, orderPath, postPath, sortedDistricts, subjectName } from '~/lib/content';
+import { allEvents, allOrders, allPosts, orderPath, postPath, sortedDistricts, subjectName } from '~/lib/content';
 import { formatDate } from '~/lib/i18n';
 import { goCore, type SearchDoc } from '~/lib/search';
 import { topicBySlug, districtBySlug } from '~/data/districts';
-import { events } from '~/data/site';
 
 export const prerender = true;
 
@@ -15,7 +14,7 @@ export const GET: APIRoute = () => {
         k: 'order',
         ml: o.title.ml,
         en: o.title.en,
-        sub: `${o.goNumber} · ${formatDate(o.goDate, 'en', 'short')}`,
+        sub: [o.goNumber, `${o.dateIsUpload ? 'Added ' : ''}${formatDate(o.goDate, 'en', 'short')}`, subj?.en].filter(Boolean).join(' · '),
         url: orderPath(o),
         kw: [o.goNumber, goCore(o.goNumber), subj?.ml, subj?.en, o.group].filter(Boolean).join(' '),
         imp: o.important,
@@ -37,7 +36,7 @@ export const GET: APIRoute = () => {
       url: `/districts/${d.slug}`,
       kw: `${d.hq.ml} ${d.hq.en} ${d.slug}`,
     })),
-    ...events.map((e): SearchDoc => ({
+    ...allEvents().map((e): SearchDoc => ({
       k: 'event',
       ml: e.title.ml,
       en: e.title.en,

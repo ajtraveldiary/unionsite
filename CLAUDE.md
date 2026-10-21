@@ -4,15 +4,23 @@ The new keralangounion.in: an Astro 7 site on Cloudflare for the union of Kerala
 employees. The master plan is `../Kerala NGO Union — Website Rebuild Plan.md` (one folder up);
 code comments that say "plan, section N" refer to it.
 
-Right now the site is a **preview built on sample data** (`src/data/*.ts`). The real content
-arrives with the Phase 2 import; the admin panel, database and file storage are not built yet.
+Right now the site is a **preview**. News, GO orders and Kerala Service are real content crawled
+from the current keralangounion.in (`src/data/live/*.json`; photos and PDFs are still linked from
+the old site). Events, videos and the state committee are hand-written in `src/data/site.ts`;
+events are sample data. The admin panel, database and file storage are not built yet.
 
 ## Commands
 
 - `npm run dev`: dev server on port 4321 (in the desktop app, start it with the "site" entry in `.claude/launch.json`)
 - `npm run check`: Astro/TypeScript check. Must show 0 errors, 0 warnings.
-- `npm run build`: builds every page (currently 430). Run it after changing pages or data.
+- `npm run build`: builds every page (about 4,460 with the crawled archive, ~75 s). Run it after changing pages or data.
 - `npm run map`: regenerates `src/data/geo/kerala-map.json` from the district GeoJSON (rarely needed)
+- `node scripts/crawl.mjs`: reads the current site into `scripts/.cache/` (one request at a time,
+  cached; a full run from scratch takes hours because the old server is slow). `--cache-only` builds
+  from the cache without fetching. Watch it with `node scripts/crawl-progress.mjs` in another terminal.
+- `node scripts/import-crawl.mjs`: turns the crawl into `src/data/live/*.json` (topics, districts,
+  subjects, GO numbers, transliterated slugs). Never edit those JSON files by hand; change the
+  script and rerun it.
 
 There are no automated tests. Check changes in the browser at phone (375 px) and laptop width,
 in light and dark themes.
@@ -31,6 +39,8 @@ in light and dark themes.
 - `src/lib/content.ts`: all content queries. Pages call these, never the data files directly, so the
   Phase 2 database can replace them with the same function signatures.
 - `src/lib/search.ts`: search scoring shared by `/search` and the Orders page (index at `/search-index.json`).
+- The News page renders only the newest stories; filters, search and "Load more" read
+  `/news-index.json`. Lists that could hold the whole archive must stay limited like this.
 - `src/lib/i18n.ts`: `t()` / `langOf()` for bilingual text, `href()` for `/en` paths, date formatting.
 - `/design-system`: the living style guide. `/wireframes`: the greyscale Phase A wireframes, kept on
   purpose (noindex) with their own `wire.css` and `components/wire/`.

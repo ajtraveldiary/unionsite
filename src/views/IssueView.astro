@@ -12,16 +12,17 @@ import ShareBar from '~/components/ds/ShareBar.astro';
 import MagazineCover from '~/components/ui/MagazineCover.astro';
 import type { Lang } from '~/lib/types';
 import { href, monthName } from '~/lib/i18n';
-import { issuePath } from '~/lib/content';
-import { magazineIssues } from '~/data/site';
+import { allIssues, issuePath } from '~/lib/content';
 
 interface Props { lang: Lang; year: number; month: number }
 const { lang, year, month } = Astro.props;
 const L = (p: string) => href(lang, p);
+const magazineIssues = allIssues();
 const i = magazineIssues.findIndex((x) => x.year === year && x.month === month);
 // The list runs newest first, so the older issue is the next item.
 const newer = magazineIssues[i - 1];
 const older = magazineIssues[i + 1];
+const issue = magazineIssues[i];
 const sameYear = magazineIssues.filter((x) => x.year === year);
 const label = `${monthName(month, 'en')} ${year}`;
 const pageUrl = new URL(L(issuePath(year, month)), Astro.site).toString();
@@ -32,16 +33,26 @@ const pageUrl = new URL(L(issuePath(year, month)), Astro.site).toString();
 
     <div class="mt-5 grid items-start gap-6 sm:grid-cols-[200px_minmax(0,1fr)] lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
       <div class="mx-auto w-48 overflow-hidden rounded-md border border-line sm:w-full">
-        <MagazineCover year={year} month={month} class="block h-auto w-full" />
+        <MagazineCover year={year} month={month} class="block h-auto w-full" eager />
       </div>
       <div>
         <p class="t-label">Kerala Service</p>
         <h1 class="t-display mt-1">{label}</h1>
-        <div class="mt-5 flex flex-wrap gap-2">
-          <button type="button" class="btn btn-primary" disabled><Icon name="BookOpen" size={18} /> Read online</button>
-          <button type="button" class="btn btn-secondary" disabled><Icon name="Download" size={18} /> Download PDF</button>
-        </div>
-        <p class="t-meta mt-2 max-w-md">Reading and download open once this issue's PDF is moved over from the current site. The cover is a stand-in until then.</p>
+        {issue.pdfUrl ? (
+          <>
+            <div class="mt-5 flex flex-wrap gap-2">
+              <a href={issue.pdfUrl} target="_blank" rel="noopener" class="btn btn-primary"><Icon name="BookOpen" size={18} /> Read the PDF</a>
+            </div>
+            <p class="t-meta mt-2 max-w-md">Opens the issue's PDF from the current site. A page-by-page reader comes with Phase 3.</p>
+          </>
+        ) : (
+          <>
+            <div class="mt-5 flex flex-wrap gap-2">
+              <button type="button" class="btn btn-primary" disabled><Icon name="BookOpen" size={18} /> Read the PDF</button>
+            </div>
+            <p class="t-meta mt-2 max-w-md">This issue isn't on the current site, so there is no PDF yet. The cover is a stand-in.</p>
+          </>
+        )}
         <div class="mt-5 border-t border-line pt-4">
           <ShareBar url={pageUrl} title={`Kerala Service, ${label}`} />
         </div>

@@ -29,6 +29,8 @@ export interface NoCover {
 export interface PhotoCover {
   kind: 'photo';
   src: string;
+  /** Other sizes of the same photo ("url 300w, url 768w"), so small spots load a small file */
+  srcset?: string;
   alt: L10n;
   focal?: [number, number];
 }
@@ -62,16 +64,21 @@ export interface OrderSubject {
 export interface Order {
   id: number;
   slug: string;
+  /** "G.O.(P) No.112/2026/Fin"; empty when the title doesn't give it (most crawled orders) */
   goNumber: string;
+  /** The GO's date, or the day it was uploaded when `dateIsUpload` is set */
   goDate: string;
-  department: string;
+  dateIsUpload?: boolean;
+  department?: string;
   group: OrderGroup;
   subject: string;
   title: L10n & { en: string };
   summary?: L10n;
   important?: boolean;
   pdfKb: number;
-  pages: number;
+  pages?: number;
+  pdfUrl?: string;
+  legacyUrl?: string;
   sample?: boolean;
 }
 
@@ -105,6 +112,10 @@ export interface UnionEvent {
 export interface MagazineIssue {
   year: number;
   month: number; // 1-12
+  pdfUrl?: string;
+  /** Cover image (page 1); without one the archive draws a stand-in cover */
+  coverUrl?: string;
+  legacyUrl?: string;
 }
 
 export interface Video {

@@ -23,8 +23,8 @@ import EmptyState from '~/components/ds/EmptyState.astro';
 import VideoCard from '~/components/ds/VideoCard.astro';
 import type { Lang, Post } from '~/lib/types';
 import { href, monthName } from '~/lib/i18n';
-import { allPosts, latestOrders, upcomingEvents, sortedDistricts, postsForDistrict, issuePath, activeNotice } from '~/lib/content';
-import { magazineIssues, videos, site } from '~/data/site';
+import { allPosts, latestOrders, upcomingEvents, sortedDistricts, postsForDistrict, allIssues, issuePath, activeNotice } from '~/lib/content';
+import { videos, site } from '~/data/site';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
@@ -57,7 +57,7 @@ const popular = [
   { label: 'DA', path: '/orders?s=da' },
   { label: 'Pay Revision', path: '/orders?s=pay-revision' },
   { label: 'Pension', path: '/orders?g=pension' },
-  { label: 'MEDISEP', path: '/orders?s=medisep' },
+  { label: 'NPS', path: '/orders?g=nps' },
   { label: 'Leave', path: '/orders?s=leave' },
   { label: 'Bonus', path: '/orders?s=bonus' },
 ];
@@ -77,15 +77,24 @@ const tools = [
 // Events: every upcoming event in the slider; district ones again in the Districts section
 const events = upcomingEvents(50);
 const districtEvents = events.filter((e) => e.district);
-// District news: stories already shown higher up appear only when their district is picked
-const districtPosts = posts.filter((p) => p.district);
+// District news: stories already shown higher up appear only when their district is picked.
+// The page carries a few per district (enough to fill the list when one is picked), not all.
 const EVENT_LIMIT = 4;
 const NEWS_LIMIT = 5;
+const perDistrict = new Map<string, number>();
+const districtPosts = posts.filter((p) => {
+  if (!p.district) return false;
+  const n = perDistrict.get(p.district) ?? 0;
+  perDistrict.set(p.district, n + 1);
+  return n < NEWS_LIMIT + 2;
+});
 const districts = sortedDistricts().map((d) => ({ d, count: postsForDistrict(d.slug).length }));
 const districtOptions = districts.map(({ d }) => ({ value: d.slug, label: d.name.en, short: d.name.en.replace('Thiruvananthapuram', 'TVM') }));
 const firstNews = districtPosts.filter((p) => !used.has(p.id)).slice(0, NEWS_LIMIT);
 
-const issue = magazineIssues[0];
+const issues = allIssues();
+const issue = issues[0];
+const oldest = issues.at(-1)!;
 ---
 <AppLayout lang={lang}>
   <h1 class="sr-only">Kerala NGO Union</h1>
@@ -216,7 +225,7 @@ const issue = magazineIssues[0];
         <div lang="en" class="flex min-w-0 flex-col">
           <p class="t-label">Current issue</p>
           <p class="t-h2 mt-1">{monthName(issue.month, 'en')} {issue.year}</p>
-          <p class="mt-1 text-sm text-ink-2">The union's monthly magazine. Every issue since November 2014, readable on any phone.</p>
+          <p class="mt-1 text-sm text-ink-2">The union's monthly magazine. Every issue since {monthName(oldest.month, 'en')} {oldest.year}, readable on any phone.</p>
           <a href={L(issuePath(issue.year, issue.month))} class="btn btn-primary btn-sm mt-auto self-start"><Icon name="BookOpen" size={16} /> Read online</a>
         </div>
       </div>

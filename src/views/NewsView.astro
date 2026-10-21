@@ -5,8 +5,9 @@
  * filter is on. Filters live in the URL (?topic=&district=&q=), so a filtered view can be
  * shared and the home page's "More from…" links open it ready-filtered.
  *
- * Every post is in the page and filtered in the browser, which is fine for the preview's
- * sample set; with the full archive (Phase 2) the same URLs are answered by the server.
+ * The page renders only the newest stories. Filtering, search and "Load more" read
+ * /news-index.json (every post, compact) and draw the list in the browser; in Phase 2 the
+ * same URLs are answered by the server.
  */
 import AppLayout from '~/layouts/AppLayout.astro';
 import Icon from '~/components/ui/Icon.astro';
@@ -19,7 +20,7 @@ import EmptyState from '~/components/ds/EmptyState.astro';
 import type { Lang, Post } from '~/lib/types';
 import { href, monthName } from '~/lib/i18n';
 import { allPosts, sortedDistricts, upcomingEvents } from '~/lib/content';
-import { topics, topicBySlug, districtBySlug } from '~/data/districts';
+import { topics } from '~/data/districts';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
@@ -28,27 +29,22 @@ const posts = allPosts();
 const lead = posts[0];
 const PAGE = 12;
 
-// Months of the newest year, then whole years before it
+// Months of the newest year, then whole years before it (the script groups the same way)
 const newestYear = Number(lead.date.slice(0, 4));
 const groupOf = (p: Post) => {
   const y = Number(p.date.slice(0, 4));
   return y === newestYear ? `${monthName(Number(p.date.slice(5, 7)), 'en')} ${y}` : String(y);
 };
+// The first page, without the lead (it shows above)
 const groups: { label: string; items: Post[] }[] = [];
-for (const p of posts) {
+for (const p of posts.slice(1, PAGE + 1)) {
   const label = groupOf(p);
   if (groups.at(-1)?.label !== label) groups.push({ label, items: [] });
   groups.at(-1)!.items.push(p);
 }
-// Text the search box matches against, in both languages
-const searchText = (p: Post) =>
-  [p.title.ml, p.title.en, p.summary.ml, p.summary.en, topicBySlug[p.topic]?.name.en, p.district && districtBySlug[p.district]?.name.en]
-    .filter(Boolean).join(' ').toLowerCase();
 
 const usedTopics = topics.filter((tp) => posts.some((p) => p.topic === tp.slug));
 const events = upcomingEvents(3);
-// Items shown before any script runs: the first page, without the lead (it shows above)
-const firstPage = new Set(posts.slice(1, PAGE + 1).map((p) => p.id));
 ---
 <AppLayout lang={lang} title="News" description="News from the Kerala NGO Union and its 15 district committees.">
   <div class="wrap pt-5 lg:pt-8" lang="en">
@@ -76,24 +72,22 @@ const firstPage = new Set(posts.slice(1, PAGE + 1).map((p) => p.id));
   </div>
 
   <div class="wrap mt-8 grid gap-x-12 gap-y-14 lg:grid-cols-[minmax(0,1fr)_300px]">
-    <div>
+    <div data-news data-lang={lang} data-page={PAGE} data-total={posts.length - 1} data-newest-year={newestYear} data-lead-id={lead.id}>
       <div data-news-lead class="mb-8">
         <StoryLead post={lead} lang={lang} headingLevel="h2" ratio="2/1" />
       </div>
       <p class="sr-only" aria-live="polite" data-news-status></p>
 
-      {groups.map((g) => (
-        <section data-news-group class="mb-8" aria-label={g.label} hidden={!g.items.some((p) => firstPage.has(p.id))}>
-          <h2 lang="en" class="t-label mb-1">{g.label}</h2>
-          <ul class="divide-y divide-line border-t border-line">
-            {g.items.map((p) => (
-              <li data-news-item data-topic={p.topic} data-district={p.district ?? 'state'} data-text={searchText(p)} data-lead={p === lead ? '' : undefined} hidden={!firstPage.has(p.id)} class="py-4">
-                <StoryItem post={p} lang={lang} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+      <div data-news-feed>
+        {groups.map((g) => (
+          <section class="mb-8" aria-label={g.label}>
+            <h2 lang="en" class="t-label mb-1">{g.label}</h2>
+            <ul class="divide-y divide-line border-t border-line">
+              {g.items.map((p) => <li class="py-4"><StoryItem post={p} lang={lang} /></li>)}
+            </ul>
+          </section>
+        ))}
+      </div>
 
       <div data-news-empty hidden>
         <EmptyState icon="Newspaper" title="No stories match" text="Try another topic or district, or clear the search.">
@@ -102,7 +96,7 @@ const firstPage = new Set(posts.slice(1, PAGE + 1).map((p) => p.id));
       </div>
       <div lang="en" class="text-center">
         <p class="t-meta" data-news-count>Showing {Math.min(PAGE, posts.length - 1)} of {posts.length - 1}</p>
-        <button type="button" data-news-more data-page={PAGE} class="btn btn-secondary mt-2" hidden={posts.length - 1 <= PAGE}>Load more</button>
+        <button type="button" data-news-more class="btn btn-secondary mt-2" hidden={posts.length - 1 <= PAGE}>Load more</button>
       </div>
     </div>
 
@@ -133,21 +127,32 @@ const firstPage = new Set(posts.slice(1, PAGE + 1).map((p) => p.id));
 </AppLayout>
 
 <script>
+  import { normalise } from '~/lib/search';
+
+  interface IndexPost { id: number; u: string; d: string; tp: string; ds?: string; t: string; te?: string; s: string; se?: string; img?: string }
+  interface NewsIndex { topics: Record<string, string>; districts: Record<string, string>; posts: IndexPost[] }
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  let index: Promise<NewsIndex> | undefined;
+  const loadIndex = (): Promise<NewsIndex> => (index ??= fetch('/news-index.json').then((r) => r.json()));
+
   function initNews() {
+    const root = document.querySelector<HTMLElement>('[data-news]');
     const form = document.querySelector<HTMLFormElement>('[data-news-filters]');
-    if (!form || form.dataset.ready) return;
-    form.dataset.ready = '1';
+    if (!root || !form || root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const en = root.dataset.lang === 'en';
+    const PAGE = Number(root.dataset.page);
+    const newestYear = Number(root.dataset.newestYear);
+    const leadId = Number(root.dataset.leadId);
     const q = form.querySelector<HTMLInputElement>('[data-news-q]')!;
     const sel = form.querySelector<HTMLSelectElement>('[data-news-district]')!;
     const chips = [...form.querySelectorAll<HTMLButtonElement>('[data-news-topic]')];
-    const lead = document.querySelector<HTMLElement>('[data-news-lead]')!;
-    const items = [...document.querySelectorAll<HTMLElement>('[data-news-item]')];
-    const groups = [...document.querySelectorAll<HTMLElement>('[data-news-group]')];
-    const empty = document.querySelector<HTMLElement>('[data-news-empty]')!;
-    const count = document.querySelector<HTMLElement>('[data-news-count]')!;
-    const more = document.querySelector<HTMLButtonElement>('[data-news-more]')!;
-    const status = document.querySelector<HTMLElement>('[data-news-status]')!;
-    const PAGE = Number(more.dataset.page) || 12;
+    const lead = root.querySelector<HTMLElement>('[data-news-lead]')!;
+    const feed = root.querySelector<HTMLElement>('[data-news-feed]')!;
+    const empty = root.querySelector<HTMLElement>('[data-news-empty]')!;
+    const count = root.querySelector<HTMLElement>('[data-news-count]')!;
+    const more = root.querySelector<HTMLButtonElement>('[data-news-more]')!;
+    const status = root.querySelector<HTMLElement>('[data-news-status]')!;
 
     const params = new URLSearchParams(location.search);
     let topic = chips.some((c) => c.dataset.newsTopic === params.get('topic')) ? params.get('topic')! : 'all';
@@ -157,36 +162,81 @@ const firstPage = new Set(posts.slice(1, PAGE + 1).map((p) => p.id));
     sel.value = district;
     let limit = PAGE;
 
-    const apply = (announce = false) => {
-      const term = q.value.trim().toLowerCase();
+    const groupOf = (d: string) => (Number(d.slice(0, 4)) === newestYear ? `${MONTHS[Number(d.slice(5, 7)) - 1]} ${d.slice(0, 4)}` : d.slice(0, 4));
+    const shortDate = (d: string) => `${Number(d.slice(8, 10))} ${MONTHS[Number(d.slice(5, 7)) - 1].slice(0, 3)} ${d.slice(0, 4)}`;
+    const isMl = (s: string) => /[ഀ-ൿ]/.test(s);
+
+    // One story, drawn like StoryItem: meta line, title, two-line summary, photo on the right
+    const item = (p: IndexPost, ix: NewsIndex) => {
+      const li = document.createElement('li');
+      li.className = 'py-4';
+      const title = en && p.te ? p.te : p.t;
+      const summary = en && p.se ? p.se : p.s;
+      li.innerHTML = `
+        <article class="group relative flex gap-4">
+          <div class="min-w-0 flex-1">
+            <p lang="en" class="t-meta"><span class="font-semibold text-ink-2"></span><span data-rest></span></p>
+            <h3 class="t-h3 mt-0.5"><a class="stretched group-hover:text-accent-ink"></a></h3>
+            <p class="clamp-2 mt-1 text-sm text-ink-2"></p>
+          </div>
+          ${p.img ? '<img alt="" loading="lazy" decoding="async" class="w-24 shrink-0 self-start rounded-[10px] bg-bg-subtle object-cover sm:w-36" style="aspect-ratio:4/3">' : ''}
+        </article>`;
+      li.querySelector('.font-semibold')!.textContent = ix.topics[p.tp] ?? '';
+      li.querySelector('[data-rest]')!.textContent = `${p.ds ? ` · ${ix.districts[p.ds]}` : ''} · ${shortDate(p.d)}`;
+      const h = li.querySelector('h3')!;
+      h.lang = isMl(title) ? 'ml' : 'en';
+      const a = h.querySelector('a')!;
+      a.href = en ? `/en${p.u}` : p.u;
+      a.textContent = title;
+      const s = li.querySelector<HTMLElement>('p.clamp-2')!;
+      s.lang = isMl(summary) ? 'ml' : 'en';
+      s.textContent = summary;
+      if (p.img) li.querySelector('img')!.src = p.img;
+      return li;
+    };
+
+    const apply = async (announce = false) => {
+      const term = normalise(q.value);
       const filtered = topic !== 'all' || district !== 'all' || !!term;
-      lead.hidden = filtered;
-      let matches = 0, shown = 0;
-      for (const li of items) {
-        const ok = (topic === 'all' || li.dataset.topic === topic)
-          && (district === 'all' || li.dataset.district === district)
-          && (!term || li.dataset.text!.includes(term))
-          && (filtered || !li.hasAttribute('data-lead'));
-        if (ok) matches++;
-        const visible = ok && shown < limit;
-        if (visible) shown++;
-        li.hidden = !visible;
-      }
-      groups.forEach((g) => { g.hidden = !g.querySelector('[data-news-item]:not([hidden])'); });
-      empty.hidden = matches > 0;
-      count.hidden = matches === 0;
-      count.textContent = `Showing ${shown} of ${matches}`;
-      more.hidden = shown >= matches;
       chips.forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.newsTopic === topic)));
-      if (announce) status.textContent = matches ? `${matches} ${matches === 1 ? 'story' : 'stories'}` : 'No stories match';
+      lead.hidden = filtered;
+      root.setAttribute('aria-busy', 'true');
+      const ix = await loadIndex();
+      root.removeAttribute('aria-busy');
+      const matches = ix.posts.filter((p) =>
+        (topic === 'all' || p.tp === topic)
+        && (district === 'all' || (p.ds ?? 'state') === district)
+        && (!term || normalise(`${p.t} ${p.te ?? ''} ${p.s} ${p.se ?? ''} ${ix.topics[p.tp]} ${p.ds ? ix.districts[p.ds] : ''}`).includes(term))
+        && (filtered || p.id !== leadId));
+      const shown = matches.slice(0, limit);
+      const sections: HTMLElement[] = [];
+      for (const p of shown) {
+        const label = groupOf(p.d);
+        if (sections.at(-1)?.getAttribute('aria-label') !== label) {
+          const sec = document.createElement('section');
+          sec.className = 'mb-8';
+          sec.setAttribute('aria-label', label);
+          sec.innerHTML = '<h2 lang="en" class="t-label mb-1"></h2><ul class="divide-y divide-line border-t border-line"></ul>';
+          sec.querySelector('h2')!.textContent = label;
+          sections.push(sec);
+        }
+        sections.at(-1)!.querySelector('ul')!.append(item(p, ix));
+      }
+      feed.replaceChildren(...sections);
+      empty.hidden = matches.length > 0;
+      count.hidden = matches.length === 0;
+      count.textContent = `Showing ${shown.length} of ${matches.length}`;
+      more.hidden = shown.length >= matches.length;
+      if (announce) status.textContent = matches.length ? `${matches.length} ${matches.length === 1 ? 'story' : 'stories'}` : 'No stories match';
 
       // Keep the URL in step so the view can be shared
-      const p = new URLSearchParams();
-      if (topic !== 'all') p.set('topic', topic);
-      if (district !== 'all') p.set('district', district);
-      if (term) p.set('q', q.value.trim());
-      const qs = p.toString();
+      const u = new URLSearchParams();
+      if (topic !== 'all') u.set('topic', topic);
+      if (district !== 'all') u.set('district', district);
+      if (term) u.set('q', q.value.trim());
+      const qs = u.toString();
       history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
+      return shown.length;
     };
     const refilter = () => { limit = PAGE; apply(true); };
 
@@ -197,7 +247,7 @@ const firstPage = new Set(posts.slice(1, PAGE + 1).map((p) => p.id));
     });
     sel.addEventListener('change', () => { district = sel.value; refilter(); });
     let timer: number | undefined;
-    q.addEventListener('input', () => { clearTimeout(timer); timer = window.setTimeout(refilter, 150); });
+    q.addEventListener('input', () => { clearTimeout(timer); timer = window.setTimeout(refilter, 200); });
 
     // Topic links in the side column filter in place instead of reloading
     document.querySelectorAll<HTMLAnchorElement>('[data-news-topic-link]').forEach((a) => a.addEventListener('click', (e) => {
@@ -206,18 +256,20 @@ const firstPage = new Set(posts.slice(1, PAGE + 1).map((p) => p.id));
       refilter();
       form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }));
-    document.querySelector('[data-news-clear]')?.addEventListener('click', () => {
+    root.querySelector('[data-news-clear]')?.addEventListener('click', () => {
       topic = 'all'; district = 'all'; q.value = ''; sel.value = 'all';
       refilter();
     });
-    more.addEventListener('click', () => {
-      const before = items.filter((li) => !li.hidden).length;
+    more.addEventListener('click', async () => {
+      const before = limit;
       limit += PAGE;
-      apply();
+      await apply();
       // Move focus to the first newly shown story so keyboard users carry on from there
-      items.filter((li) => !li.hidden)[before]?.querySelector('a')?.focus();
+      feed.querySelectorAll<HTMLElement>('li')[before]?.querySelector('a')?.focus();
     });
-    apply();
+
+    // A filtered link (from the home page, or shared) draws its list straight away
+    if (topic !== 'all' || district !== 'all' || q.value.trim()) apply();
   }
   initNews();
   document.addEventListener('astro:page-load', initNews);

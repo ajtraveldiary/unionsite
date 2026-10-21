@@ -7,7 +7,7 @@ import { formatDate, readingMinutes } from '~/lib/i18n';
 import { topicBySlug } from '~/data/districts';
 
 // Example: the Secretariat protest story, which has full text in both languages
-const p = allPosts().find((x) => x.slug === 'protest-march-secretariat-district-centres')!;
+const p = allPosts().find((x) => x.featured && x.body) ?? allPosts().find((x) => x.body)!;
 const related = relatedPosts(p, 3);
 const topic = topicBySlug[p.topic].name.en;
 ---

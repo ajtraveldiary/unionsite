@@ -26,7 +26,7 @@ const kinds = [
   { k: 'event', label: 'Events', icon: 'CalendarDays' },
   { k: 'page', label: 'Pages', icon: 'Landmark' },
 ] as const;
-const popular = ['DA', 'ക്ഷാമബത്ത', 'Pay Revision', 'MEDISEP', '81/2014', 'Pension', 'Kollam'];
+const popular = ['DA', 'ക്ഷാമബത്ത', 'Pay Revision', 'MEDISEP', '116/2021', 'Pension', 'Kollam'];
 const sections = [
   { label: 'Government orders', note: 'GOs and circulars', path: '/orders', icon: 'FileText' },
   { label: 'News', note: 'From the union and districts', path: '/news', icon: 'Newspaper' },
@@ -44,7 +44,7 @@ const sections = [
         <Icon name="Search" size={20} class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-3" />
         <input name="q" type="search" data-search-q class="field !min-h-14 pl-12 text-[1.0625rem]" placeholder="Orders, news, districts, events" aria-label="Search the site" aria-describedby="search-hint" autocomplete="off" />
       </div>
-      <p id="search-hint" class="t-meta mt-1.5">Malayalam or English. A GO number like <span class="font-semibold text-ink-2">112/2026</span> opens that order.</p>
+      <p id="search-hint" class="t-meta mt-1.5">Malayalam or English. A GO number like <span class="font-semibold text-ink-2">116/2021</span> opens that order.</p>
     </form>
 
     <!-- Before a search: popular searches and the main sections -->
@@ -84,7 +84,7 @@ const sections = [
     <div data-search-loading hidden class="t-meta mt-8">Searching…</div>
 
     <div data-search-empty hidden class="mt-8">
-      <EmptyState icon="SearchX" title="No results" text="Check the spelling, try fewer words, or search a GO number like 81/2014.">
+      <EmptyState icon="SearchX" title="No results" text="Check the spelling, try fewer words, or search a GO number like 116/2021.">
         <a href={L('/orders')} data-search-orders class="btn btn-secondary btn-sm mt-4">Search orders instead</a>
       </EmptyState>
     </div>

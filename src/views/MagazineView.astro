@@ -10,21 +10,23 @@ import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
 import MagazineCover from '~/components/ui/MagazineCover.astro';
 import type { Lang } from '~/lib/types';
 import { href, monthName } from '~/lib/i18n';
-import { issuePath } from '~/lib/content';
-import { site, magazineIssues } from '~/data/site';
+import { allIssues, issuePath } from '~/lib/content';
+import { site } from '~/data/site';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
 const L = (p: string) => href(lang, p);
+const magazineIssues = allIssues();
 const current = magazineIssues[0];
+const since = `${monthName(magazineIssues.at(-1)!.month, 'en')} ${magazineIssues.at(-1)!.year}`;
 const years = [...new Set(magazineIssues.map((i) => i.year))];
 const byYear = years.map((y) => ({ y, issues: magazineIssues.filter((i) => i.year === y) }));
 ---
-<AppLayout lang={lang} title="Kerala Service" description={`Kerala Service, the Kerala NGO Union's monthly magazine: ${magazineIssues.length} issues since November 2014, readable on any phone.`}>
+<AppLayout lang={lang} title="Kerala Service" description={`Kerala Service, the Kerala NGO Union's monthly magazine: ${magazineIssues.length} issues since ${since}, readable on any phone.`}>
   <div class="wrap pt-5 lg:pt-8" lang="en">
     <Breadcrumbs lang={lang} items={[{ label: 'Kerala Service' }]} />
     <h1 class="t-display mt-2">Kerala Service</h1>
-    <p class="mt-1 text-ink-2">The union's monthly magazine. {magazineIssues.length} issues since November 2014.</p>
+    <p class="mt-1 text-ink-2">The union's monthly magazine. {magazineIssues.length} issues since {since}.</p>
 
     <section class="mt-6 flex gap-5 border-y border-line py-5 sm:gap-8" aria-labelledby="current">
       <a href={L(issuePath(current.year, current.month))} class="block w-32 shrink-0 self-start overflow-hidden rounded-md border border-line sm:w-44" tabindex="-1" aria-hidden="true">

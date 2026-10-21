@@ -1,7 +1,7 @@
 ---
 /**
  * Government orders (redesign, Phase C), as in the wireframe. Search is the main control:
- * results update as you type, and Enter on a GO number like "112/2026" opens that order.
+ * results update as you type, and Enter on a GO number like "116/2021" opens that order.
  * Three filters: group (tabs), subject and year (menus); active filters show as removable
  * chips. Laptops get a dense table (number, date, subject in their own columns, easy to
  * scan); phones get the same rows as a list. Filters live in the URL (?q=&g=&s=&y=), so the
@@ -38,7 +38,7 @@ const PAGE = 50;
         <Icon name="Search" size={20} class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-3" />
         <input name="q" type="search" data-o-q class="field !min-h-14 pl-12 text-[1.0625rem]" placeholder="GO number, subject or keyword" aria-label="Search orders" aria-describedby="orders-hint" autocomplete="off" />
       </div>
-      <p id="orders-hint" class="t-meta mt-1.5">Try <span class="font-semibold text-ink-2">112/2026</span>, <span class="font-semibold text-ink-2">DA</span> or <span lang="ml" class="font-semibold text-ink-2">ക്ഷാമബത്ത</span>. Press Enter on a GO number to open it.</p>
+      <p id="orders-hint" class="t-meta mt-1.5">Try <span class="font-semibold text-ink-2">116/2021</span>, <span class="font-semibold text-ink-2">DA</span> or <span lang="ml" class="font-semibold text-ink-2">ക്ഷാമബത്ത</span>. Press Enter on a GO number to open it.</p>
 
       <div class="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
         <div class="no-scrollbar -mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
@@ -87,8 +87,8 @@ const PAGE = 50;
           <tr data-order data-url={orderUrl(o, lang)} data-group={o.group} data-subject={o.subject} data-year={o.goDate.slice(0, 4)}
             data-ml={o.title.ml} data-en={o.title.en} data-kw={`${o.goNumber} ${goCore(o.goNumber) ?? ''} ${subjectName(o.subject)?.en ?? ''} ${subjectName(o.subject)?.ml ?? ''} ${o.subject}`}
             data-imp={o.important ? '' : undefined} hidden={i >= PAGE} class="group relative border-b border-line align-top hover:bg-surface-hover">
-            <td class="c-go whitespace-nowrap py-3 pr-4 font-semibold tabular">{o.goNumber}</td>
-            <td class="c-date whitespace-nowrap py-3 pr-4 tabular text-ink-2"><time datetime={o.goDate}>{formatDate(o.goDate, 'en', 'short')}</time></td>
+            <td class="c-go whitespace-nowrap py-3 pr-4 font-semibold tabular">{o.goNumber || <span class="font-normal text-ink-3">Not given</span>}</td>
+            <td class="c-date whitespace-nowrap py-3 pr-4 tabular text-ink-2">{o.dateIsUpload && <span class="text-ink-3">Added </span>}<time datetime={o.goDate}>{formatDate(o.goDate, 'en', 'short')}</time></td>
             <td class="c-subj whitespace-nowrap py-3 pr-4 text-ink-2">{subjectName(o.subject)?.en}</td>
             <td class="c-title py-3 pr-4">
               <a href={orderUrl(o, lang)} lang={langOf(o.title, lang)} class="stretched font-semibold leading-snug group-hover:text-accent-ink">{t(o.title, lang)}</a>
@@ -101,7 +101,7 @@ const PAGE = 50;
     </table>
 
     <div data-o-empty hidden class="mt-6">
-      <EmptyState icon="FileText" title="No orders match" text="Try just the number (like 81/2014) or a subject like DA.">
+      <EmptyState icon="FileText" title="No orders match" text="Try just the number (like 116/2021) or a subject like DA.">
         <button type="button" data-o-clear class="btn btn-secondary btn-sm mt-4">Clear filters</button>
       </EmptyState>
     </div>

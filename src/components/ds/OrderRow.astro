@@ -2,6 +2,7 @@
 /**
  * A government order in a list: a document icon carrying the order number (type, number,
  * year), then the title and one meta line (date · department · subject · Important).
+ * Orders without a known GO number get "PDF" and the year in the icon instead.
  */
 import type { Lang, Order } from '~/lib/types';
 import { t, langOf, formatDate } from '~/lib/i18n';
@@ -11,7 +12,7 @@ interface Props { order: Order; lang: Lang }
 const { order: o, lang } = Astro.props;
 // "G.O.(P) No.112/2026/Fin" -> type "G.O.(P)", number "112", year "2026", department "Fin"
 const m = o.goNumber.match(/^(.*?)\s*No\.\s*(\d+)\/(\d+)\/?(.*)$/);
-const g = m ? { type: m[1], n: m[2], year: m[3], dept: m[4] } : { type: '', n: o.goNumber, year: '', dept: '' };
+const g = m ? { type: m[1], n: m[2], year: m[3], dept: m[4] } : { type: 'Order', n: 'PDF', year: o.goDate.slice(0, 4), dept: '' };
 ---
 <article class="group relative flex items-center gap-4">
   <div lang="en" class="doc" aria-hidden="true">
@@ -21,10 +22,10 @@ const g = m ? { type: m[1], n: m[2], year: m[3], dept: m[4] } : { type: '', n: o
   </div>
   <div class="min-w-0 flex-1">
     <h3 lang={langOf(o.title, lang)} class="clamp-2 font-semibold leading-snug">
-      <a href={orderUrl(o, lang)} class="stretched group-hover:text-accent-ink"><span class="sr-only" lang="en">{o.goNumber}: </span>{t(o.title, lang)}</a>
+      <a href={orderUrl(o, lang)} class="stretched group-hover:text-accent-ink">{o.goNumber && <span class="sr-only" lang="en">{o.goNumber}: </span>}{t(o.title, lang)}</a>
     </h3>
     <p lang="en" class="t-meta mt-0.5">
-      {formatDate(o.goDate, 'en', 'short')}{g.dept && ` · ${g.dept}`} · {subjectName(o.subject)?.en}
+      {o.dateIsUpload && 'Added '}{formatDate(o.goDate, 'en', 'short')}{g.dept && ` · ${g.dept}`} · {subjectName(o.subject)?.en}
       {o.important && <span class="badge badge-accent ml-1 !h-5 align-[1px]">Important</span>}
     </p>
   </div>

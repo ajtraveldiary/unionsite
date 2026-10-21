@@ -14,33 +14,34 @@ import ShareBar from '~/components/ds/ShareBar.astro';
 import OrderRow from '~/components/ds/OrderRow.astro';
 import type { Lang } from '~/lib/types';
 import { t, langOf, href, formatDate, formatKb, hasEn, ui } from '~/lib/i18n';
-import { orderById, subjectBySlug, orderGroups } from '~/data/orders';
-import { orderPath, relatedOrders } from '~/lib/content';
+import { subjectBySlug, orderGroups } from '~/data/orders';
+import { orderById, orderPath, relatedOrders } from '~/lib/content';
 
 interface Props { lang: Lang; id: number }
 const { lang, id } = Astro.props;
 const L = (p: string) => href(lang, p);
-const o = orderById[id];
+const o = orderById(id)!;
 const subj = subjectBySlug[o.subject];
 const group = orderGroups.find((g) => g.slug === o.group)!;
 const title = t(o.title, lang);
 const otherTitle = lang === 'en' ? o.title.ml : o.title.en;
 const pageUrl = new URL(L(orderPath(o)), Astro.site).toString();
-const pdfInfo = `${o.pages} ${o.pages === 1 ? 'page' : 'pages'} · ${formatKb(o.pdfKb)}`;
+const pdfInfo = [o.pages && `${o.pages} ${o.pages === 1 ? 'page' : 'pages'}`, o.pdfKb && formatKb(o.pdfKb)].filter(Boolean).join(' · ');
+const dateLabel = o.dateIsUpload ? 'Added' : 'Date';
 const related = relatedOrders(o);
 const sameSubject = related.every((r) => r.subject === o.subject);
 // "DA orders", but "Pension Orders" stays as it is
 const subjOrders = /orders$/i.test(subj.name.en) ? subj.name.en : `${subj.name.en} orders`;
 const details = [
   ['GO number', o.goNumber],
-  ['Date', formatDate(o.goDate, 'en')],
+  [dateLabel, formatDate(o.goDate, 'en')],
   ['Department', o.department],
   ['Group', group.name.en],
   ['Subject', subj.name.en],
   ['PDF', pdfInfo],
-];
+].filter(([, v]) => v);
 ---
-<AppLayout lang={lang} title={`${o.goNumber} · ${o.title.en}`} description={`${o.title.en}. ${o.goNumber}, dated ${formatDate(o.goDate, 'en')}.`}>
+<AppLayout lang={lang} title={[o.goNumber, o.title.en].filter(Boolean).join(' · ')} description={`${o.title.en}.${o.goNumber ? ` ${o.goNumber}, dated ${formatDate(o.goDate, 'en')}.` : ''}`}>
   <div class="wrap pt-5 lg:pt-8">
     <Breadcrumbs lang={lang} items={[{ label: 'Orders', path: '/orders' }, { label: subj.name.en }]} />
 
@@ -48,8 +49,8 @@ const details = [
     <div class="mt-5 grid gap-x-10 lg:grid-cols-[minmax(0,1fr)_320px]">
       <header class="min-w-0 max-w-[800px]">
         <p lang="en" class="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span class="font-semibold tabular">{o.goNumber}</span>
-          <span class="t-meta">· <time datetime={o.goDate}>{formatDate(o.goDate, 'en')}</time></span>
+          {o.goNumber && <span class="font-semibold tabular">{o.goNumber}</span>}
+          <span class="t-meta">{o.goNumber && '· '}{o.dateIsUpload && 'Added '}<time datetime={o.goDate}>{formatDate(o.goDate, 'en')}</time></span>
           {o.important && <span class="badge badge-accent">Important</span>}
           {o.sample && <span class="badge badge-warning">Sample order</span>}
         </p>
@@ -57,24 +58,25 @@ const details = [
         {otherTitle !== title && <p lang={lang === 'en' ? 'ml' : 'en'} class="mt-2 text-lg text-ink-3">{otherTitle}</p>}
         <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-y border-line py-3">
           <a href={L(`/orders?s=${o.subject}`)} lang="en" class="link">More {subjOrders}</a>
-          <ShareBar url={pageUrl} title={`${o.goNumber}: ${title}`} />
+          <ShareBar url={pageUrl} title={o.goNumber ? `${o.goNumber}: ${title}` : title} />
         </div>
       </header>
 
       <div class="mt-6 min-w-0 max-w-[800px] lg:col-start-1">
-        <!-- The PDF. Sample orders have none yet: the buttons become links (and a pdf.js viewer) with the import. -->
+        <!-- The PDF, opened from the current site for now; it moves to R2 (with a pdf.js viewer) in Phase 2 -->
         <section lang="en" class="card flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-5" aria-label="PDF">
           <div class="flex min-w-0 flex-1 items-center gap-4">
             <span class="doc" aria-hidden="true"><span>PDF</span></span>
             <div class="min-w-0">
               <p class="font-semibold">Government order (PDF)</p>
-              <p class="t-meta">{pdfInfo}{o.sample && ' · arrives with the import'}</p>
+              <p class="t-meta">{pdfInfo}{!o.pdfUrl && ' · arrives with the import'}</p>
             </div>
           </div>
-          <div class="flex gap-2">
-            <button type="button" class="btn btn-primary flex-1 sm:flex-none" disabled={o.sample}><Icon name="Eye" size={18} /> Open PDF</button>
-            <button type="button" class="btn btn-secondary flex-1 sm:flex-none" disabled={o.sample}><Icon name="Download" size={18} /> Download</button>
-          </div>
+          {o.pdfUrl ? (
+            <a href={o.pdfUrl} target="_blank" rel="noopener" class="btn btn-primary"><Icon name="Download" size={18} /> Open PDF</a>
+          ) : (
+            <button type="button" class="btn btn-primary" disabled><Icon name="Download" size={18} /> Open PDF</button>
+          )}
         </section>
 
         {o.summary && (

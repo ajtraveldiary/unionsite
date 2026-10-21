@@ -20,10 +20,14 @@ interface Props {
 }
 const { post, lang, ratio = '4/3', size = 'sm', class: cls = '', eager = false } = Astro.props;
 const topic = topicBySlug[post.topic];
+// Small spots are thumbnails (96–144 px); large ones span a column or more
+const sizes = size === 'sm' ? '(min-width: 640px) 144px, 96px' : '(min-width: 1024px) 60vw, 100vw';
 ---
 {post.cover.kind === 'photo' ? (
   <img
     src={post.cover.src}
+    srcset={post.cover.srcset || undefined}
+    sizes={post.cover.srcset ? sizes : undefined}
     alt={t(post.cover.alt, lang)}
     loading={eager ? 'eager' : 'lazy'}
     decoding="async"

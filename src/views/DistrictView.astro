@@ -29,7 +29,9 @@ const all = sortedDistricts();
 const i = all.findIndex((x) => x.slug === slug);
 const prev = all[i - 1];
 const next = all[i + 1];
-const posts = postsForDistrict(slug);
+const allDistrictPosts = postsForDistrict(slug);
+// The newest 20 here; the rest are in News, filtered to this district
+const posts = allDistrictPosts.slice(0, 20);
 const events = eventsForDistrict(slug);
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const bearerRoles = ['President', 'Secretary', 'Treasurer'];
@@ -40,7 +42,7 @@ const bearerRoles = ['President', 'Secretary', 'Treasurer'];
       <div>
         <Breadcrumbs lang={lang} items={[{ label: 'Districts', path: '/districts' }, { label: d.name.en }]} />
         <h1 lang="en" class="t-display mt-2">{d.name.en}</h1>
-        <p lang="en" class="mt-1 text-ink-2">District committee · HQ {d.hq.en} · {plural(posts.length, 'post')} · {plural(events.length, 'upcoming event')}</p>
+        <p lang="en" class="mt-1 text-ink-2">District committee · HQ {d.hq.en} · {plural(allDistrictPosts.length, 'post')} · {plural(events.length, 'upcoming event')}</p>
       </div>
       <KeralaMap lang={lang} active={slug} label={`${d.name.en} on the map of Kerala`} class="hidden max-h-44 md:block" />
     </div>
@@ -57,7 +59,7 @@ const bearerRoles = ['President', 'Secretary', 'Treasurer'];
               <ul class="divide-y divide-line">
                 {posts.map((p) => <li class="py-4 first:pt-0"><StoryItem post={p} lang={lang} headingLevel="h2" /></li>)}
               </ul>
-              <a href={L(`/news?district=${slug}`)} lang="en" class="link mt-2 inline-block">{d.name.en} in News</a>
+              <a href={L(`/news?district=${slug}`)} lang="en" class="link mt-2 inline-block">{allDistrictPosts.length > posts.length ? `All ${allDistrictPosts.length} ${d.name.en} posts in News` : `${d.name.en} in News`}</a>
             </>
           ) : (
             <EmptyState icon="Newspaper" title="No district news yet" text="The district committee posts its news here. Older posts arrive with the import from the current site." />
