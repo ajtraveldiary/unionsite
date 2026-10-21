@@ -78,17 +78,34 @@ const KEYWORDS = [
   ['social-work', /രക്തദാന|ദുരിതാശ്വാസ|കിറ്റ്|ശുചീകരണ|പ്രളയ|ലഹരി|വൃക്ഷ|ചികിത്സാ|സഹായ|blood|relief|flood/i],
 ];
 
+// Posts shown as Articles (old-site post ids, e.g. 18039). Editors tag articles in the admin
+// panel later; until then, add ids here and rerun this script.
+const ARTICLE_IDS = new Set([2045, 2006, 3605, 11673, 11789]);
+
 const photos = raw.photos;
+/**
+ * About 70 posts imported into WordPress in 2017 have a web address instead of "?p=123" as
+ * their feed id, so they get a stable number made from that address (above any WordPress id).
+ */
+const stableId = (link) => {
+  let h = 2166136261;
+  for (const ch of decodeURI(link)) h = Math.imul(h ^ ch.codePointAt(0), 16777619);
+  return 1_000_000 + ((h >>> 0) % 9_000_000);
+};
+
 const usedSlugs = new Set();
 const posts = [];
 let skipped = 0;
 for (const p of raw.posts) {
   const cats = p.categories.map(norm);
-  if (cats.length && cats.every((c) => NOT_NEWS.has(c) || c === 'UNCATEGORIZED') && cats.some((c) => NOT_NEWS.has(c))) { skipped++; continue; }
   const title = clean(p.title);
+  // Office-bearer lists, committees, histories and addresses are district data, not news; so are
+  // the old per-district gallery pages ("ആലപ്പുഴ ഗാലറി") and leftover copies ("… Copy")
+  if (cats.some((c) => NOT_NEWS.has(c)) || /ഗാലറി$/.test(title) || /\scopy$/i.test(title)) { skipped++; continue; }
+  if (!p.id) p.id = stableId(p.link);
   const body = paragraphs(p.html);
   const district = cats.map((c) => DISTRICT[c]).find(Boolean);
-  const topic = cats.map((c) => TOPIC[c]).find(Boolean) ?? KEYWORDS.find(([, re]) => re.test(title))?.[0] ?? 'organisation';
+  const topic = ARTICLE_IDS.has(p.id) ? 'articles' : cats.map((c) => TOPIC[c]).find(Boolean) ?? KEYWORDS.find(([, re]) => re.test(title))?.[0] ?? 'organisation';
   const date = istDate(p.date);
   const year = date.slice(0, 4);
   let slug = slugify(title) || `post-${p.id}`;

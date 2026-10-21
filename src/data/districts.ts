@@ -32,6 +32,8 @@ export const topics: Topic[] = [
   { slug: 'janapaksha', name: { ml: 'ജനപക്ഷ സിവിൽ സർവീസ്', en: 'Janapaksha Civil Service' } },
   { slug: 'seminars', name: { ml: 'സെമിനാർ', en: 'Seminars' } },
   { slug: 'secretary', name: { ml: 'സെക്രട്ടറിയുടെ പേജ്', en: "Secretary's page" } },
+  // Assigned by hand (scripts/import-crawl.mjs for now, the admin panel later); the home page lists the newest
+  { slug: 'articles', name: { ml: 'ലേഖനങ്ങൾ', en: 'Articles' } },
 ];
 
 export const topicBySlug = Object.fromEntries(topics.map((t) => [t.slug, t])) as Record<string, Topic>;

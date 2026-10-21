@@ -8,4 +8,5 @@ export const topicIcon: Record<string, string> = {
   janapaksha: 'Landmark',
   seminars: 'Presentation',
   secretary: 'PenLine',
+  articles: 'BookOpenText',
 };
