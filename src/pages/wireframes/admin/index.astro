@@ -1,0 +1,122 @@
+---
+/**
+ * Admin wireframe: dashboard (plan, section 10). The first screen after login: what needs this
+ * person now (drafts, reviews, English to approve, messages), today's numbers and the banner.
+ * Real headlines from the crawled news; counts and statuses are made up for the wireframe.
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import { allPosts } from '~/lib/content';
+import { activeBanner } from '~/lib/content';
+import { formatDate } from '~/lib/i18n';
+import { districtBySlug } from '~/data/districts';
+
+const posts = allPosts();
+const kollam = posts.filter((p) => p.district === 'kollam');
+const review = posts.filter((p) => p.district).slice(3, 6);
+const drafts = kollam.slice(0, 2);
+const mostRead = posts.slice(6, 11);
+const banner = activeBanner();
+const district = (slug?: string) => (slug ? districtBySlug[slug]?.name.en.replace('Thiruvananthapuram', 'TVM') : 'State');
+const cards = [
+  { n: 2, label: 'My drafts', roles: undefined },
+  { n: 3, label: 'Waiting for my review', roles: 'super state district' },
+  { n: 5, label: 'English to approve', roles: 'super state district' },
+  { n: 4, label: 'New messages', roles: 'super state district' },
+  { n: 1, label: 'Sent for review', roles: 'editor' },
+];
+---
+<AdminWireLayout title="Dashboard" page="dashboard">
+  <Note n={1}>Login is Cloudflare Access: the admin types their email and gets a 6-digit code, no passwords. This dashboard is the first screen after that, and it changes with the role: try "View as" in the toolbar.</Note>
+
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="t-h1">Good morning</h1>
+      <p class="t-meta mt-1" data-roles="district editor">You manage Kollam district.</p>
+      <p class="t-meta mt-1" data-roles="super state">You manage the whole site.</p>
+    </div>
+    <a href="/wireframes/admin/editor" class="wf-btn wf-btn-dark hidden lg:inline-flex">+ New post</a>
+  </div>
+
+  <Note n={2}>Four numbers, each opening its list. Only the jobs this role does are shown, so a district editor sees "My drafts" and "Sent for review", not approvals.</Note>
+  <ul class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+    {cards.map((c) => (
+      <li data-roles={c.roles}>
+        <a href="/wireframes/admin/news" class="wf-box block p-4 hover:bg-zinc-50">
+          <p class="text-3xl font-bold tabular-nums">{c.n}</p>
+          <p class="mt-1 text-sm text-zinc-600">{c.label}</p>
+        </a>
+      </li>
+    ))}
+  </ul>
+
+  <div class="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+    <div class="space-y-8">
+      <section data-roles="super state district" aria-labelledby="review">
+        <div class="wf-section-head"><h2 id="review" class="t-h2">Waiting for review</h2><a href="/wireframes/admin/news" class="wf-link">All</a></div>
+        <Note n={3}>Posts district editors sent in. Open to edit, or publish straight from here when nothing needs changing.</Note>
+        <ul class="divide-y divide-zinc-200">
+          {review.map((p) => (
+            <li class="flex flex-wrap items-center gap-3 py-3">
+              <div class="min-w-0 flex-1">
+                <p lang="ml" class="clamp-2 font-semibold leading-snug">{p.title.ml}</p>
+                <p class="t-meta">{district(p.district)} · sent by a district editor · {formatDate(p.date, 'en', 'short')}</p>
+              </div>
+              <div class="flex gap-2"><a href="/wireframes/admin/editor" class="wf-btn wf-btn-line !min-h-9 text-sm">Open</a><span class="wf-btn wf-btn-dark !min-h-9 text-sm">Publish</span></div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section aria-labelledby="drafts">
+        <div class="wf-section-head"><h2 id="drafts" class="t-h2">My drafts</h2><a href="/wireframes/admin/news" class="wf-link">All</a></div>
+        <ul class="divide-y divide-zinc-200">
+          {drafts.map((p) => (
+            <li class="py-3">
+              <a href="/wireframes/admin/editor" class="block">
+                <p lang="ml" class="clamp-2 font-semibold leading-snug">{p.title.ml}</p>
+                <p class="t-meta">Draft · saved 2 hours ago · Kollam</p>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section data-roles="super state district" aria-labelledby="english">
+        <div class="wf-section-head"><h2 id="english" class="t-h2">English to approve</h2><a href="/wireframes/admin/news" class="wf-link">All 5</a></div>
+        <Note n={4}>AI drafts English with the admin's own Gemini key (plan, section 6). Nothing goes live in English until someone presses Approve here or in the editor.</Note>
+        <p class="t-meta">5 posts have an English draft. Approving opens the side-by-side review.</p>
+      </section>
+    </div>
+
+    <div class="space-y-8">
+      <section data-roles="super state" aria-labelledby="banner-now">
+        <div class="wf-section-head"><h2 id="banner-now" class="t-h2">Home banner now</h2><a href="/wireframes/admin/banner" class="wf-link">Replace</a></div>
+        <div class="wf-box p-4">
+          <p class="t-label">Post · set by a state editor</p>
+          <p lang="ml" class="t-h3 mt-1">{banner?.kind === 'post' ? (banner.headline?.ml ?? banner.post.title.ml) : '—'}</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="today">
+        <div class="wf-section-head"><h2 id="today" class="t-h2">Today</h2></div>
+        <Note n={5}>Cookie-less visit counts (plan, section 14). District admins see their own district's numbers.</Note>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="wf-box p-4"><p class="text-2xl font-bold tabular-nums">1,248</p><p class="t-meta">Visitors</p></div>
+          <div class="wf-box p-4"><p class="text-2xl font-bold tabular-nums">3,910</p><p class="t-meta">Pages read</p></div>
+        </div>
+        <p class="t-label mt-4">Most read</p>
+        <ol class="mt-1 divide-y divide-zinc-200">
+          {mostRead.map((p, i) => <li class="flex gap-3 py-2"><span class="t-meta w-4">{i + 1}</span><span lang="ml" class="clamp-2 min-w-0 text-sm font-medium leading-snug">{p.title.ml}</span></li>)}
+        </ol>
+      </section>
+
+      <section data-roles="super state district" aria-labelledby="inbox">
+        <div class="wf-section-head"><h2 id="inbox" class="t-h2">Messages</h2><a href="#" class="wf-link">Inbox</a></div>
+        <ul class="divide-y divide-zinc-200 text-sm">
+          {['Membership question', 'Kerala Service subscription', 'Website: order PDF not opening', 'General'].map((s) => <li class="py-2"><p class="font-medium">{s}</p><p class="t-meta">From the contact form · unassigned</p></li>)}
+        </ul>
+      </section>
+    </div>
+  </div>
+</AdminWireLayout>

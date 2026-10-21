@@ -1,0 +1,86 @@
+---
+/**
+ * Admin wireframe: home page and banner (decided 2026-10-21). One banner at a time, a news post
+ * or an event only, set by state editors; it stays until replaced, with an optional shorter
+ * headline. Also the Top news lead. State roles only.
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import Ph from '~/components/wire/Ph.astro';
+import { activeBanner, allPosts, allEvents } from '~/lib/content';
+import { formatDate, t } from '~/lib/i18n';
+
+const banner = activeBanner();
+const current = banner?.kind === 'post' ? { title: banner.post.title.ml, headline: banner.headline?.ml, date: banner.post.date } : undefined;
+const results = allPosts().filter((p) => p.topic === 'struggles').slice(4, 7);
+const event = allEvents()[1];
+const lead = allPosts().find((p) => p.featured) ?? allPosts()[0];
+---
+<AdminWireLayout title="Home & banner" page="banner">
+  <div data-roles="district editor" class="wf-box p-6 text-center">
+    <p class="font-semibold">The home page is managed by the state office.</p>
+    <p class="t-meta mt-1">District admins can ask for a place from a post's settings.</p>
+  </div>
+
+  <div data-roles="super state">
+    <h1 class="t-h1">Home & banner</h1>
+
+    <section class="mt-6" aria-labelledby="now">
+      <div class="wf-section-head"><h2 id="now" class="t-h2">Banner now</h2><span class="t-meta">since 21 Oct 2026, by a state editor</span></div>
+      <div class="rounded-xl bg-zinc-700 p-5 text-white">
+        <p class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Struggles · {current && formatDate(current.date, 'en')}</p>
+        <p lang="ml" class="t-h2 mt-1">{current?.headline ?? current?.title}</p>
+        <span class="mt-3 inline-flex rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-semibold">Read more →</span>
+      </div>
+      <div class="mt-3 flex flex-wrap gap-2"><span class="wf-btn wf-btn-dark">Replace</span><span class="wf-btn wf-btn-line">Edit headline</span><span class="wf-btn wf-btn-line">Remove banner</span></div>
+      <Note n={1}>Shown exactly as on the site (the real one is the logo's red with white and yellow text). It stays until someone replaces or removes it; there's no end date.</Note>
+    </section>
+
+    <section class="mt-10" aria-labelledby="replace">
+      <div class="wf-section-head"><h2 id="replace" class="t-h2">Replace the banner</h2></div>
+      <Note n={2}>Step 1: find a news post or an event. Only those two can be a banner, no free text and no orders. The quicker way is "Show in the home banner" in a post's settings.</Note>
+      <div class="flex flex-col gap-3 md:flex-row">
+        <div class="flex shrink-0 gap-2" role="group" aria-label="Kind"><button type="button" class="wf-chip" aria-pressed="true">News post</button><button type="button" class="wf-chip" aria-pressed="false">Event</button></div>
+        <input class="wf-input md:max-w-md" placeholder="Search posts by title" aria-label="Search posts" />
+      </div>
+      <ul class="mt-3 divide-y divide-zinc-200 border-y border-zinc-200">
+        {results.map((p, i) => (
+          <li class="flex items-center gap-3 py-3">
+            <input type="radio" name="pick" checked={i === 0} aria-label="Choose this post" />
+            <Ph label="" ratio="4/3" class="w-16 shrink-0" />
+            <div class="min-w-0"><p lang="ml" class="clamp-2 font-semibold leading-snug">{p.title.ml}</p><p class="t-meta">Struggles · {formatDate(p.date, 'en', 'short')}</p></div>
+          </li>
+        ))}
+        <li class="flex items-center gap-3 py-3 text-zinc-600">
+          <input type="radio" name="pick" aria-label="Choose this event" />
+          <span class="wf-box grid w-16 shrink-0 place-items-center py-2 text-xs font-semibold">EVENT</span>
+          <div class="min-w-0"><p lang="ml" class="font-semibold leading-snug text-zinc-900">{event && t(event.title, 'ml')}</p><p class="t-meta">Event · {event && formatDate(event.start, 'en', 'short')} (shown when "Event" is picked)</p></div>
+        </li>
+      </ul>
+
+      <Note n={3}>Step 2: optionally a shorter headline, so it fits two lines on a phone. The article keeps its full title.</Note>
+      <div class="grid gap-3 md:grid-cols-2">
+        <label class="block"><span class="t-label">Shorter headline · Malayalam · optional</span><input class="wf-input mt-1" lang="ml" placeholder="Leave empty to use the post's title" /><span class="t-meta">0 / 80</span></label>
+        <label class="block"><span class="t-label">Shorter headline · English · optional</span><input class="wf-input mt-1" placeholder="For the English site" /><span class="t-meta">0 / 80</span></label>
+      </div>
+
+      <Note n={4}>Step 3: preview at phone and laptop size, then Publish. A confirmation names the banner it replaces. The chosen post then disappears from Top news, so nothing shows twice.</Note>
+      <div class="grid gap-4 md:grid-cols-[200px_minmax(0,1fr)]">
+        <div><p class="t-label">Phone</p><Ph label="Banner on a phone" ratio="9/10" class="mt-1" /></div>
+        <div><p class="t-label">Laptop</p><Ph label="Banner on a laptop" ratio="5/1" class="mt-1" /></div>
+      </div>
+      <div class="mt-4 flex gap-2"><span class="wf-btn wf-btn-dark">Publish banner</span><span class="wf-btn wf-btn-line">Cancel</span></div>
+    </section>
+
+    <section class="mt-10" aria-labelledby="lead">
+      <div class="wf-section-head"><h2 id="lead" class="t-h2">Top news lead</h2><a href="/wireframes/admin/news" class="wf-link">Choose another</a></div>
+      <div class="flex items-center gap-3"><Ph label="" ratio="16/9" class="w-28 shrink-0" /><p lang="ml" class="clamp-2 font-semibold">{lead.title.ml}</p></div>
+      <Note n={5}>The big story at the top of Top news. Without a choice it's the newest post; editors can also tick "Lead story in Top news" in a post's settings.</Note>
+    </section>
+
+    <section class="mt-10" aria-labelledby="past">
+      <div class="wf-section-head"><h2 id="past" class="t-h2">Past banners</h2></div>
+      <p class="t-meta">Each with its dates and who set it, and "Show again".</p>
+    </section>
+  </div>
+</AdminWireLayout>

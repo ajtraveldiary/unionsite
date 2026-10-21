@@ -1,0 +1,165 @@
+---
+/**
+ * Page frame for the admin-panel wireframes (plan, section 10): review toolbar, a sidebar on
+ * laptops, a top bar and bottom bar on phones. Structure only, greyscale like the Phase A
+ * wireframes. The toolbar's "View as" switch shows what each role sees: anything marked
+ * data-roles="…" is hidden for roles not listed (super · state · district · editor).
+ */
+import '~/styles/wire.css';
+
+type Page = 'dashboard' | 'news' | 'editor' | 'orders' | 'banner' | 'users';
+interface Props { title: string; page: Page }
+const { title, page } = Astro.props;
+
+const pages: { id: Page; label: string; path: string }[] = [
+  { id: 'dashboard', label: 'Dashboard', path: '/wireframes/admin' },
+  { id: 'news', label: 'News list', path: '/wireframes/admin/news' },
+  { id: 'editor', label: 'Post editor', path: '/wireframes/admin/editor' },
+  { id: 'orders', label: 'Orders upload', path: '/wireframes/admin/orders' },
+  { id: 'banner', label: 'Home & banner', path: '/wireframes/admin/banner' },
+  { id: 'users', label: 'Users', path: '/wireframes/admin/users' },
+];
+// Sidebar sections, with the roles that may open each (plan, section 10: roles and permissions)
+const menu: { label: string; id?: Page; path: string; roles?: string }[] = [
+  { label: 'Dashboard', id: 'dashboard', path: '/wireframes/admin' },
+  { label: 'News', id: 'news', path: '/wireframes/admin/news' },
+  { label: 'Events', path: '#' },
+  { label: 'Orders', id: 'orders', path: '/wireframes/admin/orders', roles: 'super state' },
+  { label: 'Kerala Service', path: '#', roles: 'super state' },
+  { label: 'People & committees', path: '#' },
+  { label: 'District page', path: '#', roles: 'district editor' },
+  { label: 'Media', path: '#' },
+  { label: 'Home & banner', id: 'banner', path: '/wireframes/admin/banner', roles: 'super state' },
+  { label: 'Inbox', path: '#', roles: 'super state district' },
+  { label: 'Users', id: 'users', path: '/wireframes/admin/users', roles: 'super district' },
+  { label: 'Settings', path: '#', roles: 'super' },
+];
+const roles = [
+  { id: 'super', label: 'Super admin' },
+  { id: 'state', label: 'State editor' },
+  { id: 'district', label: 'District admin (Kollam)' },
+  { id: 'editor', label: 'District editor (Kollam)' },
+];
+---
+<!doctype html>
+<html lang="en" data-role="super">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <title>{title} · Admin wireframe · Kerala NGO Union</title>
+    <script is:inline>
+      try {
+        if (localStorage.getItem('wf-notes') === 'off') document.documentElement.classList.add('notes-off');
+        document.documentElement.dataset.role = localStorage.getItem('wf-role') || 'super';
+      } catch {}
+    </script>
+    <style is:global>
+      /* "View as": hide what the chosen role can't use */
+      html[data-role="super"] [data-roles]:not([data-roles~="super"]),
+      html[data-role="state"] [data-roles]:not([data-roles~="state"]),
+      html[data-role="district"] [data-roles]:not([data-roles~="district"]),
+      html[data-role="editor"] [data-roles]:not([data-roles~="editor"]) { display: none !important; }
+    </style>
+  </head>
+  <body class="min-h-dvh bg-zinc-50">
+    <!-- Review toolbar (not part of the design) -->
+    <!-- On laptops the toolbar is one 2.5rem row that stays at the top; the sidebar sits below it -->
+    <div class="bg-zinc-900 text-[0.8125rem] text-zinc-100 lg:sticky lg:top-0 lg:z-40">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 md:px-6 lg:h-10 lg:flex-nowrap lg:py-0">
+        <span class="font-semibold">Admin wireframe</span>
+        <nav aria-label="Wireframe pages" class="no-scrollbar -mx-1 flex flex-1 gap-1 overflow-x-auto">
+          {pages.map((p) => (
+            <a href={p.path} aria-current={p.id === page ? 'page' : undefined} class:list={['whitespace-nowrap rounded px-2 py-1', p.id === page ? 'bg-white text-zinc-900' : 'hover:bg-zinc-700']}>{p.label}</a>
+          ))}
+          <a href="/wireframes" class="whitespace-nowrap rounded px-2 py-1 text-zinc-400 hover:bg-zinc-700">Public site wireframes</a>
+        </nav>
+        <label class="flex items-center gap-2">View as
+          <select data-role-switch class="rounded border border-zinc-600 bg-zinc-800 px-2 py-1">
+            {roles.map((r) => <option value={r.id}>{r.label}</option>)}
+          </select>
+        </label>
+        <button type="button" data-notes-toggle class="rounded border border-zinc-600 px-2 py-1 hover:bg-zinc-700">Notes: <span data-notes-state>on</span></button>
+      </div>
+    </div>
+
+    <div class="lg:flex">
+      <!-- Laptop: sidebar with every section this role may open -->
+      <aside class="sticky top-10 hidden h-[calc(100dvh-2.5rem)] w-60 shrink-0 flex-col border-r border-zinc-200 bg-white lg:flex" aria-label="Admin sections">
+        <div class="flex items-center gap-2.5 border-b border-zinc-200 px-4 py-3">
+          <span class="wf-ph size-9 shrink-0 !rounded-lg">Logo</span>
+          <div class="leading-tight"><p class="text-sm font-semibold">Admin</p><p class="t-meta">Kerala NGO Union</p></div>
+        </div>
+        <nav class="flex-1 overflow-y-auto p-2">
+          <a href="/wireframes/admin/editor" class="wf-btn wf-btn-dark mb-2 w-full">+ New post</a>
+          <ul class="space-y-0.5 text-[0.9375rem]">
+            {menu.map((m) => (
+              <li data-roles={m.roles}>
+                <a href={m.path} aria-current={m.id === page ? 'page' : undefined} class:list={['block rounded-lg px-3 py-2', m.id === page ? 'bg-zinc-100 font-semibold' : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900']}>{m.label}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <div class="border-t border-zinc-200 p-3 text-sm">
+          <p class="font-semibold" data-role-name>Super admin</p>
+          <p class="t-meta">office@… · <a href="#" class="underline">Log out</a></p>
+          <a href="/" class="wf-link mt-1 inline-block">View site</a>
+        </div>
+      </aside>
+
+      <div class="min-w-0 flex-1">
+        <!-- Phone: top bar with the screen title; sections live in the bottom bar's Menu -->
+        <header class="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-zinc-200 bg-white px-4 lg:hidden">
+          <span class="wf-ph size-8 shrink-0 !rounded-lg">Logo</span>
+          <p class="min-w-0 flex-1 truncate font-semibold">{title}</p>
+          <span class="wf-chip !min-h-8 text-xs" data-role-name>Super admin</span>
+        </header>
+
+        <main id="main" class="px-4 pb-28 pt-5 md:px-6 lg:px-10 lg:pb-12 lg:pt-8">
+          <slot />
+        </main>
+      </div>
+    </div>
+
+    <!-- Phone bottom bar: the big middle button is "New post", the most common job on a phone -->
+    <nav aria-label="Admin" class="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-white lg:hidden">
+      <ul class="grid grid-cols-5 items-end pb-[env(safe-area-inset-bottom)]">
+        {[['Home', 'dashboard', '/wireframes/admin'], ['News', 'news', '/wireframes/admin/news'], ['New', 'editor', '/wireframes/admin/editor'], ['Inbox', '', '#'], ['Menu', '', '#']].map(([label, id, path]) => (
+          <li>
+            <a href={path} aria-current={id === page ? 'page' : undefined} class:list={['flex flex-col items-center gap-1 py-2 text-[0.6875rem]', id === page ? 'font-bold' : 'text-zinc-500']}>
+              {label === 'New'
+                ? <span class="-mt-5 grid size-12 place-items-center rounded-full bg-zinc-800 text-2xl text-white" aria-hidden="true">+</span>
+                : <span class:list={['size-6 rounded-md', id === page ? 'bg-zinc-800' : 'bg-zinc-300']} aria-hidden="true"></span>}
+              {label === 'New' ? 'New post' : label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    <script>
+      const root = document.documentElement;
+      const state = document.querySelector('[data-notes-state]')!;
+      const syncNotes = () => { state.textContent = root.classList.contains('notes-off') ? 'off' : 'on'; };
+      syncNotes();
+      document.querySelector('[data-notes-toggle]')!.addEventListener('click', () => {
+        root.classList.toggle('notes-off');
+        try { localStorage.setItem('wf-notes', root.classList.contains('notes-off') ? 'off' : 'on'); } catch {}
+        syncNotes();
+      });
+      // "View as": show the screen as each role would see it
+      const sel = document.querySelector<HTMLSelectElement>('[data-role-switch]')!;
+      const syncRole = () => {
+        sel.value = root.dataset.role ?? 'super';
+        const name = sel.selectedOptions[0]?.textContent ?? '';
+        document.querySelectorAll('[data-role-name]').forEach((el) => { el.textContent = name; });
+      };
+      syncRole();
+      sel.addEventListener('change', () => {
+        root.dataset.role = sel.value;
+        try { localStorage.setItem('wf-role', sel.value); } catch {}
+        syncRole();
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,84 @@
+---
+/**
+ * Admin wireframe: orders upload (plan, section 10, Orders screen). Drop many PDFs at once;
+ * the GO number, date and title are read from each PDF's text and the editor confirms or
+ * corrects them, picks the subject, and publishes them together. State roles only.
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import { allOrders, subjectName } from '~/lib/content';
+import { formatDate, formatKb } from '~/lib/i18n';
+import { orderSubjects } from '~/data/orders';
+
+const withGo = allOrders().filter((o) => o.goNumber).slice(0, 3);
+const files = [
+  ...withGo.map((o, i) => ({ file: `${o.goNumber.replace(/[^\w]+/g, '-').toLowerCase()}.pdf`, go: o.goNumber, date: formatDate(o.goDate, 'en'), title: o.title.en, subject: o.subject, kb: o.pdfKb, state: i === 2 ? 'duplicate' : 'read' })),
+  { file: 'scan-0042.pdf', go: '', date: '', title: '', subject: '', kb: 2380, state: 'scanned' },
+];
+---
+<AdminWireLayout title="Upload orders" page="orders">
+  <div data-roles="district editor" class="wf-box p-6 text-center">
+    <p class="font-semibold">Orders are managed by the state office.</p>
+    <p class="t-meta mt-1">District roles don't see this screen (plan, section 10).</p>
+  </div>
+
+  <div data-roles="super state">
+    <h1 class="t-h1">Upload orders</h1>
+    <Note n={1}>Step 1: drop any number of GO PDFs, or choose them from the phone. They upload in the background; you can start checking the first while the rest arrive.</Note>
+    <div class="mt-4 grid place-items-center rounded-2xl border-2 border-dashed border-zinc-300 bg-white px-4 py-10 text-center">
+      <span class="wf-ph size-12 !rounded-full" aria-hidden="true">PDF</span>
+      <p class="mt-3 font-semibold">Drop PDFs here</p>
+      <p class="t-meta">or</p>
+      <span class="wf-btn wf-btn-line mt-2">Choose files</span>
+    </div>
+
+    <Note n={2}>Step 2: each file gets a row. The GO number, date and title are read from the PDF's text and filled in; the editor only checks them and picks the subject. Anything uncertain is marked "Check".</Note>
+    <div class="mt-6 flex flex-wrap items-baseline justify-between gap-2">
+      <h2 class="t-h2">4 files</h2>
+      <p class="t-meta">2 ready · 1 already in the library · 1 needs typing</p>
+    </div>
+
+    <ul class="mt-3 space-y-3">
+      {files.map((f) => (
+        <li class="wf-box p-4">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span class="wf-doc !h-12 !w-10 text-[0.6rem] font-semibold">PDF</span>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-semibold">{f.file}</p>
+              <p class="t-meta">{formatKb(f.kb)} · uploaded</p>
+            </div>
+            {f.state === 'read' && <span class="rounded bg-zinc-200 px-2 py-0.5 text-xs font-semibold">Read from the PDF</span>}
+            {f.state === 'duplicate' && <span class="rounded border border-zinc-800 px-2 py-0.5 text-xs font-semibold">Already in the library</span>}
+            {f.state === 'scanned' && <span class="rounded border border-dashed border-zinc-800 px-2 py-0.5 text-xs font-semibold">Scanned: type the details</span>}
+            <a href="#" class="wf-link">Remove</a>
+          </div>
+
+          {f.state === 'duplicate' ? (
+            <div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
+              <span>{f.go} is already in the library.</span>
+              <span class="wf-btn wf-btn-line !min-h-9 text-sm">Skip</span><span class="wf-btn wf-btn-line !min-h-9 text-sm">Replace the PDF</span>
+            </div>
+          ) : (
+            <div class="mt-3 grid gap-3 md:grid-cols-[220px_160px_minmax(0,1fr)]">
+              <label class="block"><span class="t-label">GO number</span><input class="wf-input mt-1 !min-h-10 text-sm" value={f.go} placeholder="G.O.(P) No.…/…/Fin" /></label>
+              <label class="block"><span class="t-label">Date</span><input class="wf-input mt-1 !min-h-10 text-sm" value={f.date} placeholder="DD-MM-YYYY" /></label>
+              <label class="block"><span class="t-label">Title</span><input class="wf-input mt-1 !min-h-10 text-sm" value={f.title} placeholder="From the PDF's subject line" /></label>
+              <label class="block"><span class="t-label">Subject</span>
+                <select class="wf-input mt-1 !min-h-10 text-sm"><option>Choose…</option>{orderSubjects.map((s) => <option selected={s.slug === f.subject}>{s.name.en}</option>)}</select>
+              </label>
+              <label class="flex items-end gap-2 pb-2 text-sm"><input type="checkbox" /> Important</label>
+              <label class="block"><span class="t-label">Summary · optional, Malayalam</span><input class="wf-input mt-1 !min-h-10 text-sm" lang="ml" placeholder="What changes for employees, in a line" /></label>
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
+    <Note n={3}>Duplicates are caught by GO number. Scanned PDFs have no text to read, so their details are typed in; whether to run OCR on scans is still an open question in the plan (section 17).</Note>
+
+    <div class="sticky bottom-20 mt-6 flex flex-wrap items-center gap-3 rounded-xl border border-zinc-200 bg-white p-3 lg:bottom-4">
+      <span class="text-sm">2 ready to publish</span>
+      <span class="wf-btn wf-btn-dark ml-auto">Publish 2 orders</span>
+    </div>
+    <Note n={4}>Step 3: publish the ready ones together; the rest stay as drafts. Each new order appears in the Orders library straight away; Important ones get the Important label there and on the home page's Latest orders.</Note>
+  </div>
+</AdminWireLayout>

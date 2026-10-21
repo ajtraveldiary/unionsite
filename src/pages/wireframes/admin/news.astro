@@ -1,0 +1,75 @@
+---
+/**
+ * Admin wireframe: news list (plan, section 10). Search plus status tabs, then district, topic
+ * and English-status menus; a table on laptops, cards on phones. District roles only ever see
+ * their own district. Real headlines; statuses are made up for the wireframe.
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import { allPosts, sortedDistricts } from '~/lib/content';
+import { formatDate } from '~/lib/i18n';
+import { topics, topicBySlug, districtBySlug } from '~/data/districts';
+
+const statuses = ['Draft', 'In review', 'Published', 'Published', 'Scheduled', 'Published', 'Published', 'Draft'] as const;
+const english = ['Not started', 'AI draft to approve', 'Approved', 'Out of date', '—'] as const;
+const rows = allPosts().slice(0, 14).map((p, i) => ({
+  p,
+  status: statuses[i % statuses.length],
+  english: english[i % english.length],
+  district: p.district ? districtBySlug[p.district]?.name.en.replace('Thiruvananthapuram', 'TVM') : 'State',
+  author: i % 3 === 0 ? 'District editor' : i % 3 === 1 ? 'State editor' : 'District admin',
+}));
+const total = allPosts().length;
+const tabs = [['All', total], ['Drafts', 6], ['In review', 3], ['Scheduled', 1], ['Published', total - 10]] as const;
+---
+<AdminWireLayout title="News" page="news">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <h1 class="t-h1">News</h1>
+    <a href="/wireframes/admin/editor" class="wf-btn wf-btn-dark hidden lg:inline-flex">+ New post</a>
+  </div>
+
+  <Note n={1}>One list for every post. District admins and editors only ever see their own district, so the District menu is hidden for them (try "View as").</Note>
+  <input class="wf-input mt-4 max-w-xl" placeholder="Search titles, in Malayalam or English" aria-label="Search posts" />
+
+  <div class="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 md:mx-0 md:px-0" role="group" aria-label="Status">
+    {tabs.map(([label, n], i) => <button type="button" class="wf-chip gap-1.5" aria-pressed={i === 0 ? 'true' : 'false'}>{label} <span class="text-xs opacity-70">{n}</span></button>)}
+  </div>
+  <div class="mt-3 grid grid-cols-2 gap-3 md:flex">
+    <select class="wf-input md:w-48" aria-label="District" data-roles="super state"><option>All districts</option><option>State level</option>{sortedDistricts().map((d) => <option>{d.name.en}</option>)}</select>
+    <select class="wf-input md:w-48" aria-label="Topic"><option>All topics</option>{topics.map((t) => <option>{t.name.en}</option>)}</select>
+    <select class="wf-input md:w-56" aria-label="English" data-roles="super state district"><option>Any English status</option>{english.slice(0, 4).map((e) => <option>{e}</option>)}</select>
+  </div>
+
+  <Note n={2}>Laptops: a table that can be scanned and sorted. Status and English status each get a small label; "Out of date" means the Malayalam changed after the English was approved.</Note>
+  <table class="mt-4 hidden w-full border-collapse text-left text-sm md:table">
+    <thead>
+      <tr class="border-b-2 border-zinc-800 text-xs uppercase tracking-wide text-zinc-500">
+        <th class="py-2 pr-4 font-semibold">Title</th><th class="py-2 pr-4 font-semibold">Status</th><th class="py-2 pr-4 font-semibold" data-roles="super state">District</th><th class="py-2 pr-4 font-semibold">Topic</th><th class="py-2 pr-4 font-semibold" data-roles="super state district">English</th><th class="py-2 font-semibold">Updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map(({ p, status, english: en, district, author }) => (
+        <tr class="relative border-b border-zinc-200 align-top hover:bg-white">
+          <td class="max-w-md py-3 pr-4"><a href="/wireframes/admin/editor" lang="ml" class="stretched clamp-2 font-semibold leading-snug">{p.title.ml}</a><span class="t-meta">by {author}</span></td>
+          <td class="whitespace-nowrap py-3 pr-4"><span class="rounded bg-zinc-200 px-1.5 py-0.5 text-xs font-semibold">{status}</span></td>
+          <td class="whitespace-nowrap py-3 pr-4 text-zinc-600" data-roles="super state">{district}</td>
+          <td class="whitespace-nowrap py-3 pr-4 text-zinc-600">{topicBySlug[p.topic]?.name.en}</td>
+          <td class="whitespace-nowrap py-3 pr-4 text-zinc-600" data-roles="super state district">{en}</td>
+          <td class="whitespace-nowrap py-3 tabular-nums text-zinc-600">{formatDate(p.date, 'en', 'short')}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  <Note n={3} class="md:hidden">Phones: the same posts as cards, status first, so a district admin can find a post and fix it right after an event.</Note>
+  <ul class="mt-3 divide-y divide-zinc-200 border-t border-zinc-200 md:hidden">
+    {rows.map(({ p, status, english: en, district }) => (
+      <li class="relative py-3">
+        <p class="t-meta"><span class="rounded bg-zinc-200 px-1.5 py-0.5 text-xs font-semibold text-zinc-800">{status}</span> · {district} · {formatDate(p.date, 'en', 'short')}</p>
+        <a href="/wireframes/admin/editor" lang="ml" class="stretched clamp-2 mt-1 block font-semibold leading-snug">{p.title.ml}</a>
+        <p class="t-meta" data-roles="super state district">English: {en}</p>
+      </li>
+    ))}
+  </ul>
+  <p class="t-meta mt-4">50 per page, with page numbers below.</p>
+</AdminWireLayout>

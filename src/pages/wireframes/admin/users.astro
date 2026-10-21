@@ -1,0 +1,78 @@
+---
+/**
+ * Admin wireframe: users (plan, section 10). Invite by email, give a role and district,
+ * deactivate. The super admin manages everyone; a district admin only adds editors to their
+ * own district. Placeholder people, not real ones.
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import { sortedDistricts } from '~/lib/content';
+
+const people = [
+  { name: 'Office staff 1', email: 'office1@…', role: 'Super admin', district: '—', last: 'Today', active: true, scope: 'super' },
+  { name: 'Office staff 2', email: 'office2@…', role: 'State editor', district: '—', last: 'Yesterday', active: true, scope: 'super' },
+  { name: 'Kollam secretary', email: 'kollam.admin@…', role: 'District admin', district: 'Kollam', last: '3 days ago', active: true, scope: 'super district' },
+  { name: 'Kollam volunteer', email: 'kollam.news@…', role: 'District editor', district: 'Kollam', last: 'Today', active: true, scope: 'super district' },
+  { name: 'Former editor', email: 'old.editor@…', role: 'District editor', district: 'Kollam', last: '4 months ago', active: false, scope: 'super district' },
+  { name: 'Kannur secretary', email: 'kannur.admin@…', role: 'District admin', district: 'Kannur', last: 'Invited, not logged in yet', active: true, scope: 'super' },
+];
+---
+<AdminWireLayout title="Users" page="users">
+  <div data-roles="state editor" class="wf-box p-6 text-center">
+    <p class="font-semibold">Users are managed by the super admin.</p>
+    <p class="t-meta mt-1">District admins can add editors to their own district.</p>
+  </div>
+
+  <div data-roles="super district">
+    <h1 class="t-h1">Users</h1>
+
+    <section class="mt-6" aria-labelledby="invite">
+      <div class="wf-section-head"><h2 id="invite" class="t-h2">Invite someone</h2></div>
+      <Note n={1}>Only invited emails can log in: Cloudflare Access sends them a one-time code, so there are no passwords. Removing someone, or switching them off, ends their access at once, even mid-session.</Note>
+      <div class="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+        <label class="block"><span class="t-label">Email</span><input class="wf-input mt-1" type="email" placeholder="name@example.com" /></label>
+        <label class="block"><span class="t-label">Role</span>
+          <select class="wf-input mt-1" data-roles="super"><option>District editor</option><option>District admin</option><option>State editor</option><option>Super admin</option></select>
+          <p class="wf-input mt-1 flex items-center bg-zinc-100 text-zinc-600" data-roles="district">District editor</p>
+        </label>
+        <label class="block"><span class="t-label">District</span>
+          <select class="wf-input mt-1" data-roles="super"><option>—</option>{sortedDistricts().map((d) => <option>{d.name.en}</option>)}</select>
+          <p class="wf-input mt-1 flex items-center bg-zinc-100 text-zinc-600" data-roles="district">Kollam</p>
+        </label>
+        <span class="wf-btn wf-btn-dark">Send invite</span>
+      </div>
+      <Note n={2}>A district admin can only invite editors, and only for their own district, so role and district are fixed for them (try "View as").</Note>
+    </section>
+
+    <section class="mt-10" aria-labelledby="people">
+      <div class="wf-section-head"><h2 id="people" class="t-h2">People</h2><span class="t-meta" data-roles="district">Kollam only</span></div>
+      <table class="hidden w-full border-collapse text-left text-sm md:table">
+        <thead>
+          <tr class="border-b-2 border-zinc-800 text-xs uppercase tracking-wide text-zinc-500">
+            <th class="py-2 pr-4 font-semibold">Name</th><th class="py-2 pr-4 font-semibold">Role</th><th class="py-2 pr-4 font-semibold">District</th><th class="py-2 pr-4 font-semibold">Last login</th><th class="py-2 font-semibold"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {people.map((u) => (
+            <tr class:list={['border-b border-zinc-200', !u.active && 'text-zinc-400']} data-roles={u.scope}>
+              <td class="py-3 pr-4"><p class="font-semibold">{u.name}</p><p class="t-meta">{u.email}</p></td>
+              <td class="py-3 pr-4">{u.role}</td>
+              <td class="py-3 pr-4">{u.district}</td>
+              <td class="py-3 pr-4">{u.active ? u.last : 'Switched off'}</td>
+              <td class="py-3 text-right"><a href="#" class="wf-link">{u.active ? 'Change' : 'Switch on'}</a></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <ul class="divide-y divide-zinc-200 border-y border-zinc-200 md:hidden">
+        {people.map((u) => (
+          <li class:list={['flex items-center gap-3 py-3', !u.active && 'text-zinc-400']} data-roles={u.scope}>
+            <div class="min-w-0 flex-1"><p class="font-semibold">{u.name}</p><p class="t-meta">{u.role}{u.district !== '—' && ` · ${u.district}`} · {u.active ? u.last : 'Switched off'}</p></div>
+            <a href="#" class="wf-link">{u.active ? 'Change' : 'Switch on'}</a>
+          </li>
+        ))}
+      </ul>
+      <Note n={3}>"Change" opens role, district and "Switch off". Switched-off people stay listed, so their past posts still show who wrote them; the audit log keeps every login and change.</Note>
+    </section>
+  </div>
+</AdminWireLayout>

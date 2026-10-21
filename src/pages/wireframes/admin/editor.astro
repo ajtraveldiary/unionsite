@@ -1,0 +1,125 @@
+---
+/**
+ * Admin wireframe: post editor (plan, section 10, "How a post is updated"). Phone first:
+ * one column with the post settings below the text; on laptops the settings sit beside it.
+ * Autosave, Malayalam/English tabs, cover photo from the camera, and one main button whose
+ * label depends on the role (district editors send for review; everyone else publishes).
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import Ph from '~/components/wire/Ph.astro';
+import { postById, sortedDistricts, allEvents } from '~/lib/content';
+import { t } from '~/lib/i18n';
+import { topics } from '~/data/districts';
+
+const p = postById(18024)!;
+const body = p.body?.ml.slice(0, 3) ?? [];
+---
+<AdminWireLayout title="Edit post" page="editor">
+  <h1 class="sr-only">Edit post</h1>
+  <!-- Editor top bar: back, autosave state, preview and the one main action -->
+  <div class="sticky top-14 z-10 -mx-4 flex flex-wrap items-center gap-2 border-b border-zinc-200 bg-zinc-50/95 px-4 py-2 backdrop-blur md:-mx-6 md:px-6 lg:top-10 lg:-mx-10 lg:px-10">
+    <a href="/wireframes/admin/news" class="wf-link">← News</a>
+    <span class="t-meta">Draft · saved just now</span>
+    <span class="ml-auto flex gap-2">
+      <span class="wf-btn wf-btn-line !min-h-10 text-sm">Preview</span>
+      <span class="wf-btn wf-btn-dark !min-h-10 text-sm" data-roles="super state district">Publish</span>
+      <span class="wf-btn wf-btn-dark !min-h-10 text-sm" data-roles="editor">Send for review</span>
+    </span>
+  </div>
+  <Note n={1}>Autosaves every 10 seconds as a draft; the live page changes only on Publish (Update, for a published post). District editors get "Send for review" instead, and their district admin publishes it. Preview shows the post at phone and laptop size.</Note>
+
+  <div class="wf-box mt-4 flex flex-wrap items-center gap-2 border-dashed p-3 text-sm">
+    <span class="font-semibold">Being edited by the Kollam district admin.</span>
+    <span class="text-zinc-600">You can read it; editing opens when they close it.</span>
+  </div>
+  <Note n={2}>If two people open the same post, the second sees this and gets a read-only view, so nobody's changes are overwritten.</Note>
+
+  <div class="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div class="min-w-0">
+      <div class="flex gap-1 border-b border-zinc-200" role="tablist" aria-label="Language">
+        <button type="button" role="tab" aria-selected="true" class="-mb-px border-b-2 border-zinc-800 px-3 py-2.5 font-semibold">Malayalam</button>
+        <button type="button" role="tab" aria-selected="false" class="-mb-px border-b-2 border-transparent px-3 py-2.5 text-zinc-600" data-roles="super state district">English <span class="ml-1 rounded bg-zinc-200 px-1.5 py-0.5 text-xs font-semibold">AI draft to approve</span></button>
+      </div>
+      <Note n={3}>Malayalam is the source. Typing works with any phone keyboard (Gboard, Manglish transliteration); the editor adds no keyboard of its own.</Note>
+
+      <label class="mt-4 block"><span class="t-label">Title</span>
+        <textarea rows="3" lang="ml" class="wf-input mt-1 !min-h-0 py-3 text-lg font-semibold">{t(p.title, 'ml')}</textarea>
+      </label>
+      <label class="mt-4 block"><span class="t-label">Summary <span class="font-normal normal-case tracking-normal text-zinc-500">· optional, shown under the headline and in lists</span></span>
+        <textarea rows="2" lang="ml" class="wf-input mt-1 !min-h-0 py-3" placeholder="One or two lines"></textarea>
+      </label>
+
+      <div class="mt-4">
+        <span class="t-label">Cover photo</span>
+        <div class="mt-1 grid gap-3 sm:grid-cols-[200px_minmax(0,1fr)]">
+          <Ph label="Cover" ratio="16/9" />
+          <div class="space-y-2">
+            <div class="flex flex-wrap gap-2"><span class="wf-btn wf-btn-line !min-h-10 text-sm">Take photo</span><span class="wf-btn wf-btn-line !min-h-10 text-sm">Choose</span><span class="wf-btn wf-btn-line !min-h-10 text-sm">From media library</span></div>
+            <input class="wf-input !min-h-10 text-sm" placeholder="Describe the photo (for screen readers)" aria-label="Photo description" />
+          </div>
+        </div>
+        <Note n={4}>"Take photo" opens the phone camera. The photo is resized in the browser before upload (plan, section 4), so a large phone picture uploads quickly even on mobile data.</Note>
+      </div>
+
+      <div class="mt-4">
+        <span class="t-label">Text</span>
+        <div class="mt-1 rounded-xl border border-zinc-300 bg-white">
+          <div class="flex flex-wrap gap-1 border-b border-zinc-200 p-1.5 text-sm">
+            {['B', 'I', 'List', 'Quote', 'Link', 'Photo', 'Video'].map((b) => <span class="rounded px-2 py-1 font-semibold text-zinc-600 hover:bg-zinc-100">{b}</span>)}
+          </div>
+          <div lang="ml" class="space-y-3 p-4">{body.map((para) => <p class="clamp-3">{para}</p>)}</div>
+        </div>
+        <Note n={5}>Pasting from WhatsApp or Word is cleaned of stray formatting. Every save is kept in History and can be restored.</Note>
+      </div>
+    </div>
+
+    <!-- Post settings: beside the text on laptops, below it on phones -->
+    <aside class="space-y-5 lg:sticky lg:top-24 lg:self-start" aria-label="Post settings">
+      <p class="t-h3">Post settings</p>
+      <label class="block"><span class="t-label">Topic</span>
+        <select class="wf-input mt-1">{topics.map((tp) => <option selected={tp.slug === p.topic}>{tp.name.en}</option>)}</select>
+      </label>
+      <div>
+        <span class="t-label">District</span>
+        <select class="wf-input mt-1" data-roles="super state"><option>State level</option>{sortedDistricts().map((d) => <option>{d.name.en}</option>)}</select>
+        <p class="wf-input mt-1 flex items-center bg-zinc-100 text-zinc-600" data-roles="district editor">Kollam (your district)</p>
+      </div>
+      <label class="block"><span class="t-label">Linked event · optional</span>
+        <select class="wf-input mt-1"><option>None</option>{allEvents().map((e) => <option>{t(e.title, 'en')}</option>)}</select>
+      </label>
+      <fieldset data-roles="super state district">
+        <legend class="t-label">Publish</legend>
+        <label class="mt-1 flex items-center gap-2"><input type="radio" name="when" checked /> Now</label>
+        <label class="flex items-center gap-2"><input type="radio" name="when" /> Schedule…</label>
+      </fieldset>
+
+      <fieldset class="wf-box space-y-2 p-3" data-roles="super state">
+        <legend class="t-label px-1">Home page</legend>
+        <label class="flex items-start gap-2 text-sm"><input type="checkbox" class="mt-1" /> Lead story in Top news</label>
+        <label class="flex items-start gap-2 text-sm"><input type="checkbox" class="mt-1" /> Show in the home banner<span class="t-meta block">(replaces the current banner)</span></label>
+      </fieldset>
+      <div class="wf-box p-3 text-sm" data-roles="district">
+        <span class="wf-btn wf-btn-line !min-h-9 w-full text-sm">Request a place on the home page</span>
+        <p class="t-meta mt-1">A state editor decides.</p>
+      </div>
+      <Note n={6}>Only state editors and the super admin put a story on the home page or in the banner; a district admin can ask. These rules come from the plan's roles table.</Note>
+
+      <div class="flex flex-wrap gap-x-4 gap-y-1 border-t border-zinc-200 pt-3 text-sm">
+        <a href="#" class="wf-link">History</a>
+        <a href="#" class="wf-link" data-roles="super state district">Delete post</a>
+      </div>
+    </aside>
+  </div>
+
+  <!-- What the English tab looks like once opened -->
+  <section class="mt-12" aria-labelledby="english-review" data-roles="super state district">
+    <div class="wf-section-head"><h2 id="english-review" class="t-h2">English tab: review the AI draft</h2></div>
+    <Note n={7}>Side by side: Malayalam on the left, the English draft on the right with changed sentences highlighted. Edit the English, then Approve English to put it live. On phones the two stack, Malayalam first.</Note>
+    <div class="grid gap-4 md:grid-cols-2">
+      <div class="wf-box p-4"><p class="t-label">Malayalam</p><p lang="ml" class="mt-2 clamp-3">{body[0]}</p></div>
+      <div class="wf-box p-4"><p class="t-label">English · AI draft</p><p class="mt-2 text-zinc-700">Make the November 21 Secretariat siege a success. Action Council state convention <mark class="bg-zinc-200">demands immediate pay revision</mark> …</p></div>
+    </div>
+    <div class="mt-3 flex flex-wrap gap-2"><span class="wf-btn wf-btn-dark">Approve English</span><span class="wf-btn wf-btn-line">Draft again</span></div>
+  </section>
+</AdminWireLayout>
