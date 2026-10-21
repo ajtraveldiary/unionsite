@@ -1,4 +1,4 @@
-import type { CampaignBanner, MagazineIssue, Person, UnionEvent, Video } from '~/lib/types';
+import type { MagazineIssue, Person, UnionEvent, Video } from '~/lib/types';
 import liveIssues from './live/issues.json';
 
 export const site = {
@@ -23,21 +23,6 @@ export const site = {
  * to the last day it should show (inclusive), or set the notice to null when there is none.
  */
 export const notice: { text: string; textLang?: 'ml' | 'en'; href?: string; until?: string } | null = null;
-
-/**
- * Home-page campaign banner, on the red wave above Top news. One at a time (no carousel); set
- * `until` and it drops off by itself, or set it to null. The story it links to isn't repeated
- * below it.
- */
-export const banner: CampaignBanner | null = {
-  label: 'Campaign',
-  title: { ml: 'നവംബർ 21 സെക്രട്ടറിയേറ്റ് വളയൽ' },
-  text: { ml: 'ശമ്പള പരിഷ്ക്കരണം ഉടൻ നടപ്പിലാക്കുക, എൻപിഎസ് പിൻവലിച്ച് ഒ.പി.എസ് പുന:സ്ഥാപിക്കുക, ക്ഷാമബത്ത കുടിശ്ശിക അനുവദിക്കുക.' },
-  cta: 'Read more',
-  path: '/news/2026/navambar-21-sekrattariyett-valayal-vijayippikkuka-aakshan',
-  image: 'https://keralangounion.in/wp-content/uploads/2026/10/841193210_1978281932841640_1232847674352896089_n-1024x683.jpg',
-  until: '2026-11-21',
-};
 
 export const usefulLinks = [
   { label: 'SPARK', url: 'https://www.spark.gov.in/', note: 'Salary & service' },

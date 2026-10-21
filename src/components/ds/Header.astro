@@ -1,9 +1,7 @@
 ---
 /**
- * Site header: a light grey strip with the logo, the five main sections, search (desktop),
- * content language and theme. It stays at the top while the page scrolls, at the same height,
- * with a soft shadow once the page has moved. On phones the sections live in the bottom bar
- * and search opens from there.
+ * Site header: logo, the five main sections, search (desktop), content language and theme.
+ * On phones the sections live in the bottom bar and search opens from there.
  */
 import Logo from './Logo.astro';
 import Icon from '~/components/ui/Icon.astro';
@@ -25,7 +23,7 @@ const alt = altPath(Astro.url.pathname);
 // The search page has its own big box, so the header's is left out there
 const onSearchPage = path.replace(/\/$/, '') === '/search';
 ---
-<header lang="en" data-header class="sticky top-0 z-40 bg-bg-subtle text-ink transition-shadow">
+<header lang="en" class="sticky top-0 z-40 border-b border-line bg-bg/95 backdrop-blur supports-[backdrop-filter]:bg-bg/85">
   <div class="wrap flex h-16 items-center gap-3 lg:gap-6">
     <a href={href(lang, '/')} class="flex min-w-0 items-center lg:shrink-0" aria-label="Kerala NGO Union, home">
       <!-- Wrappers carry the breakpoints (the logo's own inline-flex would override `hidden`) -->
@@ -38,8 +36,8 @@ const onSearchPage = path.replace(/\/$/, '') === '/search';
         {nav.map((n) => (
           <li>
             <a href={href(lang, n.path)} aria-current={active(n.match ?? n.path) ? 'page' : undefined}
-              class:list={['nav-link relative block whitespace-nowrap rounded-[var(--radius-control)] px-3 py-2 text-[0.9375rem] transition-colors hover:bg-surface',
-                active(n.match ?? n.path) ? 'font-semibold text-ink' : 'text-ink-2 hover:text-ink']}>{n.label}</a>
+              class:list={['block whitespace-nowrap rounded-[var(--radius-control)] px-3 py-2 text-[0.9375rem] transition-colors',
+                active(n.match ?? n.path) ? 'bg-bg-subtle font-semibold text-ink' : 'text-ink-2 hover:bg-bg-subtle hover:text-ink']}>{n.label}</a>
           </li>
         ))}
       </ul>
@@ -57,31 +55,10 @@ const onSearchPage = path.replace(/\/$/, '') === '/search';
         <a href={alt.ml} lang="ml" aria-current={lang === 'ml' ? 'true' : undefined} class:list={['rounded-full px-2.5 py-1 sm:px-3', lang === 'ml' ? 'bg-ink text-bg' : 'text-ink-2 hover:text-ink']}>മല</a>
         <a href={alt.en} aria-current={lang === 'en' ? 'true' : undefined} class:list={['rounded-full px-2.5 py-1 sm:px-3', lang === 'en' ? 'bg-ink text-bg' : 'text-ink-2 hover:text-ink']}>EN</a>
       </div>
-      <button type="button" data-theme-toggle class="btn btn-ghost btn-sm btn-icon hover:!bg-surface" aria-label="Switch light or dark theme">
+      <button type="button" data-theme-toggle class="btn btn-ghost btn-sm btn-icon" aria-label="Switch light or dark theme">
         <Icon name="Moon" size={18} class="dark:hidden" />
         <Icon name="Sun" size={18} class="hidden dark:block" />
       </button>
     </div>
   </div>
 </header>
-
-<style>
-  /* The current section is underlined in red along the bottom of its menu item */
-  .nav-link[aria-current="page"]::after {
-    content: ""; position: absolute; inset-inline: 0.75rem; bottom: 0.2rem; height: 2px; border-radius: 2px; background: var(--accent);
-  }
-  [data-header][data-scrolled] { box-shadow: var(--shadow-float); }
-</style>
-
-<script>
-  // Shadow under the strip once the page has scrolled; the strip itself never changes height
-  function initHeader() {
-    const header = document.querySelector<HTMLElement>('[data-header]');
-    if (!header || header.dataset.ready) return;
-    header.dataset.ready = '1';
-    const sync = () => header.toggleAttribute('data-scrolled', window.scrollY > 4);
-    window.addEventListener('scroll', sync, { passive: true });
-    sync();
-  }
-  initHeader();
-</script>

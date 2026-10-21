@@ -3,7 +3,7 @@
 import { posts } from '~/data/news';
 import { orders, subjectBySlug } from '~/data/orders';
 import { districts } from '~/data/districts';
-import { events, notice, banner, magazineIssues } from '~/data/site';
+import { events, notice, magazineIssues } from '~/data/site';
 import type { Lang, Order, Post } from './types';
 import { href } from './i18n';
 
@@ -50,13 +50,9 @@ export const allEvents = () => [...events].sort((a, b) => a.start.localeCompare(
 export const isUpcoming = (e: { start: string; end?: string }) => new Date(e.end ?? e.start) >= NOW();
 export const eventsForDistrict = (slug: string) => allEvents().filter((e) => e.district === slug && isUpcoming(e));
 
-const stillOn = (until?: string) => !until || new Date(`${until}T23:59:59+05:30`) >= NOW();
-
 /** The home-page notice, if there is one and it hasn't expired. */
-export const activeNotice = () => (notice && stillOn(notice.until) ? notice : null);
-
-/** The home-page campaign banner, if there is one and it hasn't expired. */
-export const activeBanner = () => (banner && stillOn(banner.until) ? banner : null);
+export const activeNotice = () =>
+  notice && (!notice.until || new Date(`${notice.until}T23:59:59+05:30`) >= NOW()) ? notice : null;
 
 /** Kerala Service issues, newest first */
 export const allIssues = () => [...magazineIssues].sort((a, b) => b.year - a.year || b.month - a.month);

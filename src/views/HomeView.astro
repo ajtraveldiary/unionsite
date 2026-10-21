@@ -1,7 +1,7 @@
 ---
 /**
  * Home page (redesign, Phase C). Layout as finalized in the wireframe:
- * red wave + campaign banner → notice → Top news + Coming up → From the union → Articles → Latest orders + Tools & guides →
+ * notice → Top news + Coming up → From the union → Articles → Latest orders + Tools & guides →
  * Districts → Kerala Service + Videos. No story appears twice on the page, and columns
  * side by side end on the same line.
  */
@@ -10,8 +10,6 @@ import Icon from '~/components/ui/Icon.astro';
 import MagazineCover from '~/components/ui/MagazineCover.astro';
 import SectionHead from '~/components/ds/SectionHead.astro';
 import Notice from '~/components/ds/Notice.astro';
-import HeroBand from '~/components/ds/HeroBand.astro';
-import CampaignBanner from '~/components/ds/CampaignBanner.astro';
 import StoryLead from '~/components/ds/StoryLead.astro';
 import StoryRow from '~/components/ds/StoryRow.astro';
 import StoryCard from '~/components/ds/StoryCard.astro';
@@ -25,17 +23,14 @@ import EmptyState from '~/components/ds/EmptyState.astro';
 import VideoCard from '~/components/ds/VideoCard.astro';
 import type { Lang, Post } from '~/lib/types';
 import { href, monthName } from '~/lib/i18n';
-import { allPosts, latestOrders, upcomingEvents, sortedDistricts, postsForDistrict, allIssues, issuePath, activeNotice, activeBanner, postPath } from '~/lib/content';
+import { allPosts, latestOrders, upcomingEvents, sortedDistricts, postsForDistrict, allIssues, issuePath, activeNotice } from '~/lib/content';
 import { videos, site } from '~/data/site';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
 const L = (p: string) => href(lang, p);
+const posts = allPosts();
 const notice = activeNotice();
-const banner = activeBanner();
-// The story the campaign banner links to (or a post with the banner's exact title) isn't
-// repeated in the sections below it
-const posts = allPosts().filter((p) => !banner || (postPath(p) !== banner.path && p.title.ml !== banner.title.ml));
 
 // Top news: the featured story leads, the next four sit beside it (three on phones)
 const lead = posts.find((p) => p.featured) ?? posts[0];
@@ -107,13 +102,6 @@ const oldest = issues.at(-1)!;
 ---
 <AppLayout lang={lang}>
   <h1 class="sr-only">Kerala NGO Union</h1>
-
-  <!-- 0 · The red wave carrying on from the header, with the campaign banner on it (or a short band) -->
-  {banner ? (
-    <HeroBand><CampaignBanner banner={banner} lang={lang} /></HeroBand>
-  ) : (
-    <HeroBand short />
-  )}
 
   {notice && (
     <div class="wrap mt-4 lg:mt-6">

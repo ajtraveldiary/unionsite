@@ -18,10 +18,8 @@ import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
 import EmptyState from '~/components/ds/EmptyState.astro';
 import Tabs from '~/components/ds/Tabs.astro';
 import Logo from '~/components/ds/Logo.astro';
-import HeroBand from '~/components/ds/HeroBand.astro';
-import CampaignBanner from '~/components/ds/CampaignBanner.astro';
 import { allPosts, allOrders, allEvents, sortedDistricts, postsForDistrict } from '~/lib/content';
-import type { CampaignBanner as Banner, Post, UnionEvent } from '~/lib/types';
+import type { Post, UnionEvent } from '~/lib/types';
 
 const lang = 'ml' as const;
 const posts = allPosts();
@@ -62,7 +60,7 @@ const tools = [
 
 const colours = [
   { token: '--bg', name: 'Background', use: 'Page' },
-  { token: '--bg-subtle', name: 'Subtle', use: 'Header strip, home wave, section wash, no-photo tiles' },
+  { token: '--bg-subtle', name: 'Subtle', use: 'Section wash, no-photo tiles' },
   { token: '--surface', name: 'Surface', use: 'Cards' },
   { token: '--line', name: 'Line', use: 'Dividers, card borders' },
   { token: '--line-strong', name: 'Line strong', use: 'Inputs, buttons' },
@@ -76,10 +74,7 @@ const colours = [
   { token: '--success', name: 'Success', use: 'Confirmations' },
   { token: '--warning', name: 'Warning', use: 'Notices' },
 ];
-const sectionNav = ['Colour', 'Type', 'Spacing', 'Controls', 'Stories', 'Orders', 'Events', 'Tools', 'Districts', 'Header & banner', 'Notices & tabs', 'Empty states'];
-// Campaign banner examples: with a photo, and the white card without one
-const bannerPhoto: Banner = { label: 'Campaign', title: { ml: 'നവംബർ 21 സെക്രട്ടറിയേറ്റ് വളയൽ' }, text: { ml: 'ശമ്പള പരിഷ്ക്കരണം ഉടൻ നടപ്പിലാക്കുക, ക്ഷാമബത്ത കുടിശ്ശിക അനുവദിക്കുക.' }, cta: 'Read more', path: '#header-banner', image: photo };
-const bannerPlain: Banner = { ...bannerPhoto, label: 'Strike call', image: undefined };
+const sectionNav = ['Colour', 'Type', 'Spacing', 'Controls', 'Stories', 'Orders', 'Events', 'Tools', 'Districts', 'Notices & tabs', 'Empty states'];
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z]+/g, '-');
 ---
 <AppLayout lang={lang} title="Design system" noindex>
@@ -288,17 +283,6 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z]+/g, '-');
           </ul>
           <a href="#districts" class="link col-foot">Map of districts</a>
         </div>
-      </div>
-    </section>
-
-    <!-- Header strip & campaign banner -->
-    <section class="section" aria-labelledby="header-banner">
-      <SectionHead title="Header & banner" id="header-banner" />
-      <p class="mb-4 max-w-2xl text-ink-2">The light grey strip at the top of this page is the header: it stays put while the page scrolls, at the same height, with a shadow once the page has moved. On the home page its grey carries on as a wave, with one campaign banner on it: real text over an optional photo, never a picture of text, no carousel. Without a banner the wave is a short band.</p>
-      <div class="space-y-6">
-        <div class="overflow-hidden rounded-[var(--radius-card)] border border-line pb-6"><HeroBand><CampaignBanner banner={bannerPhoto} lang={lang} /></HeroBand></div>
-        <div class="overflow-hidden rounded-[var(--radius-card)] border border-line pb-6"><HeroBand><CampaignBanner banner={bannerPlain} lang={lang} /></HeroBand></div>
-        <div class="overflow-hidden rounded-[var(--radius-card)] border border-line"><HeroBand short /><p class="t-meta px-4 pb-4 pt-12 lg:pt-16">No banner: the short band under the header.</p></div>
       </div>
     </section>
 
