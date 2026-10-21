@@ -1,6 +1,6 @@
 ---
 /**
- * Site header: the union's red strip with the logo, the five main sections, search (desktop),
+ * Site header: a light grey strip with the logo, the five main sections, search (desktop),
  * content language and theme. It stays at the top while the page scrolls, at the same height,
  * with a soft shadow once the page has moved. On phones the sections live in the bottom bar
  * and search opens from there.
@@ -25,12 +25,12 @@ const alt = altPath(Astro.url.pathname);
 // The search page has its own big box, so the header's is left out there
 const onSearchPage = path.replace(/\/$/, '') === '/search';
 ---
-<header lang="en" data-header class="on-brand sticky top-0 z-40 bg-brand-bar text-on-brand transition-shadow">
+<header lang="en" data-header class="sticky top-0 z-40 bg-bg-subtle text-ink transition-shadow">
   <div class="wrap flex h-16 items-center gap-3 lg:gap-6">
     <a href={href(lang, '/')} class="flex min-w-0 items-center lg:shrink-0" aria-label="Kerala NGO Union, home">
       <!-- Wrappers carry the breakpoints (the logo's own inline-flex would override `hidden`) -->
-      <span class="hidden sm:block"><Logo inverse /></span>
-      <span class="sm:hidden"><Logo size={36} stacked inverse /></span>
+      <span class="hidden sm:block"><Logo /></span>
+      <span class="sm:hidden"><Logo size={36} stacked /></span>
     </a>
 
     <nav aria-label="Primary" class="hidden lg:block">
@@ -38,8 +38,8 @@ const onSearchPage = path.replace(/\/$/, '') === '/search';
         {nav.map((n) => (
           <li>
             <a href={href(lang, n.path)} aria-current={active(n.match ?? n.path) ? 'page' : undefined}
-              class:list={['nav-link relative block whitespace-nowrap rounded-[var(--radius-control)] px-3 py-2 text-[0.9375rem] transition-colors hover:bg-white/10',
-                active(n.match ?? n.path) ? 'font-semibold text-on-brand' : 'text-on-brand-2 hover:text-on-brand']}>{n.label}</a>
+              class:list={['nav-link relative block whitespace-nowrap rounded-[var(--radius-control)] px-3 py-2 text-[0.9375rem] transition-colors hover:bg-surface',
+                active(n.match ?? n.path) ? 'font-semibold text-ink' : 'text-ink-2 hover:text-ink']}>{n.label}</a>
           </li>
         ))}
       </ul>
@@ -48,16 +48,16 @@ const onSearchPage = path.replace(/\/$/, '') === '/search';
     {!onSearchPage && (
       <form action={href(lang, '/search')} role="search" class="relative ml-auto hidden min-w-0 max-w-xs flex-1 md:block">
         <Icon name="Search" size={18} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
-        <input name="q" type="search" class="field !min-h-10 !rounded-full !border-transparent pl-9 text-sm" placeholder="Search orders, news, districts" aria-label="Search the site" />
+        <input name="q" type="search" class="field !min-h-10 !rounded-full pl-9 text-sm" placeholder="Search orders, news, districts" aria-label="Search the site" />
       </form>
     )}
 
     <div class:list={['ml-auto flex shrink-0 items-center gap-1.5', !onSearchPage && 'md:ml-0']}>
-      <div class="flex rounded-full border border-white/50 p-0.5 text-sm font-semibold" role="group" aria-label="Content language">
-        <a href={alt.ml} lang="ml" aria-current={lang === 'ml' ? 'true' : undefined} class:list={['rounded-full px-2.5 py-1 sm:px-3', lang === 'ml' ? 'bg-on-brand text-brand-bar' : 'text-on-brand-2 hover:text-on-brand']}>മല</a>
-        <a href={alt.en} aria-current={lang === 'en' ? 'true' : undefined} class:list={['rounded-full px-2.5 py-1 sm:px-3', lang === 'en' ? 'bg-on-brand text-brand-bar' : 'text-on-brand-2 hover:text-on-brand']}>EN</a>
+      <div class="flex rounded-full border border-line-strong p-0.5 text-sm font-semibold" role="group" aria-label="Content language">
+        <a href={alt.ml} lang="ml" aria-current={lang === 'ml' ? 'true' : undefined} class:list={['rounded-full px-2.5 py-1 sm:px-3', lang === 'ml' ? 'bg-ink text-bg' : 'text-ink-2 hover:text-ink']}>മല</a>
+        <a href={alt.en} aria-current={lang === 'en' ? 'true' : undefined} class:list={['rounded-full px-2.5 py-1 sm:px-3', lang === 'en' ? 'bg-ink text-bg' : 'text-ink-2 hover:text-ink']}>EN</a>
       </div>
-      <button type="button" data-theme-toggle class="btn btn-sm btn-icon !text-on-brand hover:!bg-white/10" aria-label="Switch light or dark theme">
+      <button type="button" data-theme-toggle class="btn btn-ghost btn-sm btn-icon hover:!bg-surface" aria-label="Switch light or dark theme">
         <Icon name="Moon" size={18} class="dark:hidden" />
         <Icon name="Sun" size={18} class="hidden dark:block" />
       </button>
@@ -66,9 +66,9 @@ const onSearchPage = path.replace(/\/$/, '') === '/search';
 </header>
 
 <style>
-  /* The current section is underlined in white along the bottom of its menu item */
+  /* The current section is underlined in red along the bottom of its menu item */
   .nav-link[aria-current="page"]::after {
-    content: ""; position: absolute; inset-inline: 0.75rem; bottom: 0.2rem; height: 2px; border-radius: 2px; background: var(--on-brand);
+    content: ""; position: absolute; inset-inline: 0.75rem; bottom: 0.2rem; height: 2px; border-radius: 2px; background: var(--accent);
   }
   [data-header][data-scrolled] { box-shadow: var(--shadow-float); }
 </style>

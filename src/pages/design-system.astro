@@ -62,7 +62,7 @@ const tools = [
 
 const colours = [
   { token: '--bg', name: 'Background', use: 'Page' },
-  { token: '--bg-subtle', name: 'Subtle', use: 'Section wash, no-photo tiles' },
+  { token: '--bg-subtle', name: 'Subtle', use: 'Header strip, home wave, section wash, no-photo tiles' },
   { token: '--surface', name: 'Surface', use: 'Cards' },
   { token: '--line', name: 'Line', use: 'Dividers, card borders' },
   { token: '--line-strong', name: 'Line strong', use: 'Inputs, buttons' },
@@ -72,7 +72,6 @@ const colours = [
   { token: '--accent', name: 'Union red', use: 'Primary buttons, active marks' },
   { token: '--accent-ink', name: 'Red text', use: 'Red text and hover' },
   { token: '--accent-soft', name: 'Red tint', use: 'Badges, icon wells' },
-  { token: '--brand-bar', name: 'Brand strip', use: 'Header strip, home wave' },
   { token: '--link', name: 'Link blue', use: 'Links, focus ring' },
   { token: '--success', name: 'Success', use: 'Confirmations' },
   { token: '--warning', name: 'Warning', use: 'Notices' },
@@ -99,7 +98,7 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z]+/g, '-');
     <!-- Colour -->
     <section class="section" aria-labelledby="colour">
       <SectionHead title="Colour" id="colour" />
-      <p class="mb-4 max-w-2xl text-ink-2">Every text colour passes WCAG AA (4.5:1) on its background in both themes; the lowest pair is 5.2:1. White on union red is 5.9:1; on the brand strip it is 7.2:1 (9.5:1 in dark), and the strip's softer white is 6.0:1.</p>
+      <p class="mb-4 max-w-2xl text-ink-2">Every text colour passes WCAG AA (4.5:1) on its background in both themes; the lowest pair is 5.2:1. White on union red is 5.9:1.</p>
       <div class="grid gap-4 md:grid-cols-2">
         {['light', 'dark'].map((theme) => (
           <div data-theme={theme} class="rounded-[var(--radius-card)] border border-line bg-bg p-4 text-ink">
@@ -295,7 +294,7 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z]+/g, '-');
     <!-- Header strip & campaign banner -->
     <section class="section" aria-labelledby="header-banner">
       <SectionHead title="Header & banner" id="header-banner" />
-      <p class="mb-4 max-w-2xl text-ink-2">The red strip at the top of this page is the header: it stays put while the page scrolls, at the same height, with a shadow once the page has moved. On the home page its red carries on as a wave, with one campaign banner on it: real text over an optional photo, never a picture of text, no carousel. Without a banner the wave is a short band.</p>
+      <p class="mb-4 max-w-2xl text-ink-2">The light grey strip at the top of this page is the header: it stays put while the page scrolls, at the same height, with a shadow once the page has moved. On the home page its grey carries on as a wave, with one campaign banner on it: real text over an optional photo, never a picture of text, no carousel. Without a banner the wave is a short band.</p>
       <div class="space-y-6">
         <div class="overflow-hidden rounded-[var(--radius-card)] border border-line pb-6"><HeroBand><CampaignBanner banner={bannerPhoto} lang={lang} /></HeroBand></div>
         <div class="overflow-hidden rounded-[var(--radius-card)] border border-line pb-6"><HeroBand><CampaignBanner banner={bannerPlain} lang={lang} /></HeroBand></div>
@@ -332,7 +331,7 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z]+/g, '-');
       <div class="flex flex-wrap items-center gap-8">
         <Logo />
         <Logo size={36} stacked />
-        <div class="on-brand rounded-[var(--radius-card)] bg-brand-bar p-4"><Logo inverse /></div>
+        <div data-theme="dark" class="rounded-[var(--radius-card)] bg-bg p-4"><Logo inverse /></div>
       </div>
     </section>
   </div>
