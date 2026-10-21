@@ -1,0 +1,51 @@
+---
+/**
+ * Admin wireframe: inbox (plan, section 10). Messages from the site's contact form: assign one
+ * to a person, reply by email from your own mail app, mark it done. A message that names a
+ * district also reaches that district's admin. Placeholder senders, not real people.
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+
+const messages = [
+  { from: 'A member', district: 'Kollam', topic: 'Membership', when: '10:42', state: 'New' },
+  { from: 'A reader', district: '—', topic: 'Kerala Service', when: '09:15', state: 'New' },
+  { from: 'A teacher', district: 'Kannur', topic: 'Government orders', when: 'Yesterday', state: 'Assigned to Office staff 2' },
+  { from: 'A member', district: '—', topic: 'Website', when: 'Mon', state: 'Done' },
+];
+---
+<AdminWireLayout title="Inbox" page="inbox">
+  <div data-roles="editor" class="wf-box p-6 text-center">
+    <p class="font-semibold">Messages go to the district admin and the state office.</p>
+  </div>
+
+  <div data-roles="super state district">
+    <h1 class="t-h1">Inbox</h1>
+    <Note n={1}>Messages from the Contact page. State roles see all of them; a district admin sees the ones where the sender chose their district (try "View as").</Note>
+    <div class="mt-4 flex gap-2" role="group" aria-label="Show"><button type="button" class="wf-chip" aria-pressed="true">New 2</button><button type="button" class="wf-chip" aria-pressed="false">Assigned to me</button><button type="button" class="wf-chip" aria-pressed="false">Done</button></div>
+
+    <div class="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+      <ul class="divide-y divide-zinc-200 border-y border-zinc-200">
+        {messages.map((m, i) => (
+          <li class:list={['py-3', i === 0 && 'bg-white -mx-2 px-2 rounded-lg']} data-roles={m.district === 'Kollam' ? undefined : 'super state'}>
+            <p class="flex justify-between gap-2"><span class:list={[m.state === 'New' && 'font-semibold']}>{m.topic}</span><span class="t-meta">{m.when}</span></p>
+            <p class="t-meta">{m.from}{m.district !== '—' && ` · ${m.district}`} · {m.state}</p>
+          </li>
+        ))}
+      </ul>
+
+      <article class="wf-box p-4" aria-label="Message">
+        <p class="t-label">Membership · today 10:42</p>
+        <p class="mt-1 font-semibold">From a member, Kollam</p>
+        <p class="t-meta">name@example.com · phone given</p>
+        <p lang="ml" class="mt-3 text-zinc-700">സന്ദേശത്തിന്റെ വാചകം ഇവിടെ…</p>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+          <label class="block"><span class="t-label">Assign to</span><select class="wf-input mt-1 !min-h-10 text-sm"><option>Nobody yet</option><option>Me</option><option>Office staff 2</option><option>Kollam district admin</option></select></label>
+          <label class="block"><span class="t-label">Note for the team · optional</span><input class="wf-input mt-1 !min-h-10 text-sm" /></label>
+        </div>
+        <div class="mt-4 flex flex-wrap gap-2"><span class="wf-btn wf-btn-dark !min-h-10 text-sm">Reply by email</span><span class="wf-btn wf-btn-line !min-h-10 text-sm">Mark done</span></div>
+        <Note n={2}>"Reply by email" opens your own mail app with the sender's address and their message quoted; the site sends nothing itself. How long done messages are kept is still to decide, and the privacy page should then say it.</Note>
+      </article>
+    </div>
+  </div>
+</AdminWireLayout>

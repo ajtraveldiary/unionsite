@@ -1,0 +1,92 @@
+---
+/**
+ * Admin wireframe: people and committees (plan, section 10; content model "people" and
+ * "positions", section 5). One person record each, reused across committees and terms; a
+ * committee is a list of positions in order. State roles edit the state committee, district
+ * roles their own district's. Names read from the old site wait in "Needs checking".
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import Ph from '~/components/wire/Ph.astro';
+import { site, stateCommittee, roleLabels } from '~/data/site';
+
+const groups = [
+  { head: 'Office-bearers', roles: ['president', 'general_secretary', 'treasurer'] },
+  { head: 'Vice presidents and secretaries', roles: ['vice_president', 'secretary'] },
+] as const;
+const byRole = (roles: readonly string[]) => stateCommittee.filter((p) => p.body === 'state' && roles.includes(p.role));
+const districtRows = ['President', 'Secretary', 'Treasurer', 'Vice president', 'Joint secretary'];
+---
+<AdminWireLayout title="People & committees" page="people">
+  <h1 class="t-h1">People & committees</h1>
+
+  <!-- State roles: the state committee -->
+  <div data-roles="super state">
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <select class="wf-input !w-auto" aria-label="Committee"><option>State committee</option><option>Women's sub-committee</option><option>A district committee…</option></select>
+      <span class="t-meta">Term: elected at the {site.conferences}rd state conference</span>
+      <span class="wf-btn wf-btn-line ml-auto">Start new term</span>
+    </div>
+    <Note n={1}>"Start new term" copies the current committee as a draft for the next term; the office edits it and publishes it after the conference. Past terms stay as history, so the site can show who held which post when.</Note>
+
+    {groups.map((g) => (
+      <section class="mt-6" aria-label={g.head}>
+        <div class="wf-section-head"><h2 class="t-h2">{g.head}</h2><a href="#person" class="wf-link">+ Add</a></div>
+        <ul class="divide-y divide-zinc-200">
+          {byRole(g.roles).map((p) => (
+            <li class="flex items-center gap-3 py-2.5">
+              <span class="cursor-grab select-none text-zinc-400" aria-label="Drag to reorder">⋮⋮</span>
+              <Ph label="" class="size-11 shrink-0 !rounded-full" />
+              <div class="min-w-0 flex-1"><p lang="ml" class="font-semibold">{p.name.ml}</p><p class="t-meta">{p.name.en} · {roleLabels[p.role].en}</p></div>
+              <a href="#person" class="wf-link">Edit</a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
+    <p class="t-meta mt-3">Then the secretariat and the women's sub-committee, in the same form.</p>
+    <Note n={2}>Drag the handle to change the order the site shows. Names are typed once per person, in Malayalam and English; the English is reviewed by the state office.</Note>
+  </div>
+
+  <!-- District roles: their own committee, with names from the old site to check -->
+  <div data-roles="district editor">
+    <p class="t-meta mt-1">Kollam district committee</p>
+    <section class="wf-box mt-4 border-dashed p-4" aria-labelledby="check">
+      <h2 id="check" class="font-semibold">Needs checking: 12 names from the old site</h2>
+      <p class="mt-1 text-sm text-zinc-600">These were read from Kollam's old office-bearer page. Check each name and role, then confirm.</p>
+      <div class="mt-3 flex gap-2"><span class="wf-btn wf-btn-dark !min-h-10 text-sm">Check names</span></div>
+    </section>
+    <Note n={3}>The old site typed office-bearers as plain text; the import reads them by pattern (role, then names) and puts them here instead of publishing guesses (plan, section 12). District editors' changes go to the district admin for review.</Note>
+    <ul class="mt-4 divide-y divide-zinc-200">
+      {districtRows.map((r) => (
+        <li class="flex items-center gap-3 py-2.5">
+          <span class="cursor-grab select-none text-zinc-400" aria-label="Drag to reorder">⋮⋮</span>
+          <Ph label="" class="size-11 shrink-0 !rounded-full" />
+          <div class="min-w-0 flex-1"><p class="font-semibold">To be confirmed</p><p class="t-meta">{r}</p></div>
+          <a href="#person" class="wf-link">Edit</a>
+        </li>
+      ))}
+    </ul>
+    <a href="#" class="wf-link mt-2 inline-block">Area committees</a>
+  </div>
+
+  <section id="person" class="mt-10 scroll-mt-16" aria-labelledby="person-form">
+    <div class="wf-section-head"><h2 id="person-form" class="t-h2">Add or edit a person</h2></div>
+    <div class="grid max-w-3xl gap-4 sm:grid-cols-[120px_minmax(0,1fr)]">
+      <div><Ph label="Photo" ratio="1/1" class="!rounded-full" /><span class="wf-btn wf-btn-line !min-h-9 mt-2 w-full text-sm">Upload</span></div>
+      <div class="space-y-3">
+        <input class="wf-input" placeholder="Search people already on the site" aria-label="Find a person" />
+        <p class="t-meta">Not listed? Add them:</p>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label class="block"><span class="t-label">Name · Malayalam</span><input class="wf-input mt-1" lang="ml" /></label>
+          <label class="block"><span class="t-label">Name · English</span><input class="wf-input mt-1" /></label>
+          <label class="block"><span class="t-label">Role in this committee</span><select class="wf-input mt-1">{Object.values(roleLabels).map((r) => <option>{r.en}</option>)}</select></label>
+          <label class="block"><span class="t-label">Department or office · optional</span><input class="wf-input mt-1" /></label>
+        </div>
+        <label class="block"><span class="t-label">Phone · optional, shown on the district page</span><input class="wf-input mt-1" type="tel" /></label>
+        <Note n={4}>One record per person, reused when they move to another post or committee. A phone number is shown only if one is entered, so nobody's number appears without their consent.</Note>
+        <span class="wf-btn wf-btn-dark">Save</span>
+      </div>
+    </div>
+  </section>
+</AdminWireLayout>

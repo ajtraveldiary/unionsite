@@ -1,0 +1,70 @@
+---
+/**
+ * Admin wireframe: media (plan, section 10: Media; Albums and videos). The library of every
+ * upload, with photo descriptions and where each file is used; photo albums with bulk upload
+ * and captions; videos synced from the union's YouTube channel. District roles see and add
+ * their own district's files and albums.
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import Ph from '~/components/wire/Ph.astro';
+import { t, formatDate } from '~/lib/i18n';
+import { videos } from '~/data/site';
+---
+<AdminWireLayout title="Media" page="media">
+  <h1 class="t-h1">Media</h1>
+  <div class="mt-4 flex gap-1 border-b border-zinc-200" role="tablist" aria-label="Media sections">
+    {['Library', 'Albums', 'Videos'].map((tb, i) => <a href={`#${tb.toLowerCase()}`} role="tab" aria-selected={i === 0 ? 'true' : 'false'} class:list={['-mb-px border-b-2 px-3 py-2.5', i === 0 ? 'border-zinc-800 font-semibold' : 'border-transparent text-zinc-600']}>{tb}</a>)}
+  </div>
+  <Note n={1}>Three tabs; shown one under another here so all three can be reviewed.</Note>
+
+  <section id="library" class="mt-6 scroll-mt-16" aria-labelledby="lib">
+    <div class="wf-section-head"><h2 id="lib" class="t-h2">Library</h2><span class="wf-btn wf-btn-line !min-h-9 text-sm">Upload</span></div>
+    <div class="flex flex-col gap-3 md:flex-row">
+      <input class="wf-input md:max-w-sm" placeholder="Search by file name or description" aria-label="Search media" />
+      <div class="flex flex-wrap gap-2" role="group" aria-label="Kind"><button type="button" class="wf-chip" aria-pressed="true">All</button><button type="button" class="wf-chip" aria-pressed="false">Photos</button><button type="button" class="wf-chip" aria-pressed="false">PDFs</button><button type="button" class="wf-chip" aria-pressed="false">Missing description</button></div>
+    </div>
+    <ul class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+      {Array.from({ length: 12 }, (_, i) => (
+        <li>
+          <Ph label={i % 5 === 4 ? 'PDF' : ''} ratio="4/3" />
+          <p class="t-meta mt-1 truncate">{i % 3 === 0 ? 'Used in 3 posts' : i % 3 === 1 ? 'Used in 1 post' : 'Not used'}{i % 4 === 2 ? ' · no description' : ''}</p>
+        </li>
+      ))}
+    </ul>
+    <div class="wf-box mt-4 grid max-w-3xl gap-4 p-4 sm:grid-cols-[180px_minmax(0,1fr)]">
+      <Ph label="Selected photo" ratio="4/3" />
+      <div class="space-y-2 text-sm">
+        <label class="block"><span class="t-label">Description · for screen readers</span><input class="wf-input mt-1 !min-h-10" lang="ml" placeholder="What the photo shows" /></label>
+        <p class="t-meta">Used in: 3 posts · <a href="#" class="underline">see them</a></p>
+        <div class="flex flex-wrap gap-2"><span class="wf-btn wf-btn-line !min-h-9 text-sm">Replace file</span><span class="wf-btn wf-btn-line !min-h-9 text-sm" data-roles="super state">Delete</span></div>
+      </div>
+    </div>
+    <Note n={2}>Every upload is listed once, with where it's used. "Replace file" swaps a photo everywhere it appears; a file still in use can't be deleted. "Missing description" lists photos screen readers can't describe yet.</Note>
+  </section>
+
+  <section id="albums" class="mt-10 scroll-mt-16" aria-labelledby="alb">
+    <div class="wf-section-head"><h2 id="alb" class="t-h2">Albums</h2><span class="wf-btn wf-btn-dark !min-h-9 text-sm">+ New album</span></div>
+    <Note n={3}>New album: a title, a district (fixed for district roles), then drop or pick many photos at once; each gets an optional caption. Albums show on the Media page and the district hub's Gallery tab.</Note>
+    <ul class="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      {['Kollam district conference', 'Onam celebration', 'Secretariat march'].map((a, i) => (
+        <li><Ph label="Album cover" ratio="4/3" /><p class="mt-1 text-sm font-semibold">{a}</p><p class="t-meta">{[24, 18, 41][i]} photos</p></li>
+      ))}
+    </ul>
+  </section>
+
+  <section id="videos" class="mt-10 scroll-mt-16" aria-labelledby="vid">
+    <div class="wf-section-head"><h2 id="vid" class="t-h2">Videos</h2><span class="t-meta">YouTube channel connected · synced today</span></div>
+    <Note n={4}>New videos on the union's YouTube channel appear here by themselves; a video from elsewhere can be added by pasting its link. Hide any that shouldn't show on the site.</Note>
+    <div class="mb-3 flex max-w-xl gap-2"><input class="wf-input" placeholder="Paste a YouTube link" aria-label="YouTube link" /><span class="wf-btn wf-btn-line shrink-0">Add</span></div>
+    <ul class="divide-y divide-zinc-200">
+      {videos.map((v) => (
+        <li class="flex items-center gap-3 py-2.5">
+          <Ph label="" ratio="16/9" class="w-24 shrink-0" />
+          <div class="min-w-0 flex-1"><p lang="ml" class="clamp-2 font-semibold leading-snug">{t(v.title, 'ml')}</p><p class="t-meta">{formatDate(v.date, 'en', 'short')} · shown on the site</p></div>
+          <a href="#" class="wf-link">Hide</a>
+        </li>
+      ))}
+    </ul>
+  </section>
+</AdminWireLayout>

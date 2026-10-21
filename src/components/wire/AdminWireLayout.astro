@@ -7,7 +7,7 @@
  */
 import '~/styles/wire.css';
 
-type Page = 'dashboard' | 'news' | 'editor' | 'orders' | 'banner' | 'users';
+type Page = 'dashboard' | 'news' | 'editor' | 'events' | 'orders' | 'magazine' | 'people' | 'media' | 'banner' | 'inbox' | 'users' | 'settings';
 interface Props { title: string; page: Page }
 const { title, page } = Astro.props;
 
@@ -15,24 +15,31 @@ const pages: { id: Page; label: string; path: string }[] = [
   { id: 'dashboard', label: 'Dashboard', path: '/wireframes/admin' },
   { id: 'news', label: 'News list', path: '/wireframes/admin/news' },
   { id: 'editor', label: 'Post editor', path: '/wireframes/admin/editor' },
+  { id: 'events', label: 'Events', path: '/wireframes/admin/events' },
   { id: 'orders', label: 'Orders upload', path: '/wireframes/admin/orders' },
+  { id: 'magazine', label: 'Kerala Service', path: '/wireframes/admin/kerala-service' },
+  { id: 'people', label: 'People', path: '/wireframes/admin/people' },
+  { id: 'media', label: 'Media', path: '/wireframes/admin/media' },
   { id: 'banner', label: 'Home & banner', path: '/wireframes/admin/banner' },
+  { id: 'inbox', label: 'Inbox', path: '/wireframes/admin/inbox' },
   { id: 'users', label: 'Users', path: '/wireframes/admin/users' },
+  { id: 'settings', label: 'Settings', path: '/wireframes/admin/settings' },
 ];
 // Sidebar sections, with the roles that may open each (plan, section 10: roles and permissions)
 const menu: { label: string; id?: Page; path: string; roles?: string }[] = [
   { label: 'Dashboard', id: 'dashboard', path: '/wireframes/admin' },
   { label: 'News', id: 'news', path: '/wireframes/admin/news' },
-  { label: 'Events', path: '#' },
+  { label: 'Events', id: 'events', path: '/wireframes/admin/events' },
   { label: 'Orders', id: 'orders', path: '/wireframes/admin/orders', roles: 'super state' },
-  { label: 'Kerala Service', path: '#', roles: 'super state' },
-  { label: 'People & committees', path: '#' },
+  { label: 'Kerala Service', id: 'magazine', path: '/wireframes/admin/kerala-service', roles: 'super state' },
+  { label: 'People & committees', id: 'people', path: '/wireframes/admin/people' },
   { label: 'District page', path: '#', roles: 'district editor' },
-  { label: 'Media', path: '#' },
+  { label: 'Media', id: 'media', path: '/wireframes/admin/media' },
   { label: 'Home & banner', id: 'banner', path: '/wireframes/admin/banner', roles: 'super state' },
-  { label: 'Inbox', path: '#', roles: 'super state district' },
+  { label: 'Inbox', id: 'inbox', path: '/wireframes/admin/inbox', roles: 'super state district' },
   { label: 'Users', id: 'users', path: '/wireframes/admin/users', roles: 'super district' },
-  { label: 'Settings', path: '#', roles: 'super' },
+  // Everyone with AI translation has their own key there; site settings are the super admin's
+  { label: 'Settings', id: 'settings', path: '/wireframes/admin/settings', roles: 'super state district' },
 ];
 const roles = [
   { id: 'super', label: 'Super admin' },
@@ -124,7 +131,7 @@ const roles = [
     <!-- Phone bottom bar: the big middle button is "New post", the most common job on a phone -->
     <nav aria-label="Admin" class="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-white lg:hidden">
       <ul class="grid grid-cols-5 items-end pb-[env(safe-area-inset-bottom)]">
-        {[['Home', 'dashboard', '/wireframes/admin'], ['News', 'news', '/wireframes/admin/news'], ['New', 'editor', '/wireframes/admin/editor'], ['Inbox', '', '#'], ['Menu', '', '#']].map(([label, id, path]) => (
+        {[['Home', 'dashboard', '/wireframes/admin'], ['News', 'news', '/wireframes/admin/news'], ['New', 'editor', '/wireframes/admin/editor'], ['Inbox', 'inbox', '/wireframes/admin/inbox'], ['Menu', '', '#']].map(([label, id, path]) => (
           <li>
             <a href={path} aria-current={id === page ? 'page' : undefined} class:list={['flex flex-col items-center gap-1 py-2 text-[0.6875rem]', id === page ? 'font-bold' : 'text-zinc-500']}>
               {label === 'New'

@@ -1,0 +1,67 @@
+---
+/**
+ * Admin wireframe: settings (plan, sections 6 and 10). Everyone who approves English has their
+ * own AI translation key here (bring your own key); state editors also keep the glossary; the
+ * super admin edits site details and switches AI translation for the whole site.
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import { site } from '~/data/site';
+
+const glossary = [
+  ['എഫ്.എസ്.ഇ.ടി.ഒ', 'FSETO'],
+  ['ജനപക്ഷ സിവിൽ സർവീസ്', 'People-oriented Civil Service'],
+  ['ക്ഷാമബത്ത', 'Dearness Allowance (DA)'],
+  ['ശമ്പള പരിഷ്കരണം', 'Pay Revision'],
+];
+---
+<AdminWireLayout title="Settings" page="settings">
+  <div data-roles="editor" class="wf-box p-6 text-center">
+    <p class="font-semibold">Nothing to set here for district editors.</p>
+  </div>
+
+  <h1 class="t-h1" data-roles="super state district">Settings</h1>
+
+  <section class="mt-6 max-w-3xl" aria-labelledby="ai" data-roles="super state district">
+    <div class="wf-section-head"><h2 id="ai" class="t-h2">Your AI translation key</h2></div>
+    <Note n={1}>Each admin who drafts English uses their own Gemini key. It never reaches the site's server or database: the browser sends the text straight to Gemini (plan, section 6). Without a key, saving works as normal and English is marked "Needs translation".</Note>
+    <div class="flex flex-col gap-2 sm:flex-row"><input class="wf-input" type="password" placeholder="Paste your Gemini key" aria-label="Gemini key" /><span class="wf-btn wf-btn-line shrink-0">Test key</span></div>
+    <fieldset class="mt-4">
+      <legend class="t-label">Keep the key</legend>
+      <label class="mt-1 flex items-center gap-2"><input type="radio" name="keep" checked /> For this session only (cleared when the tab closes or after 30 minutes idle)</label>
+      <label class="flex items-center gap-2"><input type="radio" name="keep" /> On this device for 7 days</label>
+    </fieldset>
+    <label class="mt-3 flex items-center gap-2"><input type="checkbox" checked /> Draft English automatically when I save</label>
+    <a href="#" class="wf-link mt-3 inline-block">Forget my key</a>
+    <p class="t-meta mt-2">Tip: create the key under a union-owned Google account, limit it to the Gemini API, and set a monthly budget alert.</p>
+  </section>
+
+  <section class="mt-10 max-w-3xl" aria-labelledby="glossary" data-roles="super state">
+    <div class="wf-section-head"><h2 id="glossary" class="t-h2">Glossary</h2><a href="#" class="wf-link">+ Add a term</a></div>
+    <Note n={2}>Union terms the AI must always translate the same way. State editors add terms over time.</Note>
+    <table class="w-full border-collapse text-left text-sm">
+      <thead><tr class="border-b-2 border-zinc-800 text-xs uppercase tracking-wide text-zinc-500"><th class="py-2 pr-4 font-semibold">Malayalam</th><th class="py-2 pr-4 font-semibold">English</th><th class="py-2"><span class="sr-only">Actions</span></th></tr></thead>
+      <tbody>{glossary.map(([ml, en]) => <tr class="border-b border-zinc-200"><td lang="ml" class="py-2 pr-4">{ml}</td><td class="py-2 pr-4">{en}</td><td class="py-2 text-right"><a href="#" class="wf-link">Edit</a></td></tr>)}</tbody>
+    </table>
+  </section>
+
+  <section class="mt-10 max-w-3xl" aria-labelledby="site" data-roles="super">
+    <div class="wf-section-head"><h2 id="site" class="t-h2">Site details</h2></div>
+    <Note n={3}>Shown in the footer and on the Contact page. The official phone and email are still blank on the old site; they appear on the site as soon as they're entered here.</Note>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <label class="block sm:col-span-2"><span class="t-label">Address · Malayalam</span><input class="wf-input mt-1" lang="ml" value={site.address.ml} /></label>
+      <label class="block"><span class="t-label">Phone</span><input class="wf-input mt-1" type="tel" placeholder="Not set" /></label>
+      <label class="block"><span class="t-label">Email</span><input class="wf-input mt-1" type="email" placeholder="Not set" /></label>
+      <label class="block"><span class="t-label">Facebook page</span><input class="wf-input mt-1" value={site.social.facebook} /></label>
+      <label class="block"><span class="t-label">YouTube channel</span><input class="wf-input mt-1" value={site.social.youtube} /></label>
+    </div>
+    <span class="wf-btn wf-btn-dark mt-4">Save</span>
+  </section>
+
+  <section class="mt-10 max-w-3xl" aria-labelledby="ai-site" data-roles="super">
+    <div class="wf-section-head"><h2 id="ai-site" class="t-h2">AI translation for the whole site</h2></div>
+    <label class="flex items-center gap-2"><input type="checkbox" checked /> Allow AI drafts of English (English can always be typed by hand)</label>
+    <label class="mt-3 block"><span class="t-label">Model</span><select class="wf-input mt-1 sm:max-w-xs"><option>Gemini Flash (fast, default)</option><option>Gemini Pro</option></select></label>
+    <Note n={4}>Old-site link redirects and the WordPress import would also live here; redirects are on hold by your decision, and the import comes with the final migration.</Note>
+  </section>
+</AdminWireLayout>

@@ -1,0 +1,70 @@
+---
+/**
+ * Admin wireframe: Kerala Service upload (plan, section 10). Drop the issue's PDF; the cover is
+ * made from page 1 and the month is guessed from the file name; an optional table of contents
+ * lists the articles. Recent issues below, each with "Replace PDF". State roles only.
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import Ph from '~/components/wire/Ph.astro';
+import { allIssues } from '~/lib/content';
+import { monthName } from '~/lib/i18n';
+
+const recent = allIssues().slice(0, 4);
+const months = Array.from({ length: 12 }, (_, i) => monthName(i + 1, 'en'));
+---
+<AdminWireLayout title="Kerala Service" page="magazine">
+  <div data-roles="district editor" class="wf-box p-6 text-center">
+    <p class="font-semibold">Kerala Service is managed by the state office.</p>
+  </div>
+
+  <div data-roles="super state">
+    <h1 class="t-h1">Kerala Service</h1>
+
+    <section class="mt-6" aria-labelledby="new-issue">
+      <div class="wf-section-head"><h2 id="new-issue" class="t-h2">Add an issue</h2></div>
+      <Note n={1}>Drop the month's PDF. The cover is made from page 1 automatically, and year and month are guessed from the file name ("2026-April.pdf"); the editor only checks them.</Note>
+      <div class="grid gap-6 md:grid-cols-[200px_minmax(0,1fr)]">
+        <div>
+          <Ph label="Cover from page 1" ratio="210/297" />
+          <p class="t-meta mt-1">2026-April.pdf · 8.4 MB · 32 pages</p>
+        </div>
+        <div class="space-y-4">
+          <div class="grid gap-3 sm:grid-cols-2">
+            <label class="block"><span class="t-label">Year</span><select class="wf-input mt-1"><option>2026</option><option>2025</option></select></label>
+            <label class="block"><span class="t-label">Month</span><select class="wf-input mt-1">{months.map((m) => <option selected={m === 'April'}>{m}</option>)}</select></label>
+          </div>
+          <div>
+            <span class="t-label">Contents · optional</span>
+            <Note n={2}>A few lines are enough: article title, author, page. They make the issue searchable and let the reader jump to an article.</Note>
+            <ul class="mt-1 space-y-2">
+              {[1, 2, 3].map((n) => (
+                <li class="grid grid-cols-[minmax(0,1fr)_minmax(0,0.6fr)_4.5rem] gap-2">
+                  <input class="wf-input !min-h-10 text-sm" lang="ml" placeholder={`Article ${n} title`} />
+                  <input class="wf-input !min-h-10 text-sm" lang="ml" placeholder="Author" />
+                  <input class="wf-input !min-h-10 text-sm" placeholder="Page" inputmode="numeric" />
+                </li>
+              ))}
+            </ul>
+            <a href="#" class="wf-link mt-2 inline-block">+ Add a line</a>
+          </div>
+          <div class="flex flex-wrap gap-2"><span class="wf-btn wf-btn-dark">Publish issue</span><span class="wf-btn wf-btn-line">Save draft</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-10" aria-labelledby="recent">
+      <div class="wf-section-head"><h2 id="recent" class="t-h2">Recent issues</h2><a href="/kerala-service" class="wf-link">See the archive</a></div>
+      <ul class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {recent.map((i) => (
+          <li>
+            <Ph label="Cover" ratio="210/297" />
+            <p class="mt-1 text-sm font-semibold">{monthName(i.month, 'en')} {i.year}</p>
+            <p class="t-meta"><a href="#" class="underline">Replace PDF</a> · <a href="#" class="underline">Edit</a></p>
+          </li>
+        ))}
+      </ul>
+      <Note n={3}>Replacing a PDF keeps the issue's web address, so links people have shared keep working.</Note>
+    </section>
+  </div>
+</AdminWireLayout>

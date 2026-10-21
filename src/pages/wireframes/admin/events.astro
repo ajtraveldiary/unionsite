@@ -1,0 +1,74 @@
+---
+/**
+ * Admin wireframe: events (plan, section 10, Events screen; section 11, calendar). A list of
+ * upcoming and past events, and the form to add one: title, date and time, venue, district.
+ * After an event, its news report is linked so the event page points to it. District roles
+ * work in their own district; district editors send events for review.
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import { allEvents, sortedDistricts, allPosts } from '~/lib/content';
+import { t, formatDate, formatTime } from '~/lib/i18n';
+import { districtBySlug } from '~/data/districts';
+
+const events = allEvents();
+const report = allPosts().find((p) => p.district === 'kozhikode');
+---
+<AdminWireLayout title="Events" page="events">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <h1 class="t-h1">Events</h1>
+    <a href="#new-event" class="wf-btn wf-btn-dark">+ New event</a>
+  </div>
+
+  <div class="mt-4 flex flex-wrap gap-2" role="group" aria-label="When"><button type="button" class="wf-chip" aria-pressed="true">Upcoming</button><button type="button" class="wf-chip" aria-pressed="false">Past</button><select class="wf-input !min-h-9 !w-auto text-sm" aria-label="District" data-roles="super state"><option>All districts</option><option>State level</option>{sortedDistricts().map((d) => <option>{d.name.en}</option>)}</select></div>
+  <ul class="mt-3 divide-y divide-zinc-200 border-y border-zinc-200">
+    {events.map((e, i) => (
+      <li class="flex flex-wrap items-center gap-3 py-3">
+        <div class="wf-box w-14 shrink-0 py-1 text-center leading-tight"><p class="text-[0.6875rem] font-semibold uppercase">{formatDate(e.start, 'en', 'short').split(' ')[1]}</p><p class="text-lg font-bold">{Number(e.start.slice(8, 10))}</p></div>
+        <div class="min-w-0 flex-1">
+          <p lang="ml" class="font-semibold leading-snug">{t(e.title, 'ml')}</p>
+          <p class="t-meta">{e.district ? districtBySlug[e.district]?.name.en : 'State level'} · {formatTime(e.start)} · <span lang="ml">{t(e.venue, 'ml')}</span></p>
+        </div>
+        <span class="rounded bg-zinc-200 px-1.5 py-0.5 text-xs font-semibold">{i === 0 ? 'Over: link the report' : 'Published'}</span>
+        <a href="#new-event" class="wf-link">Edit</a>
+      </li>
+    ))}
+  </ul>
+  <Note n={1}>Past events without a linked report are flagged, so the office remembers to connect the news post after the day.</Note>
+
+  <section id="new-event" class="mt-10 scroll-mt-16" aria-labelledby="form">
+    <div class="wf-section-head"><h2 id="form" class="t-h2">New event</h2></div>
+    <Note n={2}>Malayalam title and venue are required; English is optional and goes through the same AI-draft-and-approve step as posts. On the site every event gets "Add to calendar" automatically.</Note>
+    <div class="grid max-w-3xl gap-4">
+      <label class="block"><span class="t-label">Title · Malayalam</span><input class="wf-input mt-1" lang="ml" placeholder="ജില്ലാതല പഠന ക്യാമ്പ്" /></label>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <label class="block"><span class="t-label">Starts</span><input class="wf-input mt-1" type="datetime-local" /></label>
+        <label class="block"><span class="t-label">Ends · optional, for multi-day events</span><input class="wf-input mt-1" type="datetime-local" /></label>
+      </div>
+      <label class="block"><span class="t-label">Venue · Malayalam</span><input class="wf-input mt-1" lang="ml" placeholder="ടൗൺ ഹാൾ, കോഴിക്കോട്" /></label>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <span class="t-label">District</span>
+          <select class="wf-input mt-1" data-roles="super state"><option>State level</option>{sortedDistricts().map((d) => <option>{d.name.en}</option>)}</select>
+          <p class="wf-input mt-1 flex items-center bg-zinc-100 text-zinc-600" data-roles="district editor">Kollam (your district)</p>
+        </div>
+        <label class="block"><span class="t-label">Map link · optional</span><input class="wf-input mt-1" placeholder="Paste a Google Maps link" /></label>
+      </div>
+      <label class="block"><span class="t-label">Registration link · optional</span><input class="wf-input mt-1" placeholder="If members must register" /></label>
+      <div class="flex flex-wrap gap-2">
+        <span class="wf-btn wf-btn-dark" data-roles="super state district">Publish event</span>
+        <span class="wf-btn wf-btn-dark" data-roles="editor">Send for review</span>
+        <span class="wf-btn wf-btn-line">Save draft</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="mt-10" aria-labelledby="after">
+    <div class="wf-section-head"><h2 id="after" class="t-h2">After the event: link the report</h2></div>
+    <Note n={3}>Pick the news post about it (or write one). The event then shows "Report" with a link on the Events page, so members see one story: announced, then reported (plan, section 11).</Note>
+    <div class="flex max-w-3xl flex-col gap-2 sm:flex-row">
+      <select class="wf-input"><option lang="ml">{report ? t(report.title, 'ml') : 'Choose a post'}</option></select>
+      <span class="wf-btn wf-btn-line shrink-0">Write the report</span>
+    </div>
+  </section>
+</AdminWireLayout>
