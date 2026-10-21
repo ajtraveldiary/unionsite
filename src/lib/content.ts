@@ -5,22 +5,13 @@ import { orders, subjectBySlug } from '~/data/orders';
 import { districts } from '~/data/districts';
 import { events, notice } from '~/data/site';
 import type { Lang, Order, Post } from './types';
-import { href, t, langOf, formatDate } from './i18n';
+import { href } from './i18n';
 
 const byDateDesc = <T extends { date: string }>(a: T, b: T) => b.date.localeCompare(a.date) || 0;
 
 export const allPosts = () => [...posts].sort(byDateDesc);
 
-export function homeStories() {
-  const sorted = allPosts();
-  const hero = sorted.find((p) => p.featured) ?? sorted[0];
-  const rest = sorted.filter((p) => p !== hero);
-  return { hero, secondary: rest.slice(0, 3), rest };
-}
-
 export const postsForDistrict = (slug: string) => allPosts().filter((p) => p.district === slug);
-export const postsForTopic = (slug: string) => allPosts().filter((p) => p.topic === slug);
-export const latestForDistrict = (slug: string) => postsForDistrict(slug)[0];
 
 export function relatedPosts(post: Post, n = 3) {
   return allPosts()
@@ -56,24 +47,6 @@ export const sortedDistricts = () => [...districts].sort((a, b) => a.sortOrder -
 export const allEvents = () => [...events].sort((a, b) => a.start.localeCompare(b.start));
 export const isUpcoming = (e: { start: string; end?: string }) => new Date(e.end ?? e.start) >= NOW();
 export const eventsForDistrict = (slug: string) => allEvents().filter((e) => e.district === slug && isUpcoming(e));
-
-/** Per-district data for the interactive map (home page and /districts). */
-export function districtMapInfo(lang: Lang) {
-  return Object.fromEntries(
-    sortedDistricts().map((d) => {
-      const ps = postsForDistrict(d.slug);
-      const latest = ps[0];
-      return [d.slug, {
-        en: d.name.en, hq: d.hq.en ?? d.hq.ml, url: districtUrl(d.slug, lang), posts: ps.length,
-        latest: latest && { title: t(latest.title, lang), titleLang: langOf(latest.title, lang), url: postUrl(latest, lang), date: formatDate(latest.date, 'en', 'short') },
-      }];
-    }),
-  );
-}
-
-/** The district with the most recent post, so the map opens on something live. */
-export const liveliestDistrict = () =>
-  sortedDistricts().map((d) => ({ d, p: latestForDistrict(d.slug) })).filter((x) => x.p).sort((a, b) => b.p!.date.localeCompare(a.p!.date))[0]?.d.slug;
 
 /** The home-page notice, if there is one and it hasn't expired. */
 export const activeNotice = () =>

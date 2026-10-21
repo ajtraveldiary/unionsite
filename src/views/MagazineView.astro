@@ -1,7 +1,12 @@
 ---
-import Base from '~/layouts/Base.astro';
-import PageHero from '~/components/PageHero.astro';
+/**
+ * Kerala Service (redesign, Phase D): the current issue first, then the archive as a shelf
+ * of covers by year. Year chips stay under the header while scrolling and mark the year in
+ * view. Covers are stand-ins until each issue's PDF is moved over (plan, section 9).
+ */
+import AppLayout from '~/layouts/AppLayout.astro';
 import Icon from '~/components/ui/Icon.astro';
+import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
 import MagazineCover from '~/components/ui/MagazineCover.astro';
 import type { Lang } from '~/lib/types';
 import { href, monthName } from '~/lib/i18n';
@@ -10,60 +15,66 @@ import { site, magazineIssues } from '~/data/site';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
+const L = (p: string) => href(lang, p);
 const current = magazineIssues[0];
 const years = [...new Set(magazineIssues.map((i) => i.year))];
 const byYear = years.map((y) => ({ y, issues: magazineIssues.filter((i) => i.year === y) }));
 ---
-<Base lang={lang} title="Kerala Service" description={`Kerala Service, the Kerala NGO Union's monthly magazine — ${magazineIssues.length} issues since November 2014, readable on any phone.`}>
-  <PageHero lang={lang} eyebrow="The union's monthly" title="Kerala Service" sub={`${magazineIssues.length} issues since November 2014. Tap any cover to open the issue.`} crumbs={[{ label: 'Kerala Service' }]} />
+<AppLayout lang={lang} title="Kerala Service" description={`Kerala Service, the Kerala NGO Union's monthly magazine: ${magazineIssues.length} issues since November 2014, readable on any phone.`}>
+  <div class="wrap pt-5 lg:pt-8" lang="en">
+    <Breadcrumbs lang={lang} items={[{ label: 'Kerala Service' }]} />
+    <h1 class="t-display mt-2">Kerala Service</h1>
+    <p class="mt-1 text-ink-2">The union's monthly magazine. {magazineIssues.length} issues since November 2014.</p>
 
-  <section class="container-x py-10 lg:py-14" aria-labelledby="cur-title">
-    <div class="card relative grid items-center gap-8 overflow-hidden p-6 sm:grid-cols-[220px_1fr] sm:p-10">
-      <div class="pointer-events-none absolute -left-24 -top-24 size-80 rounded-full bg-gold-soft" aria-hidden="true"></div>
-      <a href={href(lang, issuePath(current.year, current.month))} class="cover relative mx-auto block w-[200px] overflow-hidden rounded-md shadow-[0_24px_50px_-18px_rgb(0_0_0/0.5)] ring-1 ring-black/10 sm:w-full">
+    <section class="mt-6 flex gap-5 border-y border-line py-5 sm:gap-8" aria-labelledby="current">
+      <a href={L(issuePath(current.year, current.month))} class="block w-32 shrink-0 self-start overflow-hidden rounded-md border border-line sm:w-44" tabindex="-1" aria-hidden="true">
         <MagazineCover year={current.year} month={current.month} class="block h-auto w-full" />
       </a>
-      <div class="relative" lang="en">
-        <p class="eyebrow">Current issue</p>
-        <h2 id="cur-title" class="display mt-2 !text-[clamp(2rem,1.3rem+2.4vw,3.2rem)]">{monthName(current.month, 'en')} {current.year}</h2>
-        <div class="mt-6 flex flex-wrap gap-3">
-          <a href={href(lang, issuePath(current.year, current.month))} class="btn btn-primary"><Icon name="BookOpen" size={18} /> Open issue</a>
-          <a href={site.magazineSite} target="_blank" rel="noopener" class="btn btn-ghost">Articles site <Icon name="ArrowUpRight" size={16} /></a>
+      <div class="flex min-w-0 flex-col">
+        <p class="t-label">Current issue</p>
+        <h2 id="current" class="t-h1 mt-1">{monthName(current.month, 'en')} {current.year}</h2>
+        <p class="mt-1 text-sm text-ink-2">Read it online on any phone, or download the PDF.</p>
+        <div class="mt-auto flex flex-wrap gap-2 pt-4">
+          <a href={L(issuePath(current.year, current.month))} class="btn btn-primary btn-sm"><Icon name="BookOpen" size={16} /> Open issue</a>
+          <a href={site.magazineSite} target="_blank" rel="noopener" class="btn btn-secondary btn-sm">Articles site <Icon name="ArrowUpRight" size={16} /></a>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="container-x" aria-labelledby="arch-title">
-    <h2 id="arch-title" lang="en" class="h2">Archive</h2>
-    <nav lang="en" aria-label="Jump to year" class="sticky top-[64px] z-20 -mx-4 mt-4 border-b border-line bg-paper/90 px-4 py-3 backdrop-blur lg:mx-0 lg:px-0">
-      <ul class="no-scrollbar flex gap-2 overflow-x-auto">
-        {years.map((y) => <li><a href={`#y${y}`} class="chip" data-year-chip={y}>{y}</a></li>)}
-      </ul>
-    </nav>
-    {byYear.map(({ y, issues }) => (
-      <section id={`y${y}`} class="scroll-mt-36 pt-10" aria-label={String(y)} data-year={y}>
-        <h3 lang="en" class="title mb-4 flex items-center gap-3 text-[2.18rem] font-extrabold tabular">{y}<span class="h-px flex-1 bg-line"></span><span class="text-sm font-medium text-ink-3">{issues.length} {issues.length === 1 ? 'issue' : 'issues'}</span></h3>
-        <ul class="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6 lg:gap-5">
-          {issues.map((iss) => (
-            <li>
-              <a href={href(lang, issuePath(iss.year, iss.month))} class="cover group block">
-                <span class="block overflow-hidden rounded-md shadow-[0_10px_24px_-14px_rgb(0_0_0/0.5)] ring-1 ring-black/10 transition duration-300 group-hover:-translate-y-1.5 group-hover:-rotate-1 group-hover:shadow-[0_20px_36px_-16px_rgb(0_0_0/0.55)]">
-                  <MagazineCover year={iss.year} month={iss.month} class="block h-auto w-full" />
-                </span>
-                <span lang="en" class="mt-2 block text-center text-sm font-semibold group-hover:text-brand">{monthName(iss.month, 'en').slice(0, 3)} {iss.year}</span>
-              </a>
-            </li>
-          ))}
+    <section class="mt-10" aria-labelledby="archive">
+      <h2 id="archive" class="t-h1">Archive</h2>
+      <nav aria-label="Jump to year" class="sticky top-16 z-20 -mx-4 mt-2 border-b border-line bg-bg/95 px-4 py-2.5 backdrop-blur md:mx-0 md:px-0">
+        <ul class="no-scrollbar flex gap-2 overflow-x-auto">
+          {years.map((y) => <li><a href={`#y${y}`} class="chip !min-h-8 tabular" data-year-chip={y}>{y}</a></li>)}
         </ul>
-      </section>
-    ))}
-  </section>
-</Base>
+      </nav>
+      {byYear.map(({ y, issues }) => (
+        <section id={`y${y}`} class="scroll-mt-32 pt-8" aria-labelledby={`h${y}`} data-year={y}>
+          <div class="mb-3 flex items-baseline justify-between gap-3 border-b border-line pb-1">
+            <h3 id={`h${y}`} class="t-h2 tabular">{y}</h3>
+            <p class="t-meta">{issues.length} {issues.length === 1 ? 'issue' : 'issues'}</p>
+          </div>
+          <ul class="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6 lg:gap-5">
+            {issues.map((iss) => (
+              <li>
+                <a href={L(issuePath(iss.year, iss.month))} class="group block">
+                  <span class="block overflow-hidden rounded-md border border-line transition-colors group-hover:border-accent">
+                    <MagazineCover year={iss.year} month={iss.month} class="block h-auto w-full" />
+                  </span>
+                  <span class="mt-1.5 block text-center text-sm font-medium group-hover:text-accent-ink">{monthName(iss.month, 'en').slice(0, 3)}<span class="sr-only"> {iss.year}</span></span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </section>
+  </div>
+</AppLayout>
 
 <script>
-  // Highlight the year chip for the section in view
-  document.addEventListener('astro:page-load', () => {
+  // Mark the year chip for the section in view
+  function initShelf() {
     const chips = document.querySelectorAll<HTMLElement>('[data-year-chip]');
     if (!chips.length) return;
     const io = new IntersectionObserver((entries) => {
@@ -71,11 +82,12 @@ const byYear = years.map((y) => ({ y, issues: magazineIssues.filter((i) => i.yea
         const y = (e.target as HTMLElement).dataset.year;
         chips.forEach((c) => {
           const on = c.dataset.yearChip === y;
-          c.classList.toggle('is-active', on);
-          if (on) c.scrollIntoView({ block: 'nearest', inline: 'center' });
+          if (on) { c.setAttribute('aria-current', 'true'); c.scrollIntoView({ block: 'nearest', inline: 'center' }); }
+          else c.removeAttribute('aria-current');
         });
       }
     }, { rootMargin: '-40% 0px -55% 0px' });
     document.querySelectorAll('[data-year]').forEach((s) => io.observe(s));
-  });
+  }
+  initShelf();
 </script>

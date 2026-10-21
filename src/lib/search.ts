@@ -27,6 +27,11 @@ export function goCore(s: string): string | null {
   return m ? `${Number(m[1])}/${m[2]}` : null;
 }
 
+/** Every GO number in a text, each reduced by goCore ("112/2026" and "12/2026" stay apart). */
+function goNumbersIn(s: string): string[] {
+  return [...s.matchAll(/(?<!\d)(\d{1,5})\s*\/\s*(\d{4})(?!\d)/g)].map((m) => `${Number(m[1])}/${m[2]}`);
+}
+
 export function normalise(s: string) {
   return s
     .toLowerCase()
@@ -40,18 +45,28 @@ export function normalise(s: string) {
     .trim();
 }
 
-const ALIASES: Record<string, string> = {
-  da: 'ക്ഷാമബത്ത dearness allowance',
-  'ക്ഷാമബത്ത': 'da dearness',
-  dr: 'dearness relief ക്ഷാമാശ്വാസം',
-  pension: 'പെൻഷൻ',
-  'പെൻഷൻ': 'pension',
-  leave: 'അവധി',
-  nps: 'പങ്കാളിത്ത പെൻഷൻ contributory',
-  bonus: 'ബോണസ്',
-  hra: 'house rent allowance വീട്ടുവാടക',
-  'pay revision': 'ശമ്പള പരിഷ്കരണം',
+// Other names for a word; each entry matches as a whole phrase ("dearness allowance", not "allowance")
+const ALIASES: Record<string, string[]> = {
+  da: ['ക്ഷാമബത്ത', 'dearness allowance'],
+  'ക്ഷാമബത്ത': ['da', 'dearness allowance'],
+  dr: ['dearness relief', 'ക്ഷാമാശ്വാസം'],
+  pension: ['പെൻഷൻ'],
+  'പെൻഷൻ': ['pension'],
+  leave: ['അവധി'],
+  nps: ['പങ്കാളിത്ത പെൻഷൻ', 'contributory'],
+  bonus: ['ബോണസ്'],
+  hra: ['house rent allowance', 'വീട്ടുവാടക'],
+  'pay revision': ['ശമ്പള പരിഷ്കരണം'],
 };
+
+/**
+ * Short English words (up to 3 letters, like "da", "ta", "hra") must match a whole word, so
+ * "da" doesn't find "day" or "update". Longer words and Malayalam match anywhere.
+ */
+function contains(text: string, word: string) {
+  if (!/^[a-z0-9]{1,3}$/.test(word)) return text.includes(word);
+  return new RegExp(`(?:^|[^a-z0-9])${word}(?:[^a-z0-9]|$)`).test(text);
+}
 
 export function scoreDoc(doc: SearchDoc, q: string): number {
   const query = normalise(q);
@@ -60,18 +75,22 @@ export function scoreDoc(doc: SearchDoc, q: string): number {
   const title = normalise(`${doc.ml} ${doc.en ?? ''}`);
   let score = 0;
 
+  // A GO number in the query asks for that order only: "12/2026" must not find 112/2026
   const go = goCore(q);
-  if (go && doc.kw?.includes(go)) score += 100;
+  if (go) {
+    if (!goNumbersIn(`${doc.kw ?? ''} ${doc.sub ?? ''} ${doc.ml} ${doc.en ?? ''}`).includes(go)) return 0;
+    score += 100;
+  }
 
-  if (title.startsWith(query)) score += 40;
-  if (title.includes(query)) score += 25;
-  else if (hay.includes(query)) score += 15;
+  if (title.startsWith(query) && contains(title, query)) score += 40;
+  if (contains(title, query)) score += 25;
+  else if (contains(hay, query)) score += 15;
 
   const tokens = query.split(' ').filter(Boolean);
   let matched = 0;
   for (const tok of tokens) {
-    const expanded = [tok, ...(ALIASES[tok]?.split(' ') ?? [])];
-    if (expanded.some((x) => hay.includes(x))) matched++;
+    const expanded = [tok, ...(ALIASES[tok] ?? [])];
+    if (expanded.some((x) => contains(hay, x))) matched++;
   }
   if (tokens.length) score += (matched / tokens.length) * 30 * (matched === tokens.length ? 1.5 : 0.6);
   if (score > 0 && doc.imp) score += 4;

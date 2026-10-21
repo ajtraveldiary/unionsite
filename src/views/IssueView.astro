@@ -1,7 +1,14 @@
 ---
-import Base from '~/layouts/Base.astro';
+/**
+ * One Kerala Service issue (redesign, Phase D): cover, month, read / download and share;
+ * older and newer issue at the foot, then the rest of that year. The reader and download
+ * open once the issue's PDF is moved over from the current site.
+ */
+import AppLayout from '~/layouts/AppLayout.astro';
 import Icon from '~/components/ui/Icon.astro';
-import Brand from '~/components/ui/Brand.astro';
+import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
+import SectionHead from '~/components/ds/SectionHead.astro';
+import ShareBar from '~/components/ds/ShareBar.astro';
 import MagazineCover from '~/components/ui/MagazineCover.astro';
 import type { Lang } from '~/lib/types';
 import { href, monthName } from '~/lib/i18n';
@@ -10,70 +17,57 @@ import { magazineIssues } from '~/data/site';
 
 interface Props { lang: Lang; year: number; month: number }
 const { lang, year, month } = Astro.props;
+const L = (p: string) => href(lang, p);
 const i = magazineIssues.findIndex((x) => x.year === year && x.month === month);
 // The list runs newest first, so the older issue is the next item.
 const newer = magazineIssues[i - 1];
 const older = magazineIssues[i + 1];
 const sameYear = magazineIssues.filter((x) => x.year === year);
 const label = `${monthName(month, 'en')} ${year}`;
-const pageUrl = new URL(href(lang, issuePath(year, month)), Astro.site).toString();
+const pageUrl = new URL(L(issuePath(year, month)), Astro.site).toString();
 ---
-<Base lang={lang} title={`Kerala Service · ${label}`} description={`Kerala Service, ${label} — the Kerala NGO Union's monthly magazine.`}>
-  <section class="page-hero border-b border-line">
-    <div class="container-x grid items-center gap-8 pb-10 pt-6 md:grid-cols-[minmax(0,300px)_1fr] lg:gap-14 lg:pb-14 lg:pt-10">
-      <div class="issue-cover mx-auto w-[220px] overflow-hidden rounded-md shadow-[0_30px_60px_-20px_rgb(0_0_0/0.55)] ring-1 ring-black/10 md:w-full">
+<AppLayout lang={lang} title={`Kerala Service · ${label}`} description={`Kerala Service, ${label}: the Kerala NGO Union's monthly magazine.`}>
+  <div class="wrap pt-5 lg:pt-8" lang="en">
+    <Breadcrumbs lang={lang} items={[{ label: 'Kerala Service', path: '/kerala-service' }, { label: String(year), path: `/kerala-service#y${year}` }, { label: monthName(month, 'en') }]} />
+
+    <div class="mt-5 grid items-start gap-6 sm:grid-cols-[200px_minmax(0,1fr)] lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
+      <div class="mx-auto w-48 overflow-hidden rounded-md border border-line sm:w-full">
         <MagazineCover year={year} month={month} class="block h-auto w-full" />
       </div>
       <div>
-        <nav aria-label="Breadcrumb" lang="en" class="mb-5 text-sm text-ink-3">
-          <a href={href(lang, '/')} class="hover:underline">Home</a> / <a href={href(lang, '/kerala-service')} class="hover:underline">Kerala Service</a> / <a href={href(lang, `/kerala-service#y${year}`)} class="hover:underline">{year}</a>
-        </nav>
-        <p lang="en" class="eyebrow">Kerala Service</p>
-        <h1 lang="en" class="display mt-2">{label}</h1>
-        <div lang="en" class="mt-7 flex flex-wrap gap-3">
-          <button type="button" class="btn btn-primary" disabled title="The reader arrives with the real PDFs"><Icon name="BookOpen" size={18} /> Read online</button>
-          <button type="button" class="btn btn-ghost" disabled><Icon name="Download" size={18} /> Download PDF</button>
-          <a href={`https://wa.me/?text=${encodeURIComponent(`Kerala Service · ${label}\n${pageUrl}`)}`} target="_blank" rel="noopener" class="btn bg-[#1f9d55] text-white hover:bg-[#178246]"><Brand name="whatsapp" size={17} /> Share</a>
+        <p class="t-label">Kerala Service</p>
+        <h1 class="t-display mt-1">{label}</h1>
+        <div class="mt-5 flex flex-wrap gap-2">
+          <button type="button" class="btn btn-primary" disabled><Icon name="BookOpen" size={18} /> Read online</button>
+          <button type="button" class="btn btn-secondary" disabled><Icon name="Download" size={18} /> Download PDF</button>
         </div>
-        <p lang="en" class="mt-4 max-w-md text-sm text-ink-3">The page-turn reader and download open once this issue's PDF is moved over from the current site. The cover is a stand-in until then.</p>
+        <p class="t-meta mt-2 max-w-md">Reading and download open once this issue's PDF is moved over from the current site. The cover is a stand-in until then.</p>
+        <div class="mt-5 border-t border-line pt-4">
+          <ShareBar url={pageUrl} title={`Kerala Service, ${label}`} />
+        </div>
       </div>
     </div>
-  </section>
 
-  <nav lang="en" aria-label="Other issues" class="container-x mt-10 grid gap-3 sm:grid-cols-2">
-    {older ? (
-      <a href={href(lang, issuePath(older.year, older.month))} class="group card lift flex items-center gap-3 p-4">
-        <Icon name="ArrowLeft" size={18} class="text-ink-3 group-hover:text-brand" />
-        <span><span class="block text-xs text-ink-3">Older issue</span><span class="font-semibold">{monthName(older.month, 'en')} {older.year}</span></span>
-      </a>
-    ) : <span class="hidden sm:block" />}
-    {newer && (
-      <a href={href(lang, issuePath(newer.year, newer.month))} class="group card lift flex items-center justify-end gap-3 p-4 text-right">
-        <span><span class="block text-xs text-ink-3">Newer issue</span><span class="font-semibold">{monthName(newer.month, 'en')} {newer.year}</span></span>
-        <Icon name="ArrowRight" size={18} class="text-ink-3 group-hover:text-brand" />
-      </a>
-    )}
-  </nav>
+    <nav aria-label="Other issues" class="mt-10 grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-y border-line py-3 text-sm">
+      {older ? <a href={L(issuePath(older.year, older.month))} class="flex items-center gap-1 font-semibold hover:text-accent-ink"><Icon name="ChevronLeft" size={16} /> {monthName(older.month, 'en').slice(0, 3)} {older.year}</a> : <span />}
+      <a href={L('/kerala-service')} class="link">All issues</a>
+      {newer ? <a href={L(issuePath(newer.year, newer.month))} class="flex items-center justify-end gap-1 font-semibold hover:text-accent-ink">{monthName(newer.month, 'en').slice(0, 3)} {newer.year} <Icon name="ChevronRight" size={16} /></a> : <span />}
+    </nav>
 
-  <section class="container-x mt-14" aria-labelledby="yr-title">
-    <h2 id="yr-title" lang="en" class="h2 mb-5">More from {year}</h2>
-    <ul class="no-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 pb-3 lg:mx-0 lg:px-0">
-      {sameYear.map((x) => (
-        <li class="w-[110px] shrink-0 sm:w-[130px]">
-          <a href={href(lang, issuePath(x.year, x.month))} aria-current={x.month === month ? 'page' : undefined} class="group block">
-            <span class:list={['block overflow-hidden rounded-md ring-1 ring-black/10 transition group-hover:-translate-y-1', x.month === month && 'ring-[3px] !ring-brand-solid']}>
-              <MagazineCover year={x.year} month={x.month} class="block h-auto w-full" />
-            </span>
-            <span lang="en" class:list={['mt-2 block text-center text-sm', x.month === month ? 'font-bold text-brand' : 'font-medium']}>{monthName(x.month, 'en').slice(0, 3)}</span>
-          </a>
-        </li>
-      ))}
-    </ul>
-  </section>
-</Base>
-
-<style>
-  .issue-cover { animation: cover-in 0.7s var(--ease-spring) both; }
-  @keyframes cover-in { from { transform: perspective(900px) rotateY(-22deg) translateY(12px); opacity: 0; } }
-  @media (prefers-reduced-motion: reduce) { .issue-cover { animation: none; } }
-</style>
+    <section class="section" aria-labelledby="year">
+      <SectionHead title={`More from ${year}`} id="year" size="h2" />
+      <ul class="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0">
+        {sameYear.map((x) => (
+          <li class="w-24 shrink-0 sm:w-28">
+            <a href={L(issuePath(x.year, x.month))} aria-current={x.month === month ? 'page' : undefined} class="group block">
+              <span class:list={['block overflow-hidden rounded-md border transition-colors group-hover:border-accent', x.month === month ? 'border-2 border-accent' : 'border-line']}>
+                <MagazineCover year={x.year} month={x.month} class="block h-auto w-full" />
+              </span>
+              <span class:list={['mt-1.5 block text-center text-sm', x.month === month ? 'font-semibold text-accent-ink' : 'font-medium']}>{monthName(x.month, 'en').slice(0, 3)}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  </div>
+</AppLayout>

@@ -1,83 +1,38 @@
 ---
-import Base from '~/layouts/Base.astro';
-import PageHero from '~/components/PageHero.astro';
-import Icon from '~/components/ui/Icon.astro';
+/**
+ * Media (redesign, Phase D): the union's latest YouTube videos (only the thumbnail loads
+ * until play is tapped, via VideoCard), then photo albums, which arrive with the import.
+ */
+import AppLayout from '~/layouts/AppLayout.astro';
 import Brand from '~/components/ui/Brand.astro';
+import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
+import SectionHead from '~/components/ds/SectionHead.astro';
+import VideoCard from '~/components/ds/VideoCard.astro';
+import EmptyState from '~/components/ds/EmptyState.astro';
 import type { Lang } from '~/lib/types';
-import { formatDate } from '~/lib/i18n';
 import { site, videos } from '~/data/site';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
-const [lead, ...rest] = videos;
 ---
-<Base lang={lang} title="Gallery" description="Videos and photos from Kerala NGO Union programmes and campaigns.">
-  <PageHero lang={lang} eyebrow="Photos & videos" title="Gallery" sub="Talks, campaigns and programmes from the union's YouTube channel. Videos load only when you tap play." crumbs={[{ label: 'Gallery' }]} />
+<AppLayout lang={lang} title="Media" description="Videos and photos from Kerala NGO Union programmes and campaigns.">
+  <div class="wrap pt-5 lg:pt-8">
+    <Breadcrumbs lang={lang} items={[{ label: 'About', path: '/about' }, { label: 'Media' }]} />
+    <h1 lang="en" class="t-display mt-2">Media</h1>
+    <p lang="en" class="mt-1 text-ink-2">Talks, campaigns and programmes. Videos load only when you tap play.</p>
 
-  <div class="container-x py-10 lg:py-14">
-    <section aria-labelledby="vid-title">
-      <div class="mb-6 flex items-end justify-between gap-4">
-        <h2 id="vid-title" lang="en" class="h2">Latest videos</h2>
-        <a href={site.social.youtube} target="_blank" rel="noopener" lang="en" class="btn btn-ghost !min-h-10 text-sm"><Brand name="youtube" size={17} /> Channel</a>
-      </div>
-      <div class="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-        <article>
-          <button type="button" class="group relative block aspect-video w-full overflow-hidden rounded-2xl bg-night" data-yt={lead.id} aria-label={`Play video: ${lead.title.ml}`}>
-            <img src={`https://i.ytimg.com/vi/${lead.id}/maxresdefault.jpg`} alt="" width="1280" height="720" class="size-full object-cover transition-transform duration-700 group-hover:scale-105" />
-            <span class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent"></span>
-            <span class="absolute left-1/2 top-1/2 grid size-20 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-brand-solid text-white shadow-2xl transition-transform group-hover:scale-110"><Icon name="Play" size={30} stroke={2.4} class="ml-1 fill-white" /></span>
-            <span class="absolute inset-x-0 bottom-0 p-5 text-left">
-              <span lang="ml" class="title clamp-2 text-[1.45rem] font-bold leading-snug text-white sm:text-[1.74rem]">{lead.title.ml}</span>
-              <span lang="en" class="mt-1 block text-sm text-white/70">{formatDate(lead.date, 'en')}</span>
-            </span>
-          </button>
-        </article>
-        <ul class="space-y-4">
-          {rest.map((v) => (
-            <li class="flex gap-3">
-              <button type="button" class="group relative block aspect-video w-40 shrink-0 overflow-hidden rounded-xl bg-night" data-yt={v.id} aria-label={`Play video: ${v.title.ml}`}>
-                <img src={`https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`} alt="" loading="lazy" width="320" height="180" class="size-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <span class="absolute left-1/2 top-1/2 grid size-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-brand-solid text-white"><Icon name="Play" size={16} stroke={2.4} class="ml-0.5 fill-white" /></span>
-              </button>
-              <div class="min-w-0 py-1">
-                <h3 lang="ml" class="title clamp-3 text-[1.16em] font-semibold leading-snug">{v.title.ml}</h3>
-                <p lang="en" class="mt-1 text-xs text-ink-3">{formatDate(v.date, 'en', 'short')}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
+    <section class="mt-8" aria-labelledby="videos">
+      <SectionHead title="Latest videos" id="videos" size="h2">
+        <a href={site.social.youtube} target="_blank" rel="noopener" lang="en" class="btn btn-secondary btn-sm"><Brand name="youtube" size={16} /> YouTube channel</a>
+      </SectionHead>
+      <ul class="grid gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+        {videos.map((v) => <li><VideoCard video={v} lang={lang} /></li>)}
+      </ul>
     </section>
 
-    <section aria-labelledby="ph-title" class="mt-16" lang="en">
-      <h2 id="ph-title" class="h2 mb-6">Photo albums</h2>
-      <div class="relative overflow-hidden rounded-2xl border border-dashed border-line-strong p-8 text-center sm:p-12">
-        <div class="pointer-events-none absolute inset-0 grid grid-cols-6 gap-2 p-2 opacity-40" aria-hidden="true">
-          {Array.from({ length: 12 }).map((_, i) => <span class:list={['rounded-lg bg-paper-2', i % 5 === 0 && 'col-span-2 row-span-2']}></span>)}
-        </div>
-        <div class="relative mx-auto max-w-md rounded-2xl bg-paper/90 p-6 backdrop-blur">
-          <span class="mx-auto grid size-12 place-items-center rounded-full bg-brand-soft text-brand"><Icon name="Images" size={22} /></span>
-          <p class="mt-3 font-semibold">Albums are on their way</p>
-          <p class="mt-1 text-sm text-ink-3">Photos from the current site are moved over in the import, and admins add new albums from their phones. Each photo opens full screen with swipe.</p>
-        </div>
-      </div>
+    <section class="section" aria-labelledby="photos">
+      <SectionHead title="Photo albums" id="photos" size="h2" />
+      <EmptyState icon="Images" title="Albums are on their way" text="Photos from the current site are moved over in the import, and admins add new albums from their phones." />
     </section>
   </div>
-</Base>
-
-<script>
-  // YouTube lite embed: the player loads only when tapped
-  document.addEventListener('astro:page-load', () => {
-    document.querySelectorAll<HTMLButtonElement>('button[data-yt]').forEach((b) => {
-      b.addEventListener('click', () => {
-        const f = document.createElement('iframe');
-        f.src = `https://www.youtube-nocookie.com/embed/${b.dataset.yt}?autoplay=1&rel=0`;
-        f.allow = 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture';
-        f.allowFullscreen = true;
-        f.title = b.getAttribute('aria-label') ?? 'Video';
-        f.className = 'absolute inset-0 size-full';
-        b.replaceChildren(f);
-      }, { once: true });
-    });
-  });
-</script>
+</AppLayout>

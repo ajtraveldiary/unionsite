@@ -20,6 +20,8 @@ const nav = [
 ];
 const active = (p: string) => path.startsWith(p);
 const alt = altPath(Astro.url.pathname);
+// The search page has its own big box, so the header's is left out there
+const onSearchPage = path.replace(/\/$/, '') === '/search';
 ---
 <header lang="en" class="sticky top-0 z-40 border-b border-line bg-bg/95 backdrop-blur supports-[backdrop-filter]:bg-bg/85">
   <div class="wrap flex h-16 items-center gap-3 lg:gap-6">
@@ -41,12 +43,14 @@ const alt = altPath(Astro.url.pathname);
       </ul>
     </nav>
 
-    <form action={href(lang, '/search')} role="search" class="relative ml-auto hidden min-w-0 max-w-xs flex-1 md:block">
-      <Icon name="Search" size={18} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
-      <input name="q" type="search" class="field !min-h-10 !rounded-full pl-9 text-sm" placeholder="Search orders, news, districts" aria-label="Search the site" />
-    </form>
+    {!onSearchPage && (
+      <form action={href(lang, '/search')} role="search" class="relative ml-auto hidden min-w-0 max-w-xs flex-1 md:block">
+        <Icon name="Search" size={18} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
+        <input name="q" type="search" class="field !min-h-10 !rounded-full pl-9 text-sm" placeholder="Search orders, news, districts" aria-label="Search the site" />
+      </form>
+    )}
 
-    <div class="ml-auto flex shrink-0 items-center gap-1.5 md:ml-0">
+    <div class:list={['ml-auto flex shrink-0 items-center gap-1.5', !onSearchPage && 'md:ml-0']}>
       <div class="flex rounded-full border border-line-strong p-0.5 text-sm font-semibold" role="group" aria-label="Content language">
         <a href={alt.ml} lang="ml" aria-current={lang === 'ml' ? 'true' : undefined} class:list={['rounded-full px-2.5 py-1 sm:px-3', lang === 'ml' ? 'bg-ink text-bg' : 'text-ink-2 hover:text-ink']}>മല</a>
         <a href={alt.en} aria-current={lang === 'en' ? 'true' : undefined} class:list={['rounded-full px-2.5 py-1 sm:px-3', lang === 'en' ? 'bg-ink text-bg' : 'text-ink-2 hover:text-ink']}>EN</a>

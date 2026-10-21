@@ -64,7 +64,10 @@ const canonical = new URL(lang === 'en' ? alt.en : alt.ml, Astro.site);
       root.dataset.theme = next;
       try { localStorage.setItem('theme', next); } catch {}
     } else if (el.closest('[data-open-search]')) {
-      document.querySelector<HTMLDialogElement>('#search-dialog')?.showModal();
+      // On the search page, go to its own box instead of opening the dialog
+      const pageBox = document.querySelector<HTMLInputElement>('[data-search-q]');
+      if (pageBox) { pageBox.focus(); pageBox.select(); }
+      else document.querySelector<HTMLDialogElement>('#search-dialog')?.showModal();
     } else if (el.closest('[data-close-dialog]')) {
       el.closest('dialog')?.close();
     } else if (el instanceof HTMLDialogElement && el.open) {

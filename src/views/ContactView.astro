@@ -1,8 +1,14 @@
 ---
-import Base from '~/layouts/Base.astro';
-import PageHero from '~/components/PageHero.astro';
+/**
+ * Contact (redesign, Phase D): the State Centre's address and directions, the district
+ * committees, and a message form. The form checks entries but doesn't send yet; sending
+ * (with spam protection) is switched on with the admin panel.
+ */
+import AppLayout from '~/layouts/AppLayout.astro';
 import Icon from '~/components/ui/Icon.astro';
 import Brand from '~/components/ui/Brand.astro';
+import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
+import SectionHead from '~/components/ds/SectionHead.astro';
 import type { Lang } from '~/lib/types';
 import { t, langOf } from '~/lib/i18n';
 import { districtUrl, sortedDistricts } from '~/lib/content';
@@ -12,95 +18,97 @@ interface Props { lang: Lang }
 const { lang } = Astro.props;
 const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Kerala NGO Union, ${site.address.en}`)}`;
 ---
-<Base lang={lang} title="Contact" description="Contact the Kerala NGO Union State Centre in Thiruvananthapuram or your district committee.">
-  <PageHero lang={lang} eyebrow="Get in touch" title="Contact" sub="Write to the State Centre, or reach your district committee directly." crumbs={[{ label: 'Contact' }]} />
+<AppLayout lang={lang} title="Contact" description="Contact the Kerala NGO Union State Centre in Thiruvananthapuram or your district committee.">
+  <div class="wrap pt-5 lg:pt-8">
+    <Breadcrumbs lang={lang} items={[{ label: 'Contact' }]} />
+    <h1 lang="en" class="t-display mt-2">Contact</h1>
+    <p lang="en" class="mt-1 text-ink-2">Write to the State Centre, or reach your district committee directly.</p>
 
-  <div class="container-x grid gap-10 py-10 lg:grid-cols-[1fr_1.15fr] lg:gap-14 lg:py-14">
-    <div class="space-y-5">
-      <section class="card relative overflow-hidden p-6 sm:p-7" aria-labelledby="sc-title">
-        <div class="pointer-events-none absolute -right-14 -top-14 size-44 rounded-full bg-brand-soft" aria-hidden="true"></div>
-        <p lang="en" class="eyebrow relative">Head office</p>
-        <h2 id="sc-title" lang="en" class="h2 relative mt-1">State Centre</h2>
-        <p lang={langOf(site.address, lang)} class="relative mt-4 text-lg leading-relaxed">{t(site.address, lang)}</p>
-        <ul lang="en" class="relative mt-5 space-y-2 text-sm">
-          <li class="flex items-center gap-3"><span class="grid size-9 place-items-center rounded-full bg-paper-2"><Icon name="Phone" size={16} /></span>{site.phone ? <a href={`tel:${site.phone}`} class="font-semibold hover:text-brand">{site.phone}</a> : <span class="text-ink-3">Phone number to be added</span>}</li>
-          <li class="flex items-center gap-3"><span class="grid size-9 place-items-center rounded-full bg-paper-2"><Icon name="Mail" size={16} /></span>{site.email ? <a href={`mailto:${site.email}`} class="font-semibold hover:text-brand">{site.email}</a> : <span class="text-ink-3">Email address to be added</span>}</li>
-        </ul>
-        <div lang="en" class="relative mt-6 flex flex-wrap gap-2">
-          <a href={mapUrl} target="_blank" rel="noopener" class="btn btn-primary"><Icon name="MapPin" size={17} /> Directions</a>
-          <a href={site.social.facebook} target="_blank" rel="noopener" class="btn btn-ghost"><Brand name="facebook" size={17} /> Facebook</a>
-        </div>
-      </section>
+    <div class="mt-8 grid gap-x-12 gap-y-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+      <div>
+        <section aria-labelledby="state-centre">
+          <SectionHead title="State Centre" id="state-centre" size="h2" />
+          <p lang={langOf(site.address, lang)} class="text-lg">{t(site.address, lang)}</p>
+          <ul lang="en" class="mt-3 space-y-1.5 text-sm">
+            <li class="flex items-center gap-2"><Icon name="Phone" size={16} class="text-ink-3" />{site.phone ? <a href={`tel:${site.phone}`} class="font-semibold hover:text-accent-ink">{site.phone}</a> : <span class="text-ink-3">Phone number to be added</span>}</li>
+            <li class="flex items-center gap-2"><Icon name="Mail" size={16} class="text-ink-3" />{site.email ? <a href={`mailto:${site.email}`} class="font-semibold hover:text-accent-ink">{site.email}</a> : <span class="text-ink-3">Email address to be added</span>}</li>
+          </ul>
+          <div lang="en" class="mt-4 flex flex-wrap gap-2">
+            <a href={mapUrl} target="_blank" rel="noopener" class="btn btn-primary btn-sm"><Icon name="MapPin" size={16} /> Directions</a>
+            <a href={site.social.facebook} target="_blank" rel="noopener" class="btn btn-secondary btn-sm"><Brand name="facebook" size={16} /> Facebook</a>
+          </div>
+        </section>
 
-      <section aria-labelledby="dc-title" lang="en">
-        <h2 id="dc-title" class="h3 mb-3">District committees</h2>
-        <ul class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {sortedDistricts().map((d) => (
-            <li><a href={districtUrl(d.slug, lang)} class="block rounded-xl border border-line bg-surface px-3 py-2 transition hover:border-brand"><span class="block font-semibold leading-snug">{d.name.en.replace('Thiruvananthapuram', 'TVM')}</span><span class="block text-xs text-ink-3">HQ {d.hq.en}</span></a></li>
-          ))}
-        </ul>
+        <section class="mt-10" aria-labelledby="district-committees" lang="en">
+          <SectionHead title="District committees" id="district-committees" size="h2" />
+          <ul class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {sortedDistricts().map((d) => (
+              <li>
+                <article class="card card-hover group relative px-3 py-2">
+                  <h3 class="text-sm font-semibold leading-snug"><a href={districtUrl(d.slug, lang)} class="stretched group-hover:text-accent-ink">{d.name.en.replace('Thiruvananthapuram', 'TVM')}</a></h3>
+                  <p class="t-meta">HQ {d.hq.en?.replace('Thiruvananthapuram', 'TVM')}</p>
+                </article>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+
+      <section aria-labelledby="message" lang="en">
+        <SectionHead title="Send a message" id="message" size="h2" />
+        <p class="t-meta -mt-2">We reply by email or phone. Fields marked * are required.</p>
+        <form class="mt-4 grid gap-4 sm:grid-cols-2" data-contact novalidate>
+          <label class="grid gap-1.5 sm:col-span-2"><span class="text-sm font-semibold">Name *</span><input name="name" class="field" required autocomplete="name" /></label>
+          <label class="grid gap-1.5"><span class="text-sm font-semibold">Email *</span><input name="email" type="email" class="field" required autocomplete="email" /></label>
+          <label class="grid gap-1.5"><span class="text-sm font-semibold">Phone</span><input name="phone" type="tel" class="field" autocomplete="tel" inputmode="tel" /></label>
+          <label class="grid gap-1.5"><span class="text-sm font-semibold">Your district</span>
+            <select name="district" class="field">
+              <option value="">Choose…</option>
+              {sortedDistricts().map((d) => <option value={d.slug}>{d.name.en}</option>)}
+            </select>
+          </label>
+          <label class="grid gap-1.5"><span class="text-sm font-semibold">Topic</span>
+            <select name="topic" class="field"><option>General</option><option>Membership</option><option>Government orders</option><option>Kerala Service</option><option>Website</option></select>
+          </label>
+          <label class="grid gap-1.5 sm:col-span-2"><span class="text-sm font-semibold">Message *</span><textarea name="message" rows="5" class="field py-2.5" required></textarea></label>
+          <div class="flex flex-wrap items-center gap-3 sm:col-span-2">
+            <button type="submit" class="btn btn-primary"><Icon name="Send" size={17} /> Send message</button>
+            <p class="text-sm" data-contact-status role="status" aria-live="polite"></p>
+          </div>
+        </form>
+        <p class="t-meta mt-5 flex items-start gap-2"><Icon name="Info" size={15} class="mt-0.5 shrink-0" /> Preview: the form checks your entry but doesn't send yet. Sending (with spam protection) is switched on with the admin panel.</p>
       </section>
     </div>
-
-    <section class="card p-6 sm:p-8" aria-labelledby="form-title" lang="en">
-      <h2 id="form-title" class="h2">Send a message</h2>
-      <p class="mt-1 text-sm text-ink-3">We reply by email or phone. Fields marked * are required.</p>
-      <form class="mt-6 grid gap-4 sm:grid-cols-2" data-contact novalidate>
-        <label class="field sm:col-span-2"><span>Name *</span><input name="name" required autocomplete="name" /></label>
-        <label class="field"><span>Email *</span><input name="email" type="email" required autocomplete="email" /></label>
-        <label class="field"><span>Phone</span><input name="phone" type="tel" autocomplete="tel" inputmode="tel" /></label>
-        <label class="field"><span>Your district</span>
-          <select name="district">
-            <option value="">Choose…</option>
-            {sortedDistricts().map((d) => <option value={d.slug}>{d.name.en}</option>)}
-          </select>
-        </label>
-        <label class="field"><span>Topic</span>
-          <select name="topic"><option>General</option><option>Membership</option><option>Government orders</option><option>Kerala Service</option><option>Website</option></select>
-        </label>
-        <label class="field sm:col-span-2"><span>Message *</span><textarea name="message" rows="5" required></textarea></label>
-        <div class="sm:col-span-2 flex flex-wrap items-center gap-3">
-          <button type="submit" class="btn btn-primary"><Icon name="Send" size={17} /> Send message</button>
-          <p class="text-sm" data-contact-status role="status" aria-live="polite"></p>
-        </div>
-      </form>
-      <p class="mt-6 flex items-start gap-2 rounded-xl border border-line bg-paper p-3 text-xs text-ink-3"><Icon name="Info" size={15} class="mt-0.5 shrink-0" /> Preview: the form checks your entry but doesn't send yet. Sending (with spam protection) is switched on with the admin panel.</p>
-    </section>
   </div>
-</Base>
+</AppLayout>
 
 <style>
-  .field { display: grid; gap: 0.35rem; font-size: 0.875rem; font-weight: 600; }
-  .field :is(input, select, textarea) {
-    width: 100%; min-height: 44px; padding: 0.6rem 0.85rem; border-radius: 12px;
-    border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); font-weight: 400; font-size: 1rem;
-    transition: border-color 0.15s, box-shadow 0.15s;
-  }
-  .field :is(input, select, textarea):focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
-  .field [aria-invalid='true'] { border-color: var(--brand); }
+  [data-contact] [aria-invalid='true'] { border-color: var(--accent); }
 </style>
 
 <script>
-  document.addEventListener('astro:page-load', () => {
+  function initContact() {
     const form = document.querySelector<HTMLFormElement>('[data-contact]');
-    if (!form) return;
+    if (!form || form.dataset.ready) return;
+    form.dataset.ready = '1';
     const status = form.querySelector<HTMLElement>('[data-contact-status]')!;
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      let firstBad: HTMLInputElement | null = null;
+      let firstBad: HTMLInputElement | undefined;
       form.querySelectorAll<HTMLInputElement>('input, textarea').forEach((el) => {
         const bad = !el.checkValidity();
         el.setAttribute('aria-invalid', String(bad));
-        if (bad && !firstBad) firstBad = el;
+        if (bad) firstBad ??= el;
       });
       if (firstBad) {
-        status.className = 'text-sm text-brand';
+        status.className = 'text-sm text-accent-ink';
         status.textContent = 'Please fill in the highlighted fields.';
-        (firstBad as HTMLInputElement).focus();
+        firstBad.focus();
         return;
       }
       status.className = 'text-sm text-success';
       status.textContent = 'Looks good. Sending will be switched on before launch.';
     });
-  });
+  }
+  initContact();
 </script>

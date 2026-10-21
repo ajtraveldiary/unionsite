@@ -1,0 +1,33 @@
+---
+/**
+ * Kerala's district committees as a flat map. Each district links to its page. Districts
+ * with news get a soft tint; `active` fills one in the accent (the locator on a district
+ * page). Pages can light up a district by toggling `is-on` on `[data-map-district="slug"]`
+ * (the Districts page does this when a row in its list is hovered).
+ */
+import mapData from '~/data/geo/kerala-map.json';
+import type { Lang } from '~/lib/types';
+import { districtUrl, postsForDistrict } from '~/lib/content';
+import { districtBySlug } from '~/data/districts';
+
+interface Props { lang: Lang; active?: string; label?: string; class?: string }
+const { lang, active, label = "Map of Kerala's district committees", class: cls = '' } = Astro.props;
+---
+<svg viewBox={mapData.viewBox} class:list={['kmap h-auto w-full', cls]} role="group" aria-label={label} lang="en">
+  {mapData.districts.map((d) => (
+    <a href={districtUrl(d.slug, lang)} data-map-district={d.slug} aria-label={`${districtBySlug[d.slug].name.en} district`}
+      aria-current={d.slug === active ? 'page' : undefined}
+      class:list={[d.slug === active && 'is-active', postsForDistrict(d.slug).length > 0 && 'has-news']}>
+      <path d={d.d} />
+    </a>
+  ))}
+</svg>
+
+<style>
+  .kmap path { fill: var(--bg-subtle); stroke: var(--line-strong); stroke-width: 1.1; stroke-linejoin: round; transition: fill 0.15s; }
+  .kmap .has-news path { fill: var(--accent-soft); }
+  .kmap a:hover path, .kmap a:focus-visible path, .kmap .is-on path { fill: color-mix(in oklab, var(--accent) 45%, var(--surface)); }
+  .kmap .is-active path { fill: var(--accent); }
+  .kmap a:focus-visible { outline: none; }
+  .kmap a:focus-visible path { stroke: var(--focus); stroke-width: 2.5; }
+</style>

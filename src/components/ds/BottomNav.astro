@@ -15,6 +15,7 @@ const tabs = [
   { label: 'Districts', path: '/districts', icon: 'MapPinned' },
 ];
 const active = (p: string) => (p === '/' ? path === '/' : !!p && path.startsWith(p));
+const onSearch = path.replace(/\/$/, '') === '/search';
 ---
 <nav lang="en" aria-label="Mobile" class="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/95 backdrop-blur lg:hidden">
   <ul class="grid grid-cols-5 pb-[env(safe-area-inset-bottom)]">
@@ -26,8 +27,9 @@ const active = (p: string) => (p === '/' ? path === '/' : !!p && path.startsWith
             <Icon name={tb.icon as any} size={22} stroke={active(tb.path) ? 2.2 : 1.75} />{tb.label}
           </a>
         ) : (
-          <button type="button" data-open-search class="flex w-full flex-col items-center gap-0.5 py-2 text-[0.6875rem] text-ink-2">
-            <Icon name={tb.icon as any} size={22} />{tb.label}
+          <button type="button" data-open-search aria-current={onSearch ? 'page' : undefined}
+            class:list={['flex w-full flex-col items-center gap-0.5 py-2 text-[0.6875rem]', onSearch ? 'font-semibold text-accent-ink' : 'text-ink-2']}>
+            <Icon name={tb.icon as any} size={22} stroke={onSearch ? 2.2 : 1.75} />{tb.label}
           </button>
         )}
       </li>

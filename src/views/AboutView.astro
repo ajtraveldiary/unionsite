@@ -1,0 +1,80 @@
+---
+/**
+ * About (redesign, Phase D), the hub from the wireframe: a short introduction, one card per
+ * sub-page, the three office-bearers and the State Centre's address. History, Conferences,
+ * Struggles and Documents (pages the old site had) aren't moved over yet, so their cards say
+ * "Coming soon" and aren't links, like the Tools & guides tiles on the home page.
+ */
+import AppLayout from '~/layouts/AppLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
+import SectionHead from '~/components/ds/SectionHead.astro';
+import type { Lang } from '~/lib/types';
+import { href, t, langOf } from '~/lib/i18n';
+import { site, stateCommittee, roleLabels } from '~/data/site';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const L = (p: string) => href(lang, p);
+const leaders = stateCommittee.filter((p) => p.body === 'state' && ['president', 'general_secretary', 'treasurer'].includes(p.role));
+const initials = (en: string) => en.replace(/[^A-Za-z ]/g, ' ').trim().split(/\s+/).slice(-2).map((w) => w[0]).join('');
+const sections = [
+  { title: 'State committee', text: 'Office-bearers and secretariat', icon: 'Users', path: '/about/state-committee' },
+  { title: 'Media', text: 'Videos and photo albums', icon: 'Images', path: '/gallery' },
+  { title: 'Contact', text: 'State Centre and district offices', icon: 'Mail', path: '/contact' },
+  { title: 'History', text: 'From the 1920 NGO Association to today', icon: 'Landmark' },
+  { title: 'Conferences', text: `${site.conferences} state conferences since ${site.founded}`, icon: 'Flag' },
+  { title: 'Struggles', text: 'Major strikes and campaigns', icon: 'Megaphone' },
+  { title: 'Documents', text: 'Bye-law and policy resolutions', icon: 'FileText' },
+] as const;
+const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Kerala NGO Union, ${site.address.en}`)}`;
+---
+<AppLayout lang={lang} title="About" description="About the Kerala NGO Union: the organisation of Kerala State Government employees since 1962.">
+  <div class="wrap pt-5 lg:pt-8">
+    <Breadcrumbs lang={lang} items={[{ label: 'About' }]} />
+    <h1 lang="en" class="t-display mt-2">About the union</h1>
+    <p lang="en" class="mt-3 max-w-2xl text-lg text-ink-2">The Kerala NGO Union organises Kerala's State Government employees for a people-oriented civil service. It was formed in {site.founded}, with roots in the NGO Association of 1920.</p>
+
+    <ul lang="en" class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {sections.map((s) => {
+        const path = 'path' in s ? s.path : undefined;
+        return (
+          <li>
+            <article class:list={['card group relative flex h-full gap-3 p-4', path ? 'card-hover' : 'bg-bg-subtle']}>
+              <span class:list={['grid size-10 shrink-0 place-items-center rounded-lg', path ? 'bg-accent-soft text-accent-ink' : 'bg-surface text-ink-3']}><Icon name={s.icon} size={20} /></span>
+              <div class="min-w-0">
+                <h2 class:list={['font-semibold leading-snug', !path && 'text-ink-2']}>
+                  {path ? <a href={L(path)} class="stretched group-hover:text-accent-ink">{s.title}</a> : s.title}
+                </h2>
+                <p class="t-meta">{path ? s.text : 'Coming soon'}</p>
+              </div>
+            </article>
+          </li>
+        );
+      })}
+    </ul>
+
+    <section class="section" aria-labelledby="leadership">
+      <SectionHead title="Leadership" id="leadership" href={L('/about/state-committee')} linkLabel="Full state committee" />
+      <ul class="grid gap-4 sm:grid-cols-3">
+        {leaders.map((p) => (
+          <li class="flex items-center gap-4">
+            <span lang="en" class="grid size-16 shrink-0 place-items-center rounded-full bg-accent-soft text-xl font-bold text-accent-ink" aria-hidden="true">{initials(p.name.en)}</span>
+            <div class="min-w-0">
+              <p lang="en" class="t-label">{roleLabels[p.role].en}</p>
+              <p lang={lang === 'en' ? 'en' : 'ml'} class="t-h2 mt-0.5">{lang === 'en' ? p.name.en : p.name.ml}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="section" aria-labelledby="visit">
+      <SectionHead title="State Centre" id="visit" href={L('/contact')} linkLabel="Contact" />
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <p class="flex items-start gap-2 text-lg"><Icon name="MapPin" size={20} class="mt-1 shrink-0 text-accent-ink" /><span lang={langOf(site.address, lang)}>{t(site.address, lang)}</span></p>
+        <a href={mapUrl} target="_blank" rel="noopener" lang="en" class="btn btn-secondary btn-sm self-start sm:self-auto">Directions <Icon name="ArrowUpRight" size={16} /></a>
+      </div>
+    </section>
+  </div>
+</AppLayout>

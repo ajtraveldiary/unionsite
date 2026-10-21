@@ -1,54 +1,284 @@
 ---
-import Base from '~/layouts/Base.astro';
-import PageHero from '~/components/PageHero.astro';
+/**
+ * Government orders (redesign, Phase C), as in the wireframe. Search is the main control:
+ * results update as you type, and Enter on a GO number like "112/2026" opens that order.
+ * Three filters: group (tabs), subject and year (menus); active filters show as removable
+ * chips. Laptops get a dense table (number, date, subject in their own columns, easy to
+ * scan); phones get the same rows as a list. Filters live in the URL (?q=&g=&s=&y=), so the
+ * home page's subject chips open a ready-filtered view and members can share one.
+ *
+ * Every order is in the page and filtered in the browser (fine for the sample set); with
+ * the ~330 real orders (Phase 2) the same URLs are answered by the server.
+ */
+import AppLayout from '~/layouts/AppLayout.astro';
 import Icon from '~/components/ui/Icon.astro';
-import OrdersLibrary, { type LibOrder } from '~/components/islands/OrdersLibrary';
+import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
+import EmptyState from '~/components/ds/EmptyState.astro';
 import type { Lang } from '~/lib/types';
 import { t, langOf, formatDate, formatKb } from '~/lib/i18n';
-import { allOrders, orderUrl } from '~/lib/content';
+import { allOrders, orderUrl, subjectName } from '~/lib/content';
+import { goCore } from '~/lib/search';
 import { orderGroups, orderSubjects } from '~/data/orders';
-import { usefulLinks } from '~/data/site';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
-
-const lib: LibOrder[] = allOrders().map((o) => ({
-  id: o.id,
-  url: orderUrl(o, lang),
-  goNumber: o.goNumber,
-  goDate: o.goDate,
-  dateLabel: formatDate(o.goDate, 'en', 'short'),
-  group: o.group,
-  subject: o.subject,
-  title: t(o.title, lang),
-  titleLang: langOf(o.title, lang),
-  altTitle: lang === 'en' ? o.title.ml : o.title.en,
-  important: o.important,
-  pdf: formatKb(o.pdfKb),
-}));
+const orders = allOrders();
+const years = [...new Set(orders.map((o) => o.goDate.slice(0, 4)))].sort().reverse();
+const groups = [{ slug: 'all', label: 'All', count: orders.length }, ...orderGroups.map((g) => ({ slug: g.slug, label: g.name.en, count: orders.filter((o) => o.group === g.slug).length }))];
+const PAGE = 50;
 ---
-<Base lang={lang} title="Government orders" description="Search Kerala Government orders and circulars for State employees by GO number, subject or keyword — DA, pay revision, pension, leave and more.">
-  <PageHero lang={lang} eyebrow="Orders library" title="Government orders & circulars" sub="Find any GO in seconds — by number, subject or keyword, in Malayalam or English. Share a link instead of forwarding the PDF." crumbs={[{ label: 'Orders' }]} />
-  <div class="container-x grid grid-cols-[minmax(0,1fr)] gap-10 py-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:py-12">
-    <OrdersLibrary
-      client:load
-      orders={lib}
-      groups={orderGroups.map((g) => ({ slug: g.slug, label: g.name.en }))}
-      subjects={orderSubjects.map((s) => ({ slug: s.slug, label: s.name.en, group: s.group }))}
-    />
-    <aside lang="en" class="space-y-5">
-      <div class="card p-5">
-        <div class="flex items-center gap-2 text-sm font-bold"><Icon name="Info" size={17} class="text-info" /> Reference copies</div>
-        <p class="mt-2 text-sm leading-relaxed text-ink-2">Orders here are reference copies for members. Always check the official Government source for the authoritative version.</p>
+<AppLayout lang={lang} title="Government orders" description="Search Kerala Government orders and circulars for State employees by GO number, subject or keyword: DA, pay revision, pension, leave and more.">
+  <div class="wrap pt-5 lg:pt-8" lang="en">
+    <Breadcrumbs lang={lang} items={[{ label: 'Orders' }]} />
+    <h1 class="t-display mt-2">Government orders</h1>
+    <p class="mt-1 max-w-2xl text-ink-2">GOs and circulars for State employees. Search by GO number, subject or any word, in Malayalam or English.</p>
+
+    <form data-orders-filters role="search" aria-label="Search and filter orders" class="mt-5">
+      <div class="relative max-w-3xl">
+        <Icon name="Search" size={20} class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-3" />
+        <input name="q" type="search" data-o-q class="field !min-h-14 pl-12 text-[1.0625rem]" placeholder="GO number, subject or keyword" aria-label="Search orders" aria-describedby="orders-hint" autocomplete="off" />
       </div>
-      <div class="card p-5">
-        <p class="text-sm font-bold">Official portals</p>
-        <ul class="mt-3 space-y-2 text-sm">
-          {usefulLinks.slice(0, 4).map((l) => (
-            <li><a href={l.url} target="_blank" rel="noopener" class="group flex items-center justify-between gap-2 text-ink-2 hover:text-brand"><span>{l.label} <span class="text-ink-3">· {l.note}</span></span><Icon name="ArrowUpRight" size={14} /></a></li>
-          ))}
-        </ul>
+      <p id="orders-hint" class="t-meta mt-1.5">Try <span class="font-semibold text-ink-2">112/2026</span>, <span class="font-semibold text-ink-2">DA</span> or <span lang="ml" class="font-semibold text-ink-2">ക്ഷാമബത്ത</span>. Press Enter on a GO number to open it.</p>
+
+      <div class="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
+        <div class="no-scrollbar -mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
+          <div class="inline-flex gap-1 rounded-[var(--radius-control)] bg-bg-subtle p-1" role="group" aria-label="Order group">
+            {groups.map((g) => (
+              <button type="button" data-o-group={g.slug} aria-pressed={g.slug === 'all' ? 'true' : 'false'} class="seg flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium text-ink-2">
+                {g.label} <span class="t-meta">{g.count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 md:flex">
+          <select data-o-subject class="field md:w-56" aria-label="Subject">
+            <option value="all">All subjects</option>
+            {orderSubjects.map((s) => <option value={s.slug} data-group={s.group}>{s.name.en}</option>)}
+          </select>
+          <select data-o-year class="field md:w-36" aria-label="Year">
+            <option value="all">All years</option>
+            {years.map((y) => <option value={y}>{y}</option>)}
+          </select>
+        </div>
       </div>
-    </aside>
+    </form>
+
+    <div class="mt-5 flex flex-wrap items-center gap-2 border-b border-line pb-3">
+      <p class="mr-2 text-sm text-ink-2" aria-live="polite" data-o-count><strong class="text-ink tabular">{orders.length}</strong> orders</p>
+      <div class="flex flex-wrap gap-2" data-o-chips></div>
+      <button type="button" data-o-clear class="link ml-1" hidden>Clear all</button>
+    </div>
   </div>
-</Base>
+
+  <div class="wrap mt-1" lang="en">
+    <table class="otable w-full text-left text-sm">
+      <caption class="sr-only">Government orders, newest first</caption>
+      <thead>
+        <tr class="border-b-2 border-ink">
+          <th scope="col" class="t-label py-2 pr-4">GO number</th>
+          <th scope="col" class="t-label py-2 pr-4">Date</th>
+          <th scope="col" class="t-label py-2 pr-4">Subject</th>
+          <th scope="col" class="t-label py-2 pr-4">Title</th>
+          <th scope="col" class="t-label py-2">PDF</th>
+        </tr>
+      </thead>
+      <tbody>
+        {orders.map((o, i) => (
+          <tr data-order data-url={orderUrl(o, lang)} data-group={o.group} data-subject={o.subject} data-year={o.goDate.slice(0, 4)}
+            data-ml={o.title.ml} data-en={o.title.en} data-kw={`${o.goNumber} ${goCore(o.goNumber) ?? ''} ${subjectName(o.subject)?.en ?? ''} ${subjectName(o.subject)?.ml ?? ''} ${o.subject}`}
+            data-imp={o.important ? '' : undefined} hidden={i >= PAGE} class="group relative border-b border-line align-top hover:bg-surface-hover">
+            <td class="c-go whitespace-nowrap py-3 pr-4 font-semibold tabular">{o.goNumber}</td>
+            <td class="c-date whitespace-nowrap py-3 pr-4 tabular text-ink-2"><time datetime={o.goDate}>{formatDate(o.goDate, 'en', 'short')}</time></td>
+            <td class="c-subj whitespace-nowrap py-3 pr-4 text-ink-2">{subjectName(o.subject)?.en}</td>
+            <td class="c-title py-3 pr-4">
+              <a href={orderUrl(o, lang)} lang={langOf(o.title, lang)} class="stretched font-semibold leading-snug group-hover:text-accent-ink">{t(o.title, lang)}</a>
+              {o.important && <span class="badge badge-accent ml-1.5 !h-5 align-[1px]">Important</span>}
+            </td>
+            <td class="c-pdf whitespace-nowrap py-3 text-ink-2">{formatKb(o.pdfKb)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+
+    <div data-o-empty hidden class="mt-6">
+      <EmptyState icon="FileText" title="No orders match" text="Try just the number (like 81/2014) or a subject like DA.">
+        <button type="button" data-o-clear class="btn btn-secondary btn-sm mt-4">Clear filters</button>
+      </EmptyState>
+    </div>
+
+    <nav data-o-pager aria-label="Pages" class="mt-6 flex items-center justify-center gap-3" hidden>
+      <button type="button" data-o-prev class="btn btn-secondary btn-sm"><Icon name="ChevronLeft" size={16} /> Previous</button>
+      <p class="t-meta" data-o-page></p>
+      <button type="button" data-o-next class="btn btn-secondary btn-sm">Next <Icon name="ChevronRight" size={16} /></button>
+    </nav>
+
+    <p class="t-meta mt-8 flex max-w-2xl items-start gap-2">
+      <Icon name="Info" size={16} class="mt-0.5 shrink-0" />
+      <span>These are reference copies for members. For the authoritative version, check the Government's <a href="https://document.kerala.gov.in/" target="_blank" rel="noopener" class="text-link underline underline-offset-2">Document Portal</a>.</span>
+    </p>
+  </div>
+</AppLayout>
+
+<style>
+  /* Group tabs: the picked one sits on a raised surface */
+  .seg[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
+  .seg:not([aria-pressed="true"]):hover { color: var(--ink); }
+
+  /* Phones: each table row becomes a list item — number · date, title, subject · PDF */
+  @media (max-width: 767px) {
+    .otable thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    .otable tr[data-order] { display: flex; flex-wrap: wrap; column-gap: 0.35rem; padding-block: 0.75rem; }
+    .otable td { display: block; padding: 0; font-size: 0.8125rem; color: var(--ink-3); }
+    .otable .c-go { color: var(--ink-2); }
+    .otable .c-title { order: 3; flex-basis: 100%; margin-block: 0.15rem; font-size: 1rem; color: var(--ink); }
+    .otable .c-subj { order: 4; }
+    .otable .c-pdf { order: 5; }
+    .otable .c-date::before, .otable .c-pdf::before { content: "· "; }
+  }
+</style>
+
+<script>
+  import { scoreDoc, goCore, type SearchDoc } from '~/lib/search';
+
+  function initOrders() {
+    const form = document.querySelector<HTMLFormElement>('[data-orders-filters]');
+    if (!form || form.dataset.ready) return;
+    form.dataset.ready = '1';
+    const PAGE = 50;
+    const q = form.querySelector<HTMLInputElement>('[data-o-q]')!;
+    const subjectSel = form.querySelector<HTMLSelectElement>('[data-o-subject]')!;
+    const yearSel = form.querySelector<HTMLSelectElement>('[data-o-year]')!;
+    const groupBtns = [...form.querySelectorAll<HTMLButtonElement>('[data-o-group]')];
+    const tbody = document.querySelector<HTMLTableSectionElement>('.otable tbody')!;
+    const rows = [...tbody.querySelectorAll<HTMLTableRowElement>('tr[data-order]')];
+    const count = document.querySelector<HTMLElement>('[data-o-count]')!;
+    const chips = document.querySelector<HTMLElement>('[data-o-chips]')!;
+    const clears = [...document.querySelectorAll<HTMLButtonElement>('[data-o-clear]')];
+    const empty = document.querySelector<HTMLElement>('[data-o-empty]')!;
+    const table = document.querySelector<HTMLTableElement>('.otable')!;
+    const pager = document.querySelector<HTMLElement>('[data-o-pager]')!;
+    const pageLabel = pager.querySelector<HTMLElement>('[data-o-page]')!;
+    const prev = pager.querySelector<HTMLButtonElement>('[data-o-prev]')!;
+    const next = pager.querySelector<HTMLButtonElement>('[data-o-next]')!;
+    const subjectLabel = (slug: string) => subjectSel.querySelector<HTMLOptionElement>(`option[value="${slug}"]`)?.textContent ?? slug;
+    const groupLabel = (slug: string) => groupBtns.find((b) => b.dataset.oGroup === slug)?.firstChild?.textContent?.trim() ?? slug;
+    const docOf = (tr: HTMLTableRowElement): SearchDoc => ({ k: 'order', ml: tr.dataset.ml!, en: tr.dataset.en, url: tr.dataset.url!, kw: tr.dataset.kw, imp: tr.hasAttribute('data-imp') });
+
+    // State from the URL
+    const params = new URLSearchParams(location.search);
+    let group = groupBtns.some((b) => b.dataset.oGroup === params.get('g')) ? params.get('g')! : 'all';
+    let subject = params.get('s') ?? 'all';
+    const sOpt = subjectSel.querySelector<HTMLOptionElement>(`option[value="${subject}"]`);
+    if (!sOpt) subject = 'all';
+    else if (subject !== 'all') group = sOpt.dataset.group!; // a subject implies its group
+    let year = [...yearSel.options].some((o) => o.value === params.get('y')) ? params.get('y')! : 'all';
+    q.value = params.get('q') ?? '';
+    let page = 0;
+    let matches: HTMLTableRowElement[] = [];
+
+    const syncControls = () => {
+      groupBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.oGroup === group)));
+      // Only the chosen group's subjects can be picked
+      [...subjectSel.options].forEach((o) => { o.disabled = o.value !== 'all' && group !== 'all' && o.dataset.group !== group; });
+      subjectSel.value = subject;
+      yearSel.value = year;
+    };
+
+    const render = () => {
+      const total = matches.length;
+      const pages = Math.max(1, Math.ceil(total / PAGE));
+      page = Math.min(page, pages - 1);
+      const from = page * PAGE;
+      const shown = new Set(matches.slice(from, from + PAGE));
+      // Search results keep their ranking; otherwise newest first (the server order)
+      for (const tr of matches) tbody.append(tr);
+      rows.forEach((tr) => { tr.hidden = !shown.has(tr); });
+      table.hidden = total === 0;
+      empty.hidden = total > 0;
+      pager.hidden = pages <= 1;
+      pageLabel.textContent = `Page ${page + 1} of ${pages}`;
+      prev.disabled = page === 0;
+      next.disabled = page >= pages - 1;
+    };
+
+    const apply = () => {
+      const term = q.value.trim();
+      let list = rows.filter((tr) =>
+        (group === 'all' || tr.dataset.group === group)
+        && (subject === 'all' || tr.dataset.subject === subject)
+        && (year === 'all' || tr.dataset.year === year));
+      if (term) {
+        list = list.map((tr) => ({ tr, s: scoreDoc(docOf(tr), term) }))
+          .filter((x) => x.s >= 12)
+          .sort((a, b) => b.s - a.s)
+          .map((x) => x.tr);
+      } else {
+        list.sort((a, b) => rows.indexOf(a) - rows.indexOf(b));
+      }
+      matches = list;
+      page = 0;
+      render();
+
+      count.innerHTML = `<strong class="text-ink tabular">${list.length}</strong> ${list.length === 1 ? 'order' : 'orders'}`;
+      // Removable chips for each active filter
+      const active: [string, () => void][] = [];
+      if (term) active.push([`“${term}”`, () => { q.value = ''; }]);
+      if (group !== 'all') active.push([groupLabel(group), () => { group = 'all'; subject = 'all'; }]);
+      if (subject !== 'all') active.push([subjectLabel(subject), () => { subject = 'all'; }]);
+      if (year !== 'all') active.push([year, () => { year = 'all'; }]);
+      chips.replaceChildren(...active.map(([label, remove]) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'chip !min-h-8 gap-1 !pr-2';
+        b.setAttribute('aria-label', `Remove filter: ${label}`);
+        b.innerHTML = `<span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+        b.firstElementChild!.textContent = label;
+        b.addEventListener('click', () => { remove(); syncControls(); apply(); q.focus(); });
+        return b;
+      }));
+      clears.forEach((c) => { c.hidden = c.closest('[data-o-empty]') ? false : active.length < 2; });
+
+      const p = new URLSearchParams();
+      if (term) p.set('q', term);
+      if (group !== 'all' && subject === 'all') p.set('g', group);
+      if (subject !== 'all') p.set('s', subject);
+      if (year !== 'all') p.set('y', year);
+      const qs = p.toString();
+      history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
+    };
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      // Enter on a GO number opens that order when exactly one matches
+      const go = goCore(q.value);
+      if (!go) return;
+      const exact = matches.filter((tr) => tr.dataset.kw!.split(' ').includes(go));
+      if (exact.length === 1) location.href = exact[0].dataset.url!;
+    });
+    let timer: number | undefined;
+    q.addEventListener('input', () => { clearTimeout(timer); timer = window.setTimeout(apply, 120); });
+    groupBtns.forEach((b) => b.addEventListener('click', () => {
+      group = b.dataset.oGroup!;
+      if (subject !== 'all' && subjectSel.querySelector<HTMLOptionElement>(`option[value="${subject}"]`)?.dataset.group !== group) subject = 'all';
+      syncControls(); apply();
+    }));
+    subjectSel.addEventListener('change', () => {
+      subject = subjectSel.value;
+      if (subject !== 'all') group = subjectSel.selectedOptions[0].dataset.group!;
+      syncControls(); apply();
+    });
+    yearSel.addEventListener('change', () => { year = yearSel.value; apply(); });
+    clears.forEach((c) => c.addEventListener('click', () => {
+      q.value = ''; group = 'all'; subject = 'all'; year = 'all';
+      syncControls(); apply(); q.focus();
+    }));
+    const turn = (d: number) => { page += d; render(); table.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+    prev.addEventListener('click', () => turn(-1));
+    next.addEventListener('click', () => turn(1));
+
+    syncControls();
+    apply();
+  }
+  initOrders();
+  document.addEventListener('astro:page-load', initOrders);
+</script>

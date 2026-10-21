@@ -1,0 +1,247 @@
+---
+/**
+ * Site search (redesign, Phase C). The header box and the phone search open this page with
+ * ?q=. Results come from /search-index.json and update as you type; with "All" picked they are
+ * grouped by kind (orders, news, districts, events, pages), five each, and a kind's chip shows
+ * the rest. A GO number that matches exactly one order opens that order straight away.
+ * With no query the page offers popular searches and the main sections.
+ *
+ * The page itself is static: the query is read in the browser. Phase 4 swaps the JSON index
+ * for the D1 full-text search API with the same results shape.
+ */
+import AppLayout from '~/layouts/AppLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
+import EmptyState from '~/components/ds/EmptyState.astro';
+import type { Lang } from '~/lib/types';
+import { href } from '~/lib/i18n';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const L = (p: string) => href(lang, p);
+const kinds = [
+  { k: 'order', label: 'Orders', icon: 'FileText' },
+  { k: 'news', label: 'News', icon: 'Newspaper' },
+  { k: 'district', label: 'Districts', icon: 'MapPin' },
+  { k: 'event', label: 'Events', icon: 'CalendarDays' },
+  { k: 'page', label: 'Pages', icon: 'Landmark' },
+] as const;
+const popular = ['DA', 'ക്ഷാമബത്ത', 'Pay Revision', 'MEDISEP', '81/2014', 'Pension', 'Kollam'];
+const sections = [
+  { label: 'Government orders', note: 'GOs and circulars', path: '/orders', icon: 'FileText' },
+  { label: 'News', note: 'From the union and districts', path: '/news', icon: 'Newspaper' },
+  { label: 'Districts', note: 'All 15 district committees', path: '/districts', icon: 'MapPinned' },
+  { label: 'Kerala Service', note: 'The monthly magazine', path: '/kerala-service', icon: 'BookOpen' },
+] as const;
+---
+<AppLayout lang={lang} title="Search" description="Search Kerala NGO Union orders, news, districts and events." noindex>
+  <div class="wrap max-w-[860px] pt-5 lg:pt-8" lang="en" data-search data-lang={lang}>
+    <Breadcrumbs lang={lang} items={[{ label: 'Search' }]} />
+    <h1 class="t-display mt-2">Search</h1>
+
+    <form role="search" aria-label="Search the site" class="mt-4" data-search-form>
+      <div class="relative">
+        <Icon name="Search" size={20} class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-3" />
+        <input name="q" type="search" data-search-q class="field !min-h-14 pl-12 text-[1.0625rem]" placeholder="Orders, news, districts, events" aria-label="Search the site" aria-describedby="search-hint" autocomplete="off" />
+      </div>
+      <p id="search-hint" class="t-meta mt-1.5">Malayalam or English. A GO number like <span class="font-semibold text-ink-2">112/2026</span> opens that order.</p>
+    </form>
+
+    <!-- Before a search: popular searches and the main sections -->
+    <div data-search-start class="mt-8">
+      <h2 class="t-label">Popular searches</h2>
+      <ul class="mt-2 flex flex-wrap gap-2">
+        {popular.map((p) => <li><a href={`${L('/search')}?q=${encodeURIComponent(p)}`} data-search-suggest={p} lang={/[a-z0-9]/i.test(p) ? 'en' : 'ml'} class="chip">{p}</a></li>)}
+      </ul>
+      <h2 class="t-label mt-8">Browse</h2>
+      <ul class="mt-2 grid gap-2 sm:grid-cols-2">
+        {sections.map((s) => (
+          <li>
+            <article class="card card-hover group relative flex items-center gap-3 p-3">
+              <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-ink"><Icon name={s.icon} size={20} /></span>
+              <div class="min-w-0">
+                <h3 class="font-semibold leading-snug"><a href={L(s.path)} class="stretched group-hover:text-accent-ink">{s.label}</a></h3>
+                <p class="t-meta">{s.note}</p>
+              </div>
+            </article>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <!-- Results -->
+    <div data-search-results hidden class="mt-6">
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line pb-3">
+        <p class="mr-auto text-sm text-ink-2" aria-live="polite" data-search-count></p>
+        <div role="group" aria-label="Result type" class="no-scrollbar -mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto px-4 sm:mx-0 sm:w-auto sm:px-0">
+          <button type="button" class="chip !min-h-8" aria-pressed="true" data-search-kind="all">All</button>
+          {kinds.map((k) => <button type="button" class="chip !min-h-8" aria-pressed="false" data-search-kind={k.k} hidden>{k.label} <span data-n class="tabular"></span></button>)}
+        </div>
+      </div>
+      <div data-search-list></div>
+    </div>
+
+    <div data-search-loading hidden class="t-meta mt-8">Searching…</div>
+
+    <div data-search-empty hidden class="mt-8">
+      <EmptyState icon="SearchX" title="No results" text="Check the spelling, try fewer words, or search a GO number like 81/2014.">
+        <a href={L('/orders')} data-search-orders class="btn btn-secondary btn-sm mt-4">Search orders instead</a>
+      </EmptyState>
+    </div>
+
+    <!-- Icons for result rows, cloned by the script -->
+    {kinds.map((k) => <template data-search-icon={k.k}><Icon name={k.icon} size={18} /></template>)}
+  </div>
+</AppLayout>
+
+<script>
+  import { search, goCore, type SearchDoc, type SearchKind } from '~/lib/search';
+
+  const KINDS: SearchKind[] = ['order', 'news', 'district', 'event', 'page'];
+  const HEAD: Record<SearchKind, string> = { order: 'Orders', news: 'News', district: 'Districts', event: 'Events', page: 'Pages' };
+  const PLURAL: Record<SearchKind, string> = { order: 'orders', news: 'stories', district: 'districts', event: 'events', page: 'pages' };
+  const PER_GROUP = 5;
+  let index: Promise<SearchDoc[]> | undefined;
+  const loadIndex = () => (index ??= fetch('/search-index.json').then((r) => r.json()).catch(() => []));
+
+  function initSearch() {
+    const root = document.querySelector<HTMLElement>('[data-search]');
+    if (!root || root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const en = root.dataset.lang === 'en';
+    const urlFor = (d: SearchDoc) => (en ? (d.url === '/' ? '/en' : `/en${d.url}`) : d.url);
+    const $ = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
+    const form = $<HTMLFormElement>('[data-search-form]');
+    const q = $<HTMLInputElement>('[data-search-q]');
+    const start = $('[data-search-start]');
+    const results = $('[data-search-results]');
+    const list = $('[data-search-list]');
+    const count = $('[data-search-count]');
+    const loading = $('[data-search-loading]');
+    const empty = $('[data-search-empty]');
+    const ordersLink = $<HTMLAnchorElement>('[data-search-orders]');
+    const kindBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-search-kind]')];
+    const ordersHref = ordersLink.getAttribute('href')!;
+    let kind: 'all' | SearchKind = 'all';
+    let hits: SearchDoc[] = [];
+
+    const row = (d: SearchDoc) => {
+      const li = document.createElement('li');
+      li.className = 'py-3';
+      const title = en && d.en ? d.en : d.ml;
+      li.innerHTML = `
+        <article class="group relative flex gap-3">
+          <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-bg-subtle text-ink-3"></span>
+          <div class="min-w-0 flex-1">
+            <h3 class="font-semibold leading-snug"><a class="stretched group-hover:text-accent-ink"></a></h3>
+            <p class="t-meta mt-0.5"></p>
+          </div>
+        </article>`;
+      li.querySelector('span')!.append(root.querySelector<HTMLTemplateElement>(`[data-search-icon="${d.k}"]`)!.content.cloneNode(true));
+      const h = li.querySelector('h3')!;
+      h.lang = en && d.en ? 'en' : 'ml';
+      const a = li.querySelector('a')!;
+      a.href = urlFor(d);
+      a.textContent = title;
+      if (d.imp && d.k === 'order') a.insertAdjacentHTML('afterend', ' <span class="badge badge-accent ml-1 !h-5 align-[1px]" lang="en">Important</span>');
+      li.querySelector('p')!.textContent = d.sub ?? '';
+      return li;
+    };
+    const ul = (docs: SearchDoc[]) => {
+      const u = document.createElement('ul');
+      u.className = 'divide-y divide-line';
+      u.append(...docs.map(row));
+      return u;
+    };
+
+    const render = () => {
+      const term = q.value.trim();
+      const byKind = new Map(KINDS.map((k) => [k, hits.filter((d) => d.k === k)]));
+      if (kind !== 'all' && !byKind.get(kind)!.length) kind = 'all';
+      kindBtns.forEach((b) => {
+        const k = b.dataset.searchKind as 'all' | SearchKind;
+        b.setAttribute('aria-pressed', String(k === kind));
+        if (k !== 'all') {
+          const n = byKind.get(k)!.length;
+          b.hidden = n === 0;
+          b.querySelector('[data-n]')!.textContent = String(n);
+        }
+      });
+
+      start.hidden = !!term;
+      results.hidden = !term || hits.length === 0;
+      empty.hidden = !term || hits.length > 0;
+      ordersLink.href = term ? `${ordersHref}?q=${encodeURIComponent(term)}` : ordersHref;
+      empty.querySelector('p')!.textContent = `No results for “${term}”`;
+      count.textContent = term ? `${hits.length} ${hits.length === 1 ? 'result' : 'results'} for “${term}”` : '';
+
+      list.replaceChildren();
+      if (kind !== 'all') { list.append(ul(byKind.get(kind)!)); return; }
+      for (const k of KINDS) {
+        const docs = byKind.get(k)!;
+        if (!docs.length) continue;
+        const sec = document.createElement('section');
+        sec.className = 'mt-6';
+        sec.innerHTML = `<div class="flex items-baseline justify-between gap-3 border-b border-line pb-1"><h2 class="t-label"></h2></div>`;
+        sec.querySelector('h2')!.textContent = HEAD[k];
+        sec.setAttribute('aria-label', HEAD[k]);
+        if (docs.length > PER_GROUP) {
+          const more = document.createElement('button');
+          more.type = 'button';
+          more.className = 'link';
+          more.textContent = `All ${docs.length} ${PLURAL[k]}`;
+          more.addEventListener('click', () => { kind = k; render(); results.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+          sec.firstElementChild!.append(more);
+        }
+        sec.append(ul(docs.slice(0, PER_GROUP)));
+        list.append(sec);
+      }
+    };
+
+    // The one order a GO number points to, if exactly one matches
+    const goTarget = () => {
+      const go = goCore(q.value);
+      if (!go) return undefined;
+      const orders = hits.filter((d) => d.k === 'order');
+      return orders.length === 1 ? orders[0] : undefined;
+    };
+
+    const run = async (first = false) => {
+      const term = q.value.trim();
+      if (term) { loading.hidden = false; }
+      const docs = await loadIndex();
+      loading.hidden = true;
+      hits = term ? search(docs, term, 200) : [];
+      if (first) {
+        const target = goTarget();
+        if (target) { location.replace(urlFor(target)); return; }
+      } else {
+        kind = 'all';
+      }
+      render();
+      history.replaceState(null, '', term ? `?q=${encodeURIComponent(term)}` : location.pathname);
+    };
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const target = goTarget();
+      if (target) location.href = urlFor(target);
+    });
+    let timer: number | undefined;
+    q.addEventListener('input', () => { clearTimeout(timer); timer = window.setTimeout(() => run(), 150); });
+    kindBtns.forEach((b) => b.addEventListener('click', () => { kind = b.dataset.searchKind as 'all' | SearchKind; render(); }));
+    // Suggestions search in place instead of reloading the page
+    root.querySelectorAll<HTMLAnchorElement>('[data-search-suggest]').forEach((a) => a.addEventListener('click', (e) => {
+      e.preventDefault();
+      q.value = a.dataset.searchSuggest!;
+      run();
+      q.focus();
+    }));
+
+    q.value = new URLSearchParams(location.search).get('q') ?? '';
+    if (!q.value) q.focus();
+    run(true);
+  }
+  initSearch();
+  document.addEventListener('astro:page-load', initSearch);
+</script>

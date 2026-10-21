@@ -22,14 +22,18 @@ const title = t(v.title, lang);
 <script>
   document.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-yt]');
-    if (!b || b.dataset.playing) return;
-    b.dataset.playing = '1';
+    if (!b) return;
     const f = document.createElement('iframe');
     f.src = `https://www.youtube-nocookie.com/embed/${b.dataset.yt}?autoplay=1&rel=0`;
     f.allow = 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture';
     f.allowFullscreen = true;
     f.title = b.getAttribute('aria-label') ?? 'Video';
     f.className = 'absolute inset-0 size-full';
-    b.replaceChildren(f);
+    // The player replaces the button (a player inside a button can't be clicked in some browsers)
+    const box = document.createElement('div');
+    box.className = b.className;
+    box.append(f);
+    b.replaceWith(box);
+    f.focus();
   });
 </script>

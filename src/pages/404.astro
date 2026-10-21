@@ -1,9 +1,11 @@
 ---
-import Base from '~/layouts/Base.astro';
+/** Page not found (redesign, Phase D): say so plainly, offer search and the main sections. */
+import AppLayout from '~/layouts/AppLayout.astro';
 import Icon from '~/components/ui/Icon.astro';
 import { langFromPath, href } from '~/lib/i18n';
 
 const lang = langFromPath(Astro.url.pathname);
+const L = (p: string) => href(lang, p);
 const links = [
   ['Government orders', '/orders', 'FileText'],
   ['News', '/news', 'Newspaper'],
@@ -11,18 +13,23 @@ const links = [
   ['Kerala Service', '/kerala-service', 'BookOpen'],
 ] as const;
 ---
-<Base lang={lang} title="Page not found" noindex>
-  <section class="container-x py-16 text-center lg:py-24" lang="en">
-    <p lang="ml" aria-hidden="true" class="display select-none text-[clamp(5rem,3rem+10vw,10rem)] !leading-none text-brand">൪൦൪</p>
-    <h1 class="h1 mt-6">This page isn't here</h1>
+<AppLayout lang={lang} title="Page not found" noindex>
+  <section class="wrap max-w-[720px] py-12 text-center lg:py-20" lang="en">
+    <p class="t-label">Error 404</p>
+    <h1 class="t-display mt-2">This page isn't here</h1>
     <p class="mx-auto mt-2 max-w-md text-ink-2">It may have moved when the site was rebuilt. Search for it, or start from one of these.</p>
-    <div class="mt-6 flex justify-center">
-      <button type="button" data-open-search class="btn btn-primary"><Icon name="Search" size={18} /> Search the site</button>
-    </div>
-    <ul class="mx-auto mt-10 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
+    <form action={L('/search')} role="search" class="relative mx-auto mt-6 max-w-md">
+      <Icon name="Search" size={18} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
+      <input name="q" type="search" class="field pl-9" placeholder="Search orders, news, districts" aria-label="Search the site" />
+    </form>
+    <ul class="mt-8 grid grid-cols-2 gap-2 sm:grid-cols-4">
       {links.map(([label, p, icon]) => (
-        <li><a href={href(lang, p)} class="card lift flex flex-col items-center gap-2 p-4 text-sm font-semibold"><Icon name={icon} size={22} class="text-brand" />{label}</a></li>
+        <li>
+          <a href={L(p)} class="card card-hover flex h-full flex-col items-center gap-2 p-4 text-sm font-semibold hover:text-accent-ink">
+            <Icon name={icon} size={22} class="text-accent-ink" />{label}
+          </a>
+        </li>
       ))}
     </ul>
   </section>
-</Base>
+</AppLayout>
