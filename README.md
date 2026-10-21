@@ -22,6 +22,66 @@ Interface text is English on both sites; only content (headlines, articles, name
 language. News, orders and magazine issues are real content from the current site; their photos
 and PDFs are still linked from it. Events are sample data.
 
+## Site map
+
+Every public page exists twice: Malayalam at the root and English under `/en/…` with the same
+path (for example `/news` and `/en/news`).
+
+```
+/                                    Home: banner, Top news, Coming up, columns, Articles,
+│                                    Latest orders + Tools & guides, Districts, Kerala Service, Videos
+├── /news                            News: newest stories, filters, Load more
+│   │   ?topic=…  ?district=…  ?q=…      filtered views (shareable)
+│   └── /news/{year}/{slug}          1,611 articles, 2013 → 2026
+├── /orders                          Government orders: search, group tabs, subject and year menus
+│   │   ?q=…  ?g=govt|nps|pension  ?s={subject}  ?y={year}
+│   └── /orders/{id}-{slug}          379 orders: PDF, details, related orders
+├── /districts                       All 15 districts + Kerala map
+│   └── /districts/{district}        15 district hubs
+│           #news  #office-bearers  #offices  #gallery      tabs, each linkable
+├── /kerala-service                  Current issue + archive by year (#y2026 … #y2014)
+│   └── /kerala-service/{year}/{month}   138 issues, Sep 2014 → Mar 2026
+├── /events                          Upcoming by month, calendar, past events
+│       ?district=…  #{event-slug}
+├── /about                           About hub
+│   └── /about/state-committee       Office-bearers, secretariat, women's sub-committee
+├── /gallery                         Media: videos (photo albums later)
+├── /contact                         State Centre, district committees, message form
+├── /useful-links                    Government portals
+├── /search                          Site-wide search (?q=…); a GO number opens that order
+├── /privacy
+├── /accessibility
+└── (anything else)                  404 page
+```
+
+**District slugs:** `tvm-north`, `tvm-south`, `kollam`, `pathanamthitta`, `alappuzha`,
+`kottayam`, `idukki`, `ernakulam`, `thrissur`, `palakkad`, `malappuram`, `kozhikode`, `wayanad`,
+`kannur`, `kasaragod`
+
+**News topics (`?topic=`):** `struggles`, `organisation`, `fseto`, `social-work`, `arts-sports`,
+`janapaksha`, `seminars`, `secretary`, `articles`
+
+**Order subjects (`?s=`):** `da`, `pay-revision`, `pay-fixation`, `leave`, `bonus`, `allowance`,
+`gpf`, `gis-sli`, `hba`, `increment`, `ltc`, `medisep`, `ta`, `medical`, `service`, `part-time`,
+`ugc-aicte`, `other`, `nps`, `pension`, `pension-revision`, `ex-gratia`
+
+**Data files, not pages:** `/rss.xml` (newest 30 posts), `/search-index.json` (Search page),
+`/news-index.json` (News page filters and Load more).
+
+**Internal, hidden from search engines:**
+
+```
+/design-system                       Living style guide
+/wireframes                          Public-site wireframes: news, article, orders, district, about
+/wireframes/admin                    Admin wireframes (12 screens, "View as" role switch):
+                                     news, editor, events, orders, kerala-service, people,
+                                     media, banner, inbox, users, settings
+```
+
+**Planned, not built yet** (from the rebuild plan): `/about/history`, `/about/conferences`,
+`/about/struggles`, `/about/documents`, one page per event (`/events/{slug}`), photo albums
+(`/gallery/{album}`), the admin panel (`/admin`), and the Tools & guides calculators.
+
 ## Tech
 
 - [Astro](https://astro.build) 7 with the Cloudflare adapter, pages built ahead of time
