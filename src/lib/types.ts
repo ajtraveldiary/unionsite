@@ -22,11 +22,9 @@ export interface Topic {
   name: L10n & { en: string };
 }
 
-/** Generated "wall poster" cover used when a post has no photo. */
-export interface PosterCover {
-  kind: 'poster';
-  word: L10n;
-  motif: 'rays' | 'dots' | 'stripes' | 'rings' | 'leaf' | 'flag';
+/** A post without a photo; it shows a neutral tile with its topic instead. */
+export interface NoCover {
+  kind: 'none';
 }
 export interface PhotoCover {
   kind: 'photo';
@@ -34,7 +32,7 @@ export interface PhotoCover {
   alt: L10n;
   focal?: [number, number];
 }
-export type Cover = PosterCover | PhotoCover;
+export type Cover = NoCover | PhotoCover;
 
 export interface Post {
   id: number;
@@ -49,7 +47,7 @@ export interface Post {
   featured?: boolean;
   views?: number;
   legacyUrl?: string;
-  /** Placeholder content for the prototype; removed by the import */
+  /** Placeholder content for the preview; removed by the import */
   sample?: boolean;
 }
 

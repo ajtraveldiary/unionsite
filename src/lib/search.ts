@@ -1,4 +1,4 @@
-// Shared search helpers. The prototype searches a static JSON index in the browser;
+// Shared search helpers. The site searches a static JSON index in the browser;
 // Phase 4 moves the same normalisation into the D1 full-text search API.
 
 export type SearchKind = 'order' | 'news' | 'district' | 'page' | 'event';

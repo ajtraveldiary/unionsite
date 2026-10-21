@@ -15,10 +15,6 @@ export const site = {
     youtube: 'https://www.youtube.com/channel/UCr4zIQGUsuk9FuD5snJAwkA',
   },
   magazineSite: 'https://ngoukeralaservice.in/',
-  announcement: {
-    id: 'phase-1-preview',
-    text: 'Phase 1 preview — design prototype. Orders, events and posts marked “sample” are placeholder data.',
-  },
 };
 
 /**
@@ -84,7 +80,7 @@ export const roleLabels: Record<Person['role'], { ml: string; en: string }> = {
   joint_convener: { ml: 'ജോയിന്റ് കൺവീനർ', en: 'Joint Convener' },
 };
 
-// Sample events for the prototype.
+// Sample events for the preview.
 export const events: UnionEvent[] = [
   { slug: 'state-council-meeting-oct-2026', title: { ml: 'സംസ്ഥാന കൗൺസിൽ യോഗം', en: 'State Council meeting' }, start: '2026-10-17T10:00:00+05:30', venue: { ml: 'സംസ്ഥാന കേന്ദ്രം, തിരുവനന്തപുരം', en: 'State Centre, Thiruvananthapuram' }, sample: true },
   { slug: 'kozhikode-study-camp-2026', title: { ml: 'ജില്ലാതല പഠന ക്യാമ്പ്', en: 'District study camp' }, start: '2026-10-24T09:30:00+05:30', end: '2026-10-25T17:00:00+05:30', venue: { ml: 'ടൗൺ ഹാൾ, കോഴിക്കോട്', en: 'Town Hall, Kozhikode' }, district: 'kozhikode', sample: true },

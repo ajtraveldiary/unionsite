@@ -1,25 +1,7 @@
 import type { L10n, Lang } from './types';
 
-/**
- * Menus and UI labels stay in English (plan, section 6). Only article content switches.
- * All labels live here so Malayalam menus can be added later in one place.
- */
+/** Menus and UI labels stay in English (plan, section 6); only content switches language. */
 export const ui = {
-  home: 'Home',
-  about: 'About',
-  news: 'News',
-  districts: 'Districts',
-  orders: 'Orders',
-  keralaService: 'Kerala Service',
-  events: 'Events',
-  gallery: 'Gallery',
-  contact: 'Contact',
-  more: 'More',
-  search: 'Search',
-  searchPlaceholder: 'Search orders, news, districts…',
-  readMore: 'Read more',
-  viewAll: 'View all',
-  latest: 'Latest',
   enMissing: 'English version not yet available — showing Malayalam.',
 };
 

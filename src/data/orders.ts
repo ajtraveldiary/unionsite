@@ -31,7 +31,7 @@ export const subjectBySlug = Object.fromEntries(orderSubjects.map((s) => [s.slug
 
 const FIN = 'Finance Department';
 
-// Every order below is SAMPLE data for the prototype; the ~330 real GOs arrive with the Phase 2 import.
+// Every order below is SAMPLE data for the preview; the ~330 real GOs arrive with the Phase 2 import.
 export const orders: Order[] = [
   { id: 1061, slug: 'da-revised-rate-jan-2026', goNumber: 'G.O.(P) No.112/2026/Fin', goDate: '2026-09-18', department: FIN, group: 'govt', subject: 'da', important: true, pdfKb: 412, pages: 3,
     title: { ml: 'ക്ഷാമബത്ത – 2026 ജനുവരി 1 മുതൽ പുതുക്കിയ നിരക്ക്', en: 'Dearness Allowance – revised rate from 1 January 2026' },

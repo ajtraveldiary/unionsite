@@ -2,7 +2,7 @@
  * Kerala NGO Union — design system ("civic newsroom")
  * Calm, flat, content first. One accent (union red) for actions, active states and
  * important badges; blue only for links and information. Built from scratch for the
- * redesign; nothing here comes from the prototype's global.css.
+ * redesign.
  *
  * Contrast (WCAG AA, checked): every text token is at least 5.2:1 on its background
  * in both themes; white on the red accent is 5.9:1.

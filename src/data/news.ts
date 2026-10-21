@@ -29,7 +29,7 @@ export const posts: Post[] = [
         'The meetings declared that the agitation will continue until the demands are met.',
       ],
     },
-    cover: { kind: 'poster', word: { ml: 'പ്രതിഷേധം', en: 'Protest' }, motif: 'rays' },
+    cover: { kind: 'none' },
     views: 2140,
   },
   {
@@ -55,7 +55,7 @@ export const posts: Post[] = [
         'Saplings were handed out to employees and the public. Area committees will look after the planted trees.',
       ],
     },
-    cover: { kind: 'poster', word: { ml: 'പരിസ്ഥിതി', en: 'Earth' }, motif: 'leaf' },
+    cover: { kind: 'none' },
     views: 860,
   },
   {
@@ -68,7 +68,7 @@ export const posts: Post[] = [
       ml: 'ആവശ്യങ്ങൾ ഉന്നയിച്ച് ജീവനക്കാർ നിയമസഭയിലേക്ക് മാർച്ച് നടത്തി.',
       en: 'Employees marched to the Legislative Assembly with their demands.',
     },
-    cover: { kind: 'poster', word: { ml: 'മാർച്ച്', en: 'March' }, motif: 'flag' },
+    cover: { kind: 'none' },
     views: 1310,
   },
   {
@@ -82,7 +82,7 @@ export const posts: Post[] = [
       ml: 'സംഘടനയുടെ 63-ാമത് സംസ്ഥാന സമ്മേളനത്തിൻ്റെ ഒരുക്കങ്ങൾ പുരോഗമിക്കുന്നു.',
       en: 'Preparations for the union’s 63rd State Conference are under way.',
     },
-    cover: { kind: 'poster', word: { ml: '63', en: '63' }, motif: 'rings' },
+    cover: { kind: 'none' },
     views: 3420,
   },
   {
@@ -98,7 +98,7 @@ export const posts: Post[] = [
       ml: 'സമകാലിക തൊഴിൽ രംഗത്തെ വെല്ലുവിളികൾ ചർച്ച ചെയ്ത് സെമിനാർ.',
       en: 'A seminar on the challenges facing working people today.',
     },
-    cover: { kind: 'poster', word: { ml: 'സെമിനാർ', en: 'Seminar' }, motif: 'rings' },
+    cover: { kind: 'none' },
     views: 540,
   },
   {
@@ -114,7 +114,7 @@ export const posts: Post[] = [
       ml: 'പെട്രോളിയം ഉത്പന്നങ്ങളുടെ വില വർധിപ്പിച്ച നടപടിക്കെതിരെ പ്രതിഷേധം.',
       en: 'Protest against the decision to raise petroleum product prices.',
     },
-    cover: { kind: 'poster', word: { ml: 'വിലവർധന', en: 'Prices' }, motif: 'stripes' },
+    cover: { kind: 'none' },
     views: 720,
   },
   {
@@ -130,7 +130,7 @@ export const posts: Post[] = [
       ml: 'സംസ്ഥാന സമ്മേളനത്തിന് മുന്നോടിയായി ഓഫീസ് കേന്ദ്രങ്ങളിൽ പതാക ഉയർത്തി.',
       en: 'Flags were raised at office centres ahead of the State Conference.',
     },
-    cover: { kind: 'poster', word: { ml: 'പതാകദിനം', en: 'Flag Day' }, motif: 'flag' },
+    cover: { kind: 'none' },
     views: 610,
   },
   {
@@ -146,7 +146,7 @@ export const posts: Post[] = [
       ml: 'തൊഴിൽ കോഡുകൾ വിജ്ഞാപനം ചെയ്തതിനെതിരെ എഫ്.എസ്.ഇ.ടി.ഒ നേതൃത്വത്തിൽ പ്രതിഷേധം.',
       en: 'FSETO-led protest against the notification of the Labour Codes.',
     },
-    cover: { kind: 'poster', word: { ml: 'തൊഴിൽ കോഡ്', en: 'Codes' }, motif: 'rays' },
+    cover: { kind: 'none' },
     views: 980,
   },
   {
@@ -157,7 +157,7 @@ export const posts: Post[] = [
     // No reviewed English yet: shows the "English version not yet available" fallback.
     title: { ml: 'മാനദണ്ഡവിരുദ്ധമായ സ്ഥലംമാറ്റ ഉത്തരവിനെതിരെ പ്രതിഷേധം' },
     summary: { ml: 'മാനദണ്ഡങ്ങൾ ലംഘിച്ചുള്ള സ്ഥലംമാറ്റ ഉത്തരവ് പിൻവലിക്കണമെന്ന് ആവശ്യപ്പെട്ട് പ്രതിഷേധം.' },
-    cover: { kind: 'poster', word: { ml: 'സ്ഥലംമാറ്റം', en: 'Transfer' }, motif: 'stripes' },
+    cover: { kind: 'none' },
     views: 430,
   },
   // ---- Topic sections: headlines, dates and links from the keralangounion.in home page ----
@@ -168,7 +168,7 @@ export const posts: Post[] = [
     topic: 'fseto',
     title: { ml: 'പൊതുവിദ്യാഭ്യാസ ഡയറക്ടറേറ്റിന് മുന്നിൽ പ്രതിഷേധം', en: 'Protest in front of the Directorate of General Education' },
     summary: { ml: 'എഫ്.എസ്.ഇ.ടി.ഒ നേതൃത്വത്തിൽ പൊതുവിദ്യാഭ്യാസ ഡയറക്ടറേറ്റിന് മുന്നിൽ ജീവനക്കാർ പ്രതിഷേധിച്ചു.', en: 'Employees protested in front of the Directorate of General Education, led by FSETO.' },
-    cover: { kind: 'poster', word: { ml: 'പ്രതിഷേധം', en: 'Protest' }, motif: 'stripes' },
+    cover: { kind: 'none' },
     legacyUrl: '/പൊതുവിദ്യാഭ്യാസ-ഡയറക്ടറ/',
   },
   {
@@ -181,7 +181,7 @@ export const posts: Post[] = [
       en: 'Every employee must come forward to make a people-oriented civil service real: Chief Minister',
     },
     summary: { ml: 'ജനപക്ഷ സിവില്‍ സര്‍വീസിനായി ജീവനക്കാർ മുന്നോട്ടുവരണമെന്ന് മുഖ്യമന്ത്രി ആഹ്വാനം ചെയ്തു.', en: 'The Chief Minister called on employees to build a people-oriented civil service.' },
-    cover: { kind: 'poster', word: { ml: 'ജനപക്ഷം', en: 'People' }, motif: 'rays' },
+    cover: { kind: 'none' },
     legacyUrl: '/ജനപക്ഷ-സിവില്-സര്വീസ്/',
   },
   {
@@ -194,7 +194,7 @@ export const posts: Post[] = [
       en: '50 years since the historic 1973 strike: a meeting of its leaders',
     },
     summary: { ml: '1973-ലെ ഐതിഹാസിക പണിമുടക്കത്തിന് നേതൃത്വം നൽകിയവർ ഒത്തുചേർന്നു.', en: 'Leaders of the historic 1973 strike came together.' },
-    cover: { kind: 'poster', word: { ml: '1973', en: '1973' }, motif: 'flag' },
+    cover: { kind: 'none' },
     legacyUrl: '/1973-ഐതിഹാസിക-പണിമുടക്കത്തി/',
   },
   {
@@ -204,7 +204,7 @@ export const posts: Post[] = [
     topic: 'secretary',
     title: { ml: 'AISGEF ദേശീയ കൌൺസിൽ കൊൽകൊത്ത 2023', en: 'AISGEF National Council, Kolkata 2023' },
     summary: { ml: 'ഓൾ ഇന്ത്യ സ്റ്റേറ്റ് ഗവൺമെന്റ് എംപ്ലോയീസ് ഫെഡറേഷൻ ദേശീയ കൗൺസിൽ കൊൽകൊത്തയിൽ.', en: 'The All India State Government Employees Federation national council in Kolkata.' },
-    cover: { kind: 'poster', word: { ml: 'ദേശീയം', en: 'National' }, motif: 'rings' },
+    cover: { kind: 'none' },
     legacyUrl: '/14446-2/',
   },
   {
@@ -214,7 +214,7 @@ export const posts: Post[] = [
     topic: 'secretary',
     title: { ml: 'വജ്രജൂബിലി (1962-2022) പതാക ഉയർത്തി 2022 ഒക്ടോബർ 27', en: 'Diamond Jubilee (1962–2022): flag raised on 27 October 2022' },
     summary: { ml: 'സംഘടനയുടെ വജ്രജൂബിലിയുടെ ഭാഗമായി പതാക ഉയർത്തി.', en: 'The flag was raised to mark the union’s Diamond Jubilee.' },
-    cover: { kind: 'poster', word: { ml: 'വജ്രജൂബിലി', en: '60 years' }, motif: 'flag' },
+    cover: { kind: 'none' },
     legacyUrl: '/വജ്രജൂബിലി-1962-2022-പതാക-ഉയർത്ത/',
   },
   {
@@ -224,7 +224,7 @@ export const posts: Post[] = [
     topic: 'secretary',
     title: { ml: 'എഫ്. എസ്. ഇ. ടി. ഒ യുടെ നേതൃത്വത്തില്‍ ലഹരി വിരുദ്ധ ക്യാമ്പയിന് തുടക്കമായി', en: 'FSETO launches an anti-drug campaign' },
     summary: { ml: 'എഫ്.എസ്.ഇ.ടി.ഒ നേതൃത്വത്തിൽ ലഹരി വിരുദ്ധ ക്യാമ്പയിൻ ആരംഭിച്ചു.', en: 'An anti-drug campaign began under FSETO’s lead.' },
-    cover: { kind: 'poster', word: { ml: 'ലഹരിവിരുദ്ധം', en: 'Say no' }, motif: 'stripes' },
+    cover: { kind: 'none' },
     legacyUrl: '/എഫ്-എസ്-ഇ-ടി-ഒ-യുടെ-നേതൃത്/',
   },
   {
@@ -234,7 +234,7 @@ export const posts: Post[] = [
     topic: 'arts-sports',
     title: { ml: 'എട്ടാമത് സംസ്ഥാന ചെസ് കാരംസ് മത്സരം', en: 'Eighth State chess and carroms championship' },
     summary: { ml: 'സംസ്ഥാന ജീവനക്കാർക്കായി എട്ടാമത് സംസ്ഥാന ചെസ്-കാരംസ് മത്സരം.', en: 'The eighth State chess and carroms championship for State employees.' },
-    cover: { kind: 'poster', word: { ml: 'ചെസ്', en: 'Chess' }, motif: 'dots' },
+    cover: { kind: 'none' },
     legacyUrl: '/എട്ടാമത്-സംസ്ഥാന-ചെസ്-കാ/',
   },
   {
@@ -248,7 +248,7 @@ export const posts: Post[] = [
       ml: 'സംസ്ഥാന ജീവനക്കാര്‍ക്കായി സംഘടിപ്പിച്ച ഏഴാമത് സംസ്ഥാന ചെസ്-കാരംസ് മത്സരത്തില്‍ മലപ്പുറം, കോഴിക്കോട് ജില്ലകള്‍ ജേതാക്കളായി.',
       en: 'Malappuram and Kozhikode districts won the seventh State chess and carroms championship for State employees.',
     },
-    cover: { kind: 'poster', word: { ml: 'കാരംസ്', en: 'Carroms' }, motif: 'rings' },
+    cover: { kind: 'none' },
     legacyUrl: '/ഏഴാമത്-സംസ്ഥാന-ചെസ്-കാരം/',
   },
   {
@@ -258,7 +258,7 @@ export const posts: Post[] = [
     topic: 'janapaksha',
     title: { ml: 'ഫയൽ തീർപ്പാക്കൽ ജൂൺ 15 – സെപ്റ്റബർ 30', en: 'File settlement drive, 15 June – 30 September' },
     summary: { ml: 'ജനപക്ഷ സിവിൽ സർവീസിന്റെ ഭാഗമായി ഫയൽ തീർപ്പാക്കൽ യജ്ഞം.', en: 'A drive to clear pending files, part of the people-oriented civil service campaign.' },
-    cover: { kind: 'poster', word: { ml: 'ഫയൽ', en: 'Files' }, motif: 'stripes' },
+    cover: { kind: 'none' },
     legacyUrl: '/ഫയൽ-തീർപ്പാക്കൽ-ജൂൺ-15-സെപ്/',
   },
   {
@@ -268,7 +268,7 @@ export const posts: Post[] = [
     topic: 'janapaksha',
     title: { ml: 'വിമാനത്തിൽ മുഖ്യമന്ത്രിക്കെതിരായ അതിക്രമം', en: 'The attack on the Chief Minister on a flight' },
     summary: { ml: 'വിമാനത്തിൽ മുഖ്യമന്ത്രിക്കെതിരെ നടന്ന അതിക്രമത്തിൽ പ്രതിഷേധം.', en: 'Protest over the attack on the Chief Minister on a flight.' },
-    cover: { kind: 'poster', word: { ml: 'പ്രതിഷേധം', en: 'Protest' }, motif: 'rays' },
+    cover: { kind: 'none' },
     legacyUrl: '/വിമാനത്തിൽ-മുഖ്യമന്ത്രി/',
   },
   {
@@ -278,7 +278,7 @@ export const posts: Post[] = [
     topic: 'janapaksha',
     title: { ml: 'ഏകീകൃത പൊതുജനാരോഗ്യ നിയമം', en: 'The unified Public Health Act' },
     summary: { ml: 'ഏകീകൃത പൊതുജനാരോഗ്യ നിയമത്തെക്കുറിച്ച്.', en: 'On the unified Public Health Act.' },
-    cover: { kind: 'poster', word: { ml: 'ആരോഗ്യം', en: 'Health' }, motif: 'leaf' },
+    cover: { kind: 'none' },
     legacyUrl: '/ഏകീകൃത-പൊതുജനാരോഗ്യ-നിയ-2/',
   },
   {
@@ -288,7 +288,7 @@ export const posts: Post[] = [
     topic: 'social-work',
     title: { ml: 'മഹാപ്രളയം; അതിജീവനത്തിന്‍റെ കേരള മാതൃക', en: 'The great flood: Kerala’s model of recovery' },
     summary: { ml: 'മഹാപ്രളയകാലത്ത് ജീവനക്കാർ നടത്തിയ സന്നദ്ധ പ്രവർത്തനങ്ങൾ.', en: 'The volunteer work employees did during the great flood.' },
-    cover: { kind: 'poster', word: { ml: 'അതിജീവനം', en: 'Recovery' }, motif: 'leaf' },
+    cover: { kind: 'none' },
     legacyUrl: '/മഹാപ്രളയം-അതിജീവനത്തിന്/',
   },
   // ---- Sample district posts (placeholder until the crawl) ----
@@ -306,7 +306,7 @@ export const posts: Post[] = [
       ml: 'സേവനങ്ങൾ വേഗത്തിൽ ജനങ്ങളിലെത്തിക്കാൻ ഓഫീസുകളിൽ ക്യാമ്പയിൻ.',
       en: 'A campaign in offices to get services to people faster.',
     },
-    cover: { kind: 'poster', word: { ml: 'ജനപക്ഷം', en: 'People' }, motif: 'rays' },
+    cover: { kind: 'none' },
     views: 390,
   },
   {
@@ -318,7 +318,7 @@ export const posts: Post[] = [
     sample: true,
     title: { ml: 'രക്തദാന ക്യാമ്പ് സംഘടിപ്പിച്ചു', en: 'Blood donation camp held' },
     summary: { ml: 'ജില്ലാ കമ്മിറ്റിയുടെ നേതൃത്വത്തിൽ രക്തദാന ക്യാമ്പ്.', en: 'A blood donation camp led by the district committee.' },
-    cover: { kind: 'poster', word: { ml: 'രക്തദാനം', en: 'Give blood' }, motif: 'dots' },
+    cover: { kind: 'none' },
     views: 210,
   },
   {
@@ -330,7 +330,7 @@ export const posts: Post[] = [
     sample: true,
     title: { ml: 'ജീവനക്കാരുടെ ജില്ലാ കായികമേള', en: 'District sports meet for employees' },
     summary: { ml: 'ജില്ലയിലെ ജീവനക്കാർക്കായി കായികമേള നടന്നു.', en: 'A sports meet was held for employees in the district.' },
-    cover: { kind: 'poster', word: { ml: 'കായികമേള', en: 'Sports' }, motif: 'stripes' },
+    cover: { kind: 'none' },
     views: 180,
   },
   {
@@ -342,7 +342,7 @@ export const posts: Post[] = [
     sample: true,
     title: { ml: 'ജില്ലാ പഠന ക്യാമ്പ്', en: 'District study camp' },
     summary: { ml: 'ഏരിയ ഭാരവാഹികൾക്കായി ഏകദിന പഠന ക്യാമ്പ്.', en: 'A one-day study camp for area office-bearers.' },
-    cover: { kind: 'poster', word: { ml: 'പഠനം', en: 'Study' }, motif: 'rings' },
+    cover: { kind: 'none' },
     views: 150,
   },
   {
@@ -354,7 +354,7 @@ export const posts: Post[] = [
     sample: true,
     title: { ml: 'ജീവനക്കാരുടെ ഓണാഘോഷം', en: 'Employees celebrate Onam' },
     summary: { ml: 'പൂക്കളവും കലാപരിപാടികളുമായി ഓണാഘോഷം.', en: 'Onam with a flower carpet and cultural programmes.' },
-    cover: { kind: 'poster', word: { ml: 'ഓണം', en: 'Onam' }, motif: 'dots' },
+    cover: { kind: 'none' },
     views: 470,
   },
   {
@@ -366,7 +366,7 @@ export const posts: Post[] = [
     sample: true,
     title: { ml: 'ദുരിതാശ്വാസ കിറ്റ് വിതരണം', en: 'Relief kits distributed' },
     summary: { ml: 'ജില്ലയിലെ ദുരിതബാധിത കുടുംബങ്ങൾക്ക് കിറ്റുകൾ വിതരണം ചെയ്തു.', en: 'Kits were handed out to affected families in the district.' },
-    cover: { kind: 'poster', word: { ml: 'കൈത്താങ്ങ്', en: 'Relief' }, motif: 'leaf' },
+    cover: { kind: 'none' },
     views: 320,
   },
 ];
