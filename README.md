@@ -145,6 +145,7 @@ src/
   data/         site data; live/ holds the crawled content
   styles/       app.css (design system), wire.css (wireframes)
 scripts/        crawl, import and map scripts
+docs/           plan.md, the rebuild plan
 ```
 
 `CLAUDE.md` has the full working notes: design rules agreed with the union, conventions, and
@@ -152,5 +153,7 @@ where everything lives.
 
 ## Planning
 
-The project follows the "Kerala NGO Union — Website Rebuild Plan", kept separately by the project
-owner. Code comments that say "plan, section N" refer to it.
+The project follows the rebuild plan in [`docs/plan.md`](docs/plan.md): goals, information
+architecture, tech stack and costs, content model, design, page specifications, admin panel,
+features, migration, SEO and security, analytics, roadmap and open questions. Code comments that
+say "plan, section N" refer to it.

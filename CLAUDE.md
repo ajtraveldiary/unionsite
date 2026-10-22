@@ -1,8 +1,8 @@
 # Kerala NGO Union website
 
 The new keralangounion.in: an Astro 7 site on Cloudflare for the union of Kerala State Government
-employees. The master plan is `../Kerala NGO Union — Website Rebuild Plan.md` (one folder up);
-code comments that say "plan, section N" refer to it.
+employees. The master plan is `docs/plan.md`; code comments that say "plan, section N" refer to it.
+Keep its dated **Update** notes and section 1's status table current when something is decided or built.
 
 Right now the site is a **preview**. News, GO orders and Kerala Service are real content crawled
 from the current keralangounion.in (`src/data/live/*.json`; photos and PDFs are still linked from
