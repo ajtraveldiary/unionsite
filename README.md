@@ -65,8 +65,9 @@ path (for example `/news` and `/en/news`).
 `gpf`, `gis-sli`, `hba`, `increment`, `ltc`, `medisep`, `ta`, `medical`, `service`, `part-time`,
 `ugc-aicte`, `other`, `nps`, `pension`, `pension-revision`, `ex-gratia`
 
-**Data files, not pages:** `/rss.xml` (newest 30 posts), `/search-index.json` (Search page),
-`/news-index.json` (News page filters and Load more).
+**Data, not pages:** `/rss.xml` (newest 30 posts), `/api/search?q=` (Search page, from D1's
+full-text index), `/api/news?topic=&district=&q=&offset=` (News page filters, search and Load more,
+one page at a time).
 
 **Internal, hidden from search engines:**
 

@@ -2,7 +2,7 @@
 // issues and the home banner come from D1 (src/db/schema.ts), each query reading only what its
 // page shows; events stay hand-written in src/data/site.ts until the admin panel manages them.
 // The URL helpers at the top are plain functions and safe to use anywhere.
-import { and, desc, eq, exists, isNotNull, ne, notInArray, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, exists, isNotNull, isNull, ne, notInArray, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { getDb } from '~/db/client';
 import { districts as districtsT, magazineIssues, media, orders as ordersT, posts as postsT, postTranslations, siteSettings } from '~/db/schema';
@@ -11,12 +11,12 @@ import { districts } from '~/data/districts';
 import { events } from '~/data/site';
 import type { Cover, L10n, Lang, MagazineIssue, Order, Post, UnionEvent } from './types';
 import { href } from './i18n';
+import { newsMatching } from './search-db';
+import { postPath, orderPath, issuePath } from './paths';
 
-export const postPath = (p: Pick<Post, 'date' | 'slug'>) => `/news/${p.date.slice(0, 4)}/${p.slug}`;
+export { postPath, orderPath, issuePath };
 export const postUrl = (p: Pick<Post, 'date' | 'slug'>, lang: Lang) => href(lang, postPath(p));
-export const orderPath = (o: Pick<Order, 'id' | 'slug'>) => `/orders/${o.id}-${o.slug}`;
 export const orderUrl = (o: Pick<Order, 'id' | 'slug'>, lang: Lang) => href(lang, orderPath(o));
-export const issuePath = (year: number, month: number) => `/kerala-service/${year}/${String(month).padStart(2, '0')}`;
 export const districtUrl = (slug: string, lang: Lang) => href(lang, `/districts/${slug}`);
 export const subjectName = (slug: string) => subjectBySlug[slug]?.name;
 export const sortedDistricts = () => [...districts].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -72,7 +72,7 @@ function toPost(r: PostRow): Post {
   };
 }
 
-async function selectPosts(where: (SQL | undefined)[], opts: { limit?: number; body?: boolean } = {}) {
+async function selectPosts(where: (SQL | undefined)[], opts: { limit?: number; offset?: number; body?: boolean } = {}) {
   const db = await getDb();
   const columns = opts.body ? { ...postColumns, bodyMl: ml.body, bodyEn: en.body } : postColumns;
   const query = db
@@ -84,7 +84,7 @@ async function selectPosts(where: (SQL | undefined)[], opts: { limit?: number; b
     .where(and(eq(postsT.status, 'published'), ...where))
     .orderBy(desc(postsT.publishedAt), desc(postsT.id))
     .$dynamic();
-  const rows = (await (opts.limit ? query.limit(opts.limit) : query)) as PostRow[];
+  const rows = (await (opts.limit ? query.limit(opts.limit).offset(opts.offset ?? 0) : query)) as PostRow[];
   return rows.map(toPost);
 }
 
@@ -124,8 +124,33 @@ export async function relatedPosts(post: Post, n = 3) {
   return [...same, ...(await latestPosts({ limit: n - same.length, notTopics: [post.topic], exclude: [post.id] }))];
 }
 
-/** Every published post without its body, for the News page's index and site search */
-export const postSummaries = () => selectPosts([]);
+export interface NewsQuery {
+  topic?: string;
+  /** A district slug, or 'state' for posts without a district */
+  district?: string;
+  /** Search words (D1's full-text index, src/lib/search-db.ts) */
+  q?: string;
+  /** Leave out this post (the lead, when the page shows it above the list) */
+  skip?: number;
+  offset: number;
+  limit: number;
+}
+
+/** One page of the News list for its filters, newest first, with how many match in all */
+export async function newsPage({ topic, district, q, skip, offset, limit }: NewsQuery) {
+  const where = [
+    topic ? eq(postsT.topic, topic) : undefined,
+    district === 'state' ? isNull(postsT.district) : district ? eq(postsT.district, district) : undefined,
+    q?.trim() ? newsMatching(q, postsT.id) : undefined,
+    skip ? ne(postsT.id, skip) : undefined,
+  ];
+  const db = await getDb();
+  const [posts, [{ n }]] = await Promise.all([
+    selectPosts(where, { limit, offset }),
+    db.select({ n: sql<number>`count(*)` }).from(postsT).where(and(eq(postsT.status, 'published'), ...where)),
+  ]);
+  return { total: n, posts };
+}
 
 /** The newest `n` posts of every district, keyed by district slug. One small query per district,
  * each reading only its `n` rows through the index, run in parallel. (Not `db.batch`: it reads

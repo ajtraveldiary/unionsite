@@ -15,7 +15,7 @@ How this list is kept:
 - [ ] **(union)** Conferences page order: newest first (as wireframed, with a switch) or from the 1st (as the plan says)?
 - [ ] **(union)** Offline copy: keep only recently opened orders, or also the home page and the Orders list?
 
-- [ ] **(union)** Who owns keralangounion.in and its DNS? It must move to, or point at, a union-owned Cloudflare account. *Before Phase 1 deploy*
+- [ ] **(union)** Who owns keralangounion.in and its DNS? It must move to, or point at, a union-owned Cloudflare account. *Before launch: the owner decided (22 Oct 2026) the domain is connected only in the last phase*
 - [ ] **(union)** Which Cloudflare and GitHub accounts to use, and in whose name (union-owned recommended). *Before Phase 1 deploy*
 - [ ] **(union)** A vector version of the logo (SVG, AI or PDF) and any colour rules
 - [ ] **(union)** The State Centre's official email and phone (blank on the old site)
@@ -38,9 +38,9 @@ How this list is kept:
 ## Phase 1 · Foundations: the part that needs the account (§15)
 
 - [ ] Create the real D1 database, put its id in `wrangler.jsonc`, apply the migrations remotely and load the content
-- [ ] Create the R2 bucket and the `media.keralangounion.in` domain
-- [ ] Deploy a preview from GitHub through Cloudflare, with a preview URL per branch and its own D1 database
-- [ ] Confirm the edge cache on Cloudflare: a second visit reads no D1, and a tag purge makes the next visit read D1 again
+- [ ] Create the R2 bucket; until launch, files are served through the Worker (or the bucket's r2.dev address, for testing only), and `media.keralangounion.in` is added at launch
+- [ ] Deploy to the Worker's `workers.dev` address from GitHub through Cloudflare, with a preview URL per branch and its own D1 database (no domain needed until launch)
+- [ ] Confirm the edge cache on the `workers.dev` address: a second visit reads no D1, and a tag purge makes the next visit read D1 again (Cloudflare's Workers cache works on workers.dev and preview URLs, each with its own cache)
 - [ ] Decide on the `SESSION` KV binding the Cloudflare adapter adds to every build: create the namespace, or turn sessions off (the site doesn't use them)
 - [ ] Admin login: Cloudflare Access with an email code, plus the users and roles tables
 - [ ] Usage alerts at 80 % of the D1, R2 and Workers limits (§13)
@@ -57,9 +57,10 @@ How this list is kept:
 
 ## Phase 3 · Feature pages (§11)
 
-- [ ] Search in D1: an FTS5 trigram table filled on every save, a search API, and `/search` and the Orders page using it instead of `/search-index.json` and `/news-index.json`
-- [ ] Search: a list of Malayalam spelling variants (for example the three spellings of "secretariat"), the fallback for queries under 3 characters, suggestions after 2 characters, highlighted snippets, and logging of zero-result searches
-- [ ] Search acceptance test: "ക്ഷാമബത്ത", "DA 2024" and "81/2014" each return the right orders in the top 3 within 300 ms
+- [ ] Search: suggestions under the header search box after 2 characters (top 5), highlighted words in results, and counting searches that find nothing (with analytics, §14)
+- [ ] Search acceptance test with real orders after the import: "ക്ഷാമബത്ത", "DA 2024" and "81/2014" each return the right orders in the top 3 within 300 ms (the crawl has no 2024 DA order and no 81/2014, so only part of it can be checked now)
+- [ ] Grow the spelling-variants list (`VARIANTS` in `src/lib/search.ts`) as zero-result searches show new ones
+- [ ] Orders page: it puts all 379 orders in its HTML (about 1 MB) and searches them in the browser; page it from the server and use `/api/search` instead
 - [ ] Order PDFs' text extracted at upload (`pdf_text`) and searchable
 - [ ] Kerala Service reader on pdf.js: first page while the rest loads, two-page spreads on desktop, thumbnails, zoom, page jump, deep links (`#p=12`). Acceptance: a 20 MB issue shows page 1 in under 3 s on 4G
 - [ ] Events: one page per event (`/events/{slug}`), "Add to calendar" (.ics and Google), a public calendar feed, multi-day spans, and past events linking to their report and album
@@ -96,11 +97,13 @@ How this list is kept:
 - [ ] Backups: nightly D1 export to a backup R2 bucket, R2 versioning, and a restore drill before launch
 - [ ] Accessibility checklist (§9) verified on every template
 - [ ] Before launch (§12): the final export imported and spot-checked, districts confirm their office-bearers, the old site kept read-only for 3 months
+- [ ] Connect keralangounion.in to the Worker (the last phase, by the owner's decision) and `media.keralangounion.in` to the R2 bucket, then check the edge cache again on the real domain
 - [ ] Go-live checklist (§15): DNS and SSL, www → apex, Lighthouse 95+, admins invited and trained, content freeze 48 hours before the switch, the announcement
 - [ ] After launch: daily checks for 2 weeks, then the 30-day and 90-day reviews
 
 ## Done
 
+- [x] 2026-10-22 Search in D1: FTS5 trigram index (`search_docs` + `search_fts`), `/api/search` and `/api/news`, spelling variants, a fallback for short words, partial matches ranked lower; Search and News pages use them, and the 830 KB and 670 KB JSON indexes are gone. Tested against the old search on 21 queries and 8 news filters: nothing lost
 - [x] 2026-10-22 Wireframes for the 10 public pages the plan has but the site doesn't yet (listed in `wireframelist.md`), approved by the owner
 - [x] 2026-10-22 Wireframes for the last six admin screens (Pages & documents, Districts, Analytics, Audit log, Import, Help), approved by the owner; all 18 admin screens are now wireframed
 - [x] 2026-10-22 Phase 1 local work and todo.md committed and pushed

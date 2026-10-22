@@ -1,5 +1,6 @@
-// Shared search helpers. The site searches a static JSON index in the browser;
-// Phase 4 moves the same normalisation into the D1 full-text search API.
+// Shared search helpers: normalising text, GO numbers, other names and spellings of a word, and
+// scoring. The search API (src/lib/search-db.ts) runs them on D1's full-text index; the Orders
+// page runs scoreDoc on the orders already in the page. No imports, so the seed script can use it.
 
 export type SearchKind = 'order' | 'news' | 'district' | 'page' | 'event';
 
@@ -28,7 +29,7 @@ export function goCore(s: string): string | null {
 }
 
 /** Every GO number in a text, each reduced by goCore ("112/2026" and "12/2026" stay apart). */
-function goNumbersIn(s: string): string[] {
+export function goNumbersIn(s: string): string[] {
   return [...s.matchAll(/(?<!\d)(\d{1,5})\s*\/\s*(\d{4})(?!\d)/g)].map((m) => `${Number(m[1])}/${m[2]}`);
 }
 
@@ -59,11 +60,32 @@ const ALIASES: Record<string, string[]> = {
   'pay revision': ['ശമ്പള പരിഷ്കരണം'],
 };
 
+// Spellings of the same word found in the crawled posts. Each group lists interchangeable stems
+// (without the final virama, so inflected forms match too); a search for one finds all.
+const VARIANTS: string[][] = [
+  ['സെക്രട്ടറിയേറ്റ', 'സെക്രട്ടേറിയറ്റ', 'സെക്രട്ടറിയറ്റ'],
+  ['അദ്ധ്യാപക', 'അധ്യാപക'],
+  ['കുടിശ്ശിക', 'കുടിശിക'],
+];
+
+/** A normalised word with its other names and spellings */
+export function expandTerm(word: string): string[] {
+  const out = new Set([word, ...(ALIASES[word] ?? [])]);
+  for (const group of VARIANTS) {
+    const stem = group.find((s) => word.includes(s));
+    if (stem) group.forEach((other) => out.add(word.replace(stem, other)));
+  }
+  return [...out];
+}
+
+/** Words that need a whole-word check: short English ones ("da", "nps"), see contains() */
+export const isShortWord = (word: string) => /^[a-z0-9]{1,3}$/.test(word);
+
 /**
  * Short English words (up to 3 letters, like "da", "ta", "hra") must match a whole word, so
  * "da" doesn't find "day" or "update". Longer words and Malayalam match anywhere.
  */
-function contains(text: string, word: string) {
+export function contains(text: string, word: string) {
   if (!/^[a-z0-9]{1,3}$/.test(word)) return text.includes(word);
   return new RegExp(`(?:^|[^a-z0-9])${word}(?:[^a-z0-9]|$)`).test(text);
 }
@@ -89,8 +111,7 @@ export function scoreDoc(doc: SearchDoc, q: string): number {
   const tokens = query.split(' ').filter(Boolean);
   let matched = 0;
   for (const tok of tokens) {
-    const expanded = [tok, ...(ALIASES[tok] ?? [])];
-    if (expanded.some((x) => contains(hay, x))) matched++;
+    if (expandTerm(tok).some((x) => contains(hay, x))) matched++;
   }
   if (tokens.length) score += (matched / tokens.length) * 30 * (matched === tokens.length ? 1.5 : 0.6);
   if (score > 0 && doc.imp) score += 4;
@@ -98,11 +119,32 @@ export function scoreDoc(doc: SearchDoc, q: string): number {
   return score;
 }
 
-export function search(docs: SearchDoc[], q: string, limit = 30) {
-  return docs
-    .map((d) => ({ d, s: scoreDoc(d, q) }))
-    .filter((x) => x.s >= 12)
-    .sort((a, b) => b.s - a.s)
-    .slice(0, limit)
-    .map((x) => x.d);
+/**
+ * The FTS5 queries for a search, for D1's trigram index (plan, section 11).
+ * - `match`: every word, in any of its other names or spellings, anywhere (body included). A
+ *   phrase with other names ("pay revision") also matches as the phrase or its other names.
+ * - `any`: for searches of more than one word, any word, in titles and keywords only; these
+ *   partial matches rank below full ones, as in the old browser search.
+ * - `check`: short English words ("da", "nps") and words under 3 characters, which results
+ *   must hold as whole words, since the index matches inside words too.
+ * A GO number asks for that number only. `match` is undefined when no word can use the index.
+ */
+export function ftsQuery(q: string): { match?: string; any?: string; check: string[]; go: string | null } {
+  const go = goCore(q);
+  const quote = (t: string) => `"${t.replace(/"/g, '""')}"`;
+  const anyOf = (terms: string[]) => `(${terms.map(quote).join(' OR ')})`;
+  if (go) return { match: quote(go), check: [], go };
+  const query = normalise(q);
+  const groups: string[] = [];
+  const check: string[] = [];
+  for (const word of query.split(' ').filter(Boolean)) {
+    const terms = expandTerm(word).filter((t) => [...t].length >= 3);
+    if (terms.length) groups.push(anyOf(terms));
+    if (isShortWord(word) || !terms.length) check.push(word);
+  }
+  let match = groups.length ? groups.join(' AND ') : undefined;
+  const phrase = ALIASES[query] ? anyOf([query, ...ALIASES[query]]) : undefined;
+  if (phrase) match = match ? `${phrase} OR (${match})` : phrase;
+  const any = groups.length > 1 ? `{title kw} : (${groups.join(' OR ')})` : undefined;
+  return { match, any, check: phrase ? [] : check, go: null };
 }

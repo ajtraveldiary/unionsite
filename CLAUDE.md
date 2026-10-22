@@ -66,9 +66,16 @@ in light and dark themes.
   `purgeTags` lists what a publish must purge. Content routes set `export const prerender = false`
   and return `new Response(null, { status: 404 })` for missing items (not `Astro.rewrite`).
 - `src/lib/sample.ts`: the crawled JSON, synchronous, only for the prebuilt `/wireframes` and `/design-system`.
-- `src/lib/search.ts`: search scoring shared by `/search` and the Orders page (index at `/search-index.json`).
-- The News page renders only the newest stories; filters, search and "Load more" read
-  `/news-index.json`. Lists that could hold the whole archive must stay limited like this.
+- Search runs on D1 (plan, section 11): `search_docs` (one result row per post and order) and the
+  FTS5 trigram table `search_fts` (normalised title, keywords and body, same id), made by the
+  hand-written migration `migrations/0002_search_fts.sql`. `src/lib/search-entries.ts` builds both
+  rows for an item (the seed uses it; the admin must call it on every save). `src/lib/search.ts`
+  holds normalising, aliases, spelling variants (`VARIANTS`), `ftsQuery()` and `scoreDoc()`;
+  `src/lib/search-db.ts` runs them on D1. `/api/search?q=` serves the Search page; the Orders
+  page still scores the orders already in its HTML.
+- The News page renders only the newest stories; filters, search and "Load more" ask
+  `/api/news?topic=&district=&q=&offset=` for one page at a time. Lists that could hold the
+  whole archive must stay limited like this.
 - `src/lib/i18n.ts`: `t()` / `langOf()` for bilingual text, `href()` for `/en` paths, date formatting.
 - `/design-system`: the living style guide. `/wireframes` and `/wireframes/admin`: the greyscale
   wireframes (all listed in `wireframelist.md`), kept on purpose (noindex) with their own `wire.css`

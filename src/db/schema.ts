@@ -139,6 +139,30 @@ export const magazineIssues = sqliteTable(
   (t) => [uniqueIndex('issues_month').on(t.year, t.month)],
 );
 
+/**
+ * Search (plan, section 11): one row per post and order, holding the result row search shows
+ * (src/lib/search-entries.ts). Its id is the rowid of `search_fts`, the FTS5 trigram index over the
+ * same item's normalised title, keywords and body, made by a hand-written migration (Drizzle
+ * can't describe virtual tables). Both are rewritten whenever the item is saved.
+ */
+export const searchDocs = sqliteTable(
+  'search_docs',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    kind: text('kind', { enum: ['news', 'order'] }).notNull(),
+    ref: integer('ref').notNull(),
+    ml: text('ml').notNull(),
+    en: text('en'),
+    sub: text('sub'),
+    url: text('url').notNull(),
+    kw: text('kw'),
+    important: integer('important', { mode: 'boolean' }).notNull().default(false),
+    /** ISO date, so the newest of equally good results comes first */
+    date: text('date').notNull(),
+  },
+  (t) => [uniqueIndex('search_docs_item').on(t.kind, t.ref)],
+);
+
 /** Small site-wide values as JSON, e.g. `home_banner` = { post: 18024, headline: { ml } } */
 export const siteSettings = sqliteTable('site_settings', {
   key: text('key').primaryKey(),

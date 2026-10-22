@@ -5,9 +5,8 @@
  * filter is on. Filters live in the URL (?topic=&district=&q=), so a filtered view can be
  * shared and the home page's "More from…" links open it ready-filtered.
  *
- * The page renders only the newest stories. Filtering, search and "Load more" read
- * /news-index.json (every post, compact) and draw the list in the browser; in Phase 2 the
- * same URLs are answered by the server.
+ * The page renders only the newest stories. Filtering, search and "Load more" ask /api/news
+ * for one page at a time (D1, with its full-text index for search) and draw it in the browser.
  */
 import AppLayout from '~/layouts/AppLayout.astro';
 import Icon from '~/components/ui/Icon.astro';
@@ -26,7 +25,7 @@ interface Props { lang: Lang }
 const { lang } = Astro.props;
 const L = (p: string) => href(lang, p);
 const PAGE = 12;
-// The lead and the first page; the rest comes from /news-index.json
+// The lead and the first page; the rest comes from /api/news a page at a time
 const [posts, topicCounts] = await Promise.all([latestPosts({ limit: PAGE + 1 }), topicPostCounts()]);
 const total = Object.values(topicCounts).reduce((a, b) => a + b, 0);
 const lead = posts[0];
@@ -129,13 +128,9 @@ const events = upcomingEvents(3);
 </AppLayout>
 
 <script>
-  import { normalise } from '~/lib/search';
-
   interface IndexPost { id: number; u: string; d: string; tp: string; ds?: string; t: string; te?: string; s: string; se?: string; img?: string }
-  interface NewsIndex { topics: Record<string, string>; districts: Record<string, string>; posts: IndexPost[] }
+  interface NewsIndex { topics: Record<string, string>; districts: Record<string, string>; total: number; posts: IndexPost[] }
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  let index: Promise<NewsIndex> | undefined;
-  const loadIndex = (): Promise<NewsIndex> => (index ??= fetch('/news-index.json').then((r) => r.json()));
 
   function initNews() {
     const root = document.querySelector<HTMLElement>('[data-news]');
@@ -162,7 +157,10 @@ const events = upcomingEvents(3);
     if (![...sel.options].some((o) => o.value === district)) district = 'all';
     q.value = params.get('q') ?? '';
     sel.value = district;
-    let limit = PAGE;
+    // What the list shows now; empty until the first request (the server drew the first page)
+    let shown: IndexPost[] = [];
+    let ix: NewsIndex | undefined;
+    let latest = 0;
 
     const groupOf = (d: string) => (Number(d.slice(0, 4)) === newestYear ? `${MONTHS[Number(d.slice(5, 7)) - 1]} ${d.slice(0, 4)}` : d.slice(0, 4));
     const shortDate = (d: string) => `${Number(d.slice(8, 10))} ${MONTHS[Number(d.slice(5, 7)) - 1].slice(0, 3)} ${d.slice(0, 4)}`;
@@ -197,20 +195,23 @@ const events = upcomingEvents(3);
       return li;
     };
 
-    const apply = async (announce = false) => {
-      const term = normalise(q.value);
-      const filtered = topic !== 'all' || district !== 'all' || !!term;
-      chips.forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.newsTopic === topic)));
-      lead.hidden = filtered;
-      root.setAttribute('aria-busy', 'true');
-      const ix = await loadIndex();
-      root.removeAttribute('aria-busy');
-      const matches = ix.posts.filter((p) =>
-        (topic === 'all' || p.tp === topic)
-        && (district === 'all' || (p.ds ?? 'state') === district)
-        && (!term || normalise(`${p.t} ${p.te ?? ''} ${p.s} ${p.se ?? ''} ${ix.topics[p.tp]} ${p.ds ? ix.districts[p.ds] : ''}`).includes(term))
-        && (filtered || p.id !== leadId));
-      const shown = matches.slice(0, limit);
+    // Asks the server for `count` stories from `offset` with the current filters
+    const fetchPage = async (offset: number, count: number): Promise<NewsIndex> => {
+      const term = q.value.trim();
+      const u = new URLSearchParams();
+      if (topic !== 'all') u.set('topic', topic);
+      if (district !== 'all') u.set('district', district);
+      if (term) u.set('q', term);
+      // Without a filter the lead shows above the list, so the list leaves it out
+      if (topic === 'all' && district === 'all' && !term) u.set('skip', String(leadId));
+      u.set('offset', String(offset));
+      u.set('limit', String(count));
+      return (await fetch(`/api/news?${u}`)).json();
+    };
+
+    const draw = () => {
+      if (!ix) return;
+      const page = ix;
       const sections: HTMLElement[] = [];
       for (const p of shown) {
         const label = groupOf(p.d);
@@ -222,25 +223,40 @@ const events = upcomingEvents(3);
           sec.querySelector('h2')!.textContent = label;
           sections.push(sec);
         }
-        sections.at(-1)!.querySelector('ul')!.append(item(p, ix));
+        sections.at(-1)!.querySelector('ul')!.append(item(p, page));
       }
       feed.replaceChildren(...sections);
-      empty.hidden = matches.length > 0;
-      count.hidden = matches.length === 0;
-      count.textContent = `Showing ${shown.length} of ${matches.length}`;
-      more.hidden = shown.length >= matches.length;
-      if (announce) status.textContent = matches.length ? `${matches.length} ${matches.length === 1 ? 'story' : 'stories'}` : 'No stories match';
+      empty.hidden = page.total > 0;
+      count.hidden = page.total === 0;
+      count.textContent = `Showing ${shown.length} of ${page.total}`;
+      more.hidden = shown.length >= page.total;
+    };
+
+    // New filters: the first page again
+    const apply = async (announce = false) => {
+      const term = q.value.trim();
+      const filtered = topic !== 'all' || district !== 'all' || !!term;
+      chips.forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.newsTopic === topic)));
+      lead.hidden = filtered;
+      const mine = ++latest;
+      root.setAttribute('aria-busy', 'true');
+      const page = await fetchPage(0, PAGE);
+      if (mine !== latest) return;
+      root.removeAttribute('aria-busy');
+      ix = page;
+      shown = page.posts;
+      draw();
+      if (announce) status.textContent = page.total ? `${page.total} ${page.total === 1 ? 'story' : 'stories'}` : 'No stories match';
 
       // Keep the URL in step so the view can be shared
       const u = new URLSearchParams();
       if (topic !== 'all') u.set('topic', topic);
       if (district !== 'all') u.set('district', district);
-      if (term) u.set('q', q.value.trim());
+      if (term) u.set('q', term);
       const qs = u.toString();
       history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
-      return shown.length;
     };
-    const refilter = () => { limit = PAGE; apply(true); };
+    const refilter = () => apply(true);
 
     form.addEventListener('submit', (e) => e.preventDefault());
     form.addEventListener('click', (e) => {
@@ -263,9 +279,16 @@ const events = upcomingEvents(3);
       refilter();
     });
     more.addEventListener('click', async () => {
-      const before = limit;
-      limit += PAGE;
-      await apply();
+      // The first time, the server-drawn first page is fetched along with the next one
+      const before = shown.length || PAGE;
+      const mine = ++latest;
+      root.setAttribute('aria-busy', 'true');
+      const page = await fetchPage(shown.length, shown.length ? PAGE : PAGE * 2);
+      if (mine !== latest) return;
+      root.removeAttribute('aria-busy');
+      ix = page;
+      shown = [...shown, ...page.posts];
+      draw();
       // Move focus to the first newly shown story so keyboard users carry on from there
       feed.querySelectorAll<HTMLElement>('li')[before]?.querySelector('a')?.focus();
     });

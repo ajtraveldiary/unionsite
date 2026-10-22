@@ -1,13 +1,13 @@
 ---
 /**
  * Site search (redesign, Phase C). The header box and the phone search open this page with
- * ?q=. Results come from /search-index.json and update as you type; with "All" picked they are
- * grouped by kind (orders, news, districts, events, pages), five each, and a kind's chip shows
- * the rest. A GO number that matches exactly one order opens that order straight away.
- * With no query the page offers popular searches and the main sections.
+ * ?q=. Results come from /api/search (D1's full-text index) and update as you type; with
+ * "All" picked they are grouped by kind (orders, news, districts, events, pages), five each,
+ * and a kind's chip shows the rest. A GO number that matches exactly one order opens that order
+ * straight away. With no query the page offers popular searches and the main sections.
  *
- * The page itself is static: the query is read in the browser. Phase 4 swaps the JSON index
- * for the D1 full-text search API with the same results shape.
+ * The page itself is static: the query is read in the browser and sent to the API, which
+ * answers each query from the edge cache after the first time.
  */
 import AppLayout from '~/layouts/AppLayout.astro';
 import Icon from '~/components/ui/Icon.astro';
@@ -95,14 +95,14 @@ const sections = [
 </AppLayout>
 
 <script>
-  import { search, goCore, type SearchDoc, type SearchKind } from '~/lib/search';
+  import { goCore, type SearchDoc, type SearchKind } from '~/lib/search';
 
   const KINDS: SearchKind[] = ['order', 'news', 'district', 'event', 'page'];
   const HEAD: Record<SearchKind, string> = { order: 'Orders', news: 'News', district: 'Districts', event: 'Events', page: 'Pages' };
   const PLURAL: Record<SearchKind, string> = { order: 'orders', news: 'stories', district: 'districts', event: 'events', page: 'pages' };
   const PER_GROUP = 5;
-  let index: Promise<SearchDoc[]> | undefined;
-  const loadIndex = () => (index ??= fetch('/search-index.json').then((r) => r.json()).catch(() => []));
+  const fetchHits = (term: string): Promise<SearchDoc[]> =>
+    fetch(`/api/search?q=${encodeURIComponent(term)}`).then((r) => (r.ok ? r.json() : [])).catch(() => []);
 
   function initSearch() {
     const root = document.querySelector<HTMLElement>('[data-search]');
@@ -124,6 +124,8 @@ const sections = [
     const ordersHref = ordersLink.getAttribute('href')!;
     let kind: 'all' | SearchKind = 'all';
     let hits: SearchDoc[] = [];
+    // Each search gets a number, so a slow answer to an older query can't replace a newer one
+    let latest = 0;
 
     const row = (d: SearchDoc) => {
       const li = document.createElement('li');
@@ -208,10 +210,12 @@ const sections = [
 
     const run = async (first = false) => {
       const term = q.value.trim();
+      const mine = ++latest;
       if (term) { loading.hidden = false; }
-      const docs = await loadIndex();
+      const found = term ? await fetchHits(term) : [];
+      if (mine !== latest) return;
       loading.hidden = true;
-      hits = term ? search(docs, term, 200) : [];
+      hits = found;
       if (first) {
         const target = goTarget();
         if (target) { location.replace(urlFor(target)); return; }
@@ -228,7 +232,7 @@ const sections = [
       if (target) location.href = urlFor(target);
     });
     let timer: number | undefined;
-    q.addEventListener('input', () => { clearTimeout(timer); timer = window.setTimeout(() => run(), 150); });
+    q.addEventListener('input', () => { clearTimeout(timer); timer = window.setTimeout(() => run(), 200); });
     kindBtns.forEach((b) => b.addEventListener('click', () => { kind = b.dataset.searchKind as 'all' | SearchKind; render(); }));
     // Suggestions search in place instead of reloading the page
     root.querySelectorAll<HTMLAnchorElement>('[data-search-suggest]').forEach((a) => a.addEventListener('click', (e) => {
