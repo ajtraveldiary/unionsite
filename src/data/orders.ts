@@ -1,5 +1,4 @@
-import type { Order, OrderSubject } from '~/lib/types';
-import liveOrders from './live/orders.json';
+import type { OrderSubject } from '~/lib/types';
 
 // Subjects come from the live site's Download Manager categories, with duplicates merged.
 export const orderSubjects: OrderSubject[] = [
@@ -34,8 +33,4 @@ export const orderGroups = [
 ] as const;
 
 export const subjectBySlug = Object.fromEntries(orderSubjects.map((s) => [s.slug, s])) as Record<string, OrderSubject>;
-
-// The live list, crawled from the current site's downloads (src/data/live/README.md). Titles
-// are as uploaded (English, often without a GO number); dates are upload dates.
-export const orders = liveOrders as Order[];
 

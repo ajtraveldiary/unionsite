@@ -1,4 +1,8 @@
 ---
 import NewsView from '~/views/NewsView.astro';
+import { cachePage, tags } from '~/lib/cache';
+
+export const prerender = false;
+cachePage(Astro, 'list', [tags.posts]);
 ---
 <NewsView lang="ml" />

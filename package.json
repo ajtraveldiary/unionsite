@@ -8,7 +8,11 @@
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
-    "map": "node scripts/build-map.mjs"
+    "map": "node scripts/build-map.mjs",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "wrangler d1 migrations apply union --local",
+    "db:seed": "node scripts/seed-d1.mjs",
+    "preview:cached": "node scripts/preview-cached.mjs"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.3.3",
@@ -16,12 +20,14 @@
     "@fontsource-variable/noto-sans-malayalam": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.3.5",
+    "drizzle-orm": "^0.45.4",
     "lucide-static": "^1.52.0",
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "d3-geo": "^3.1.1",
+    "drizzle-kit": "^0.31.11",
     "polygon-clipping": "^0.15.7",
     "typescript": "^6.0.3",
     "wrangler": "^4.147.0"

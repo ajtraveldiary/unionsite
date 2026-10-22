@@ -1,12 +1,13 @@
 import type { APIRoute } from 'astro';
-import { allPosts, postPath } from '~/lib/content';
+import { postSummaries, postPath } from '~/lib/content';
+import { cachePage, tags } from '~/lib/cache';
 import { topics, districtBySlug } from '~/data/districts';
 import type { Post } from '~/lib/types';
 
 // Every news post in a compact form for the News page's filters, search and "Load more"
 // (the page itself renders only the newest stories). Paths are Malayalam; the English page
-// adds /en. Phase 2 answers the same filters from the database instead.
-export const prerender = true;
+// adds /en. Built from D1 on the first request, then served from the edge cache.
+export const prerender = false;
 
 /** The smallest listed size that's still at least 300 px wide, for the list thumbnail */
 const thumb = (p: Post) => {
@@ -18,11 +19,12 @@ const thumb = (p: Post) => {
 /** The list shows two lines of summary, so the index carries about that much */
 const short = (s: string) => (s.length <= 130 ? s : `${s.slice(0, s.lastIndexOf(' ', 130) > 80 ? s.lastIndexOf(' ', 130) : 130).replace(/…$/, '')}…`);
 
-export const GET: APIRoute = () => {
+export const GET: APIRoute = async (context) => {
+  cachePage(context, 'list', [tags.posts]);
   const data = {
     topics: Object.fromEntries(topics.map((t) => [t.slug, t.name.en])),
     districts: Object.fromEntries(Object.values(districtBySlug).map((d) => [d.slug, d.name.en.replace('Thiruvananthapuram', 'TVM')])),
-    posts: allPosts().map((p) => ({
+    posts: (await postSummaries()).map((p) => ({
       id: p.id,
       u: postPath(p),
       d: p.date,

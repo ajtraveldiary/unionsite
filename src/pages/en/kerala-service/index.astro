@@ -1,4 +1,8 @@
 ---
 import MagazineView from '~/views/MagazineView.astro';
+import { cachePage, tags } from '~/lib/cache';
+
+export const prerender = false;
+cachePage(Astro, 'list', [tags.issues]);
 ---
 <MagazineView lang="en" />

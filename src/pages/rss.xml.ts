@@ -1,13 +1,16 @@
 import type { APIRoute } from 'astro';
-import { allPosts, postPath } from '~/lib/content';
+import { latestPosts, postPath } from '~/lib/content';
+import { cachePage, tags } from '~/lib/cache';
 import { site } from '~/data/site';
 
-export const prerender = true;
+export const prerender = false;
 
 const esc = (s: string) => s.replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[c]!);
 
-export const GET: APIRoute = ({ site: base }) => {
-  const items = allPosts().slice(0, 30).map((p) => {
+export const GET: APIRoute = async (context) => {
+  const base = context.site;
+  cachePage(context, 'list', [tags.posts]);
+  const items = (await latestPosts({ limit: 30 })).map((p) => {
     const url = new URL(postPath(p), base).toString();
     return `<item><title>${esc(p.title.ml)}</title><link>${url}</link><guid>${url}</guid><pubDate>${new Date(`${p.date}T12:00:00+05:30`).toUTCString()}</pubDate><description>${esc(p.summary.ml)}</description></item>`;
   });

@@ -1,14 +1,18 @@
 import type { APIRoute } from 'astro';
-import { allEvents, allOrders, allPosts, orderPath, postPath, sortedDistricts, subjectName } from '~/lib/content';
+import { allEvents, allOrders, postSummaries, orderPath, postPath, sortedDistricts, subjectName } from '~/lib/content';
+import { cachePage, tags } from '~/lib/cache';
 import { formatDate } from '~/lib/i18n';
 import { goCore, type SearchDoc } from '~/lib/search';
 import { topicBySlug, districtBySlug } from '~/data/districts';
 
-export const prerender = true;
+// Built from D1 on the first request, then served from the edge cache
+export const prerender = false;
 
-export const GET: APIRoute = () => {
+export const GET: APIRoute = async (context) => {
+  cachePage(context, 'list', [tags.posts, tags.orders]);
+  const [orders, posts] = await Promise.all([allOrders(), postSummaries()]);
   const docs: SearchDoc[] = [
-    ...allOrders().map((o): SearchDoc => {
+    ...orders.map((o): SearchDoc => {
       const subj = subjectName(o.subject);
       return {
         k: 'order',
@@ -20,7 +24,7 @@ export const GET: APIRoute = () => {
         imp: o.important,
       };
     }),
-    ...allPosts().map((p): SearchDoc => ({
+    ...posts.map((p): SearchDoc => ({
       k: 'news',
       ml: p.title.ml,
       en: p.title.en,

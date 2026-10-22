@@ -12,16 +12,15 @@ import SectionHead from '~/components/ds/SectionHead.astro';
 import Media from '~/components/ds/Media.astro';
 import ShareBar from '~/components/ds/ShareBar.astro';
 import StoryRow from '~/components/ds/StoryRow.astro';
-import type { Lang } from '~/lib/types';
+import type { Lang, Post } from '~/lib/types';
 import { t, langOf, href, formatDate, readingMinutes, formatViews, hasEn, ui } from '~/lib/i18n';
-import { postById, postPath, relatedPosts, districtUrl } from '~/lib/content';
+import { postPath, relatedPosts, districtUrl } from '~/lib/content';
 import { topicBySlug, districtBySlug } from '~/data/districts';
 import { site } from '~/data/site';
 
-interface Props { lang: Lang; id: number }
-const { lang, id } = Astro.props;
+interface Props { lang: Lang; post: Post }
+const { lang, post: p } = Astro.props;
 const L = (p: string) => href(lang, p);
-const p = postById(id)!;
 const topic = topicBySlug[p.topic];
 const district = p.district ? districtBySlug[p.district] : undefined;
 // The English site shows Malayalam (and says so) until a reviewed English version exists
@@ -34,7 +33,7 @@ const title = t(p.title, lang);
 const summary = t(p.summary, lang);
 const standfirst = summary && !(body ?? []).join(' ').startsWith(summary.replace(/…$/, '')) ? summary : '';
 const pageUrl = new URL(L(postPath(p)), Astro.site).toString();
-const related = relatedPosts(p, 3);
+const related = await relatedPosts(p, 3);
 const sameTopic = related.every((r) => r.topic === p.topic);
 const photo = p.cover.kind === 'photo' ? p.cover : undefined;
 const jsonLd = JSON.stringify({

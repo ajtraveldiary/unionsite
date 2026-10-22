@@ -1,8 +1,11 @@
 ---
 import DistrictView from '~/views/DistrictView.astro';
-import { districtPaths } from '~/lib/paths';
+import { districtBySlug } from '~/data/districts';
+import { cachePage, tags } from '~/lib/cache';
 
-export function getStaticPaths() { return districtPaths(); }
-const { slug } = Astro.props;
+export const prerender = false;
+const slug = Astro.params.district!;
+if (!districtBySlug[slug]) return new Response(null, { status: 404 });
+cachePage(Astro, 'list', [tags.posts]);
 ---
 <DistrictView lang="ml" slug={slug} />

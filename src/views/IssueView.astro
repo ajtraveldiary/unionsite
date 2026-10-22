@@ -10,14 +10,14 @@ import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
 import SectionHead from '~/components/ds/SectionHead.astro';
 import ShareBar from '~/components/ds/ShareBar.astro';
 import MagazineCover from '~/components/ui/MagazineCover.astro';
-import type { Lang } from '~/lib/types';
+import type { Lang, MagazineIssue } from '~/lib/types';
 import { href, monthName } from '~/lib/i18n';
-import { allIssues, issuePath } from '~/lib/content';
+import { issuePath } from '~/lib/content';
 
-interface Props { lang: Lang; year: number; month: number }
-const { lang, year, month } = Astro.props;
+/** `issues` is every issue, newest first (allIssues()); the page shows the one at year/month */
+interface Props { lang: Lang; issues: MagazineIssue[]; year: number; month: number }
+const { lang, issues: magazineIssues, year, month } = Astro.props;
 const L = (p: string) => href(lang, p);
-const magazineIssues = allIssues();
 const i = magazineIssues.findIndex((x) => x.year === year && x.month === month);
 // The list runs newest first, so the older issue is the next item.
 const newer = magazineIssues[i - 1];
@@ -33,7 +33,7 @@ const pageUrl = new URL(L(issuePath(year, month)), Astro.site).toString();
 
     <div class="mt-5 grid items-start gap-6 sm:grid-cols-[200px_minmax(0,1fr)] lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
       <div class="mx-auto w-48 overflow-hidden rounded-md border border-line sm:w-full">
-        <MagazineCover year={year} month={month} class="block h-auto w-full" eager />
+        <MagazineCover issue={issue} class="block h-auto w-full" eager />
       </div>
       <div>
         <p class="t-label">Kerala Service</p>
@@ -72,7 +72,7 @@ const pageUrl = new URL(L(issuePath(year, month)), Astro.site).toString();
           <li class="w-24 shrink-0 sm:w-28">
             <a href={L(issuePath(x.year, x.month))} aria-current={x.month === month ? 'page' : undefined} class="group block">
               <span class:list={['block overflow-hidden rounded-md border transition-colors group-hover:border-accent', x.month === month ? 'border-2 border-accent' : 'border-line']}>
-                <MagazineCover year={x.year} month={x.month} class="block h-auto w-full" />
+                <MagazineCover issue={x} class="block h-auto w-full" />
               </span>
               <span class:list={['mt-1.5 block text-center text-sm', x.month === month ? 'font-semibold text-accent-ink' : 'font-medium']}>{monthName(x.month, 'en').slice(0, 3)}</span>
             </a>

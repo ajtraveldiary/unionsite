@@ -6,11 +6,11 @@
  */
 import { rng } from '~/lib/random';
 import { EN_MONTHS, ML_MONTHS } from '~/lib/i18n';
-import { issueFor } from '~/lib/content';
+import type { MagazineIssue } from '~/lib/types';
 
-interface Props { year: number; month: number; class?: string; eager?: boolean }
-const { year, month, class: cls = '', eager = false } = Astro.props;
-const cover = issueFor(year, month)?.coverUrl;
+interface Props { issue: MagazineIssue; class?: string; eager?: boolean }
+const { issue, class: cls = '', eager = false } = Astro.props;
+const { year, month, coverUrl: cover } = issue;
 const r = rng(year * 100 + month);
 const themes = [
   { bg: '#F4ECDD', ink: '#1B1A19', a: '#C8102E', b: '#E2B45A' },

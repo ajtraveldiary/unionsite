@@ -1,5 +1,4 @@
-import type { L10n, MagazineIssue, Person, UnionEvent, Video } from '~/lib/types';
-import liveIssues from './live/issues.json';
+import type { L10n, Person, UnionEvent, Video } from '~/lib/types';
 
 export const site = {
   name: { ml: 'കേരള എൻ.ജി.ഒ യൂണിയൻ', en: 'Kerala NGO Union' },
@@ -19,11 +18,11 @@ export const site = {
 };
 
 /**
- * The home-page banner: one news post (by id) or one event (by slug), chosen by a state editor.
- * It stays until it's replaced; `headline` optionally shortens the title to fit two lines.
- * Set it to null for no banner. The admin panel's "Show in banner" sets this later.
+ * The first home-page banner: one news post (by id) or one event (by slug), chosen by a state editor.
+ * `npm run db:seed` copies it into D1 (site_settings.home_banner), where the site reads it; the
+ * admin panel's Home & banner screen replaces it later. `headline` optionally shortens the title.
  */
-export const banner: ({ post: number } | { event: string }) & { headline?: L10n } | null = {
+export const firstBanner: ({ post: number } | { event: string }) & { headline?: L10n } = {
   post: 18024,
   headline: { ml: 'നവംബർ 21 സെക്രട്ടറിയേറ്റ് വളയൽ വിജയിപ്പിക്കുക' },
 };
@@ -91,8 +90,6 @@ export const events: UnionEvent[] = [
   { slug: 'ernakulam-women-convention-2026', title: { ml: 'വനിതാ കൺവെൻഷൻ', en: 'Women’s convention' }, start: '2026-11-14T10:00:00+05:30', venue: { ml: 'എറണാകുളം', en: 'Ernakulam' }, district: 'ernakulam', sample: true },
 ];
 
-// Kerala Service issues crawled from the old site's flipbooks (newest first), with PDF and cover.
-export const magazineIssues = liveIssues as MagazineIssue[];
 
 // Latest uploads from the union's YouTube channel feed (fetched 4 Oct 2026).
 export const videos: Video[] = [

@@ -3,10 +3,11 @@ import WireLayout from '~/components/wire/WireLayout.astro';
 import Note from '~/components/wire/Note.astro';
 import Ph from '~/components/wire/Ph.astro';
 import Thumb from '~/components/wire/Thumb.astro';
-import { allPosts, latestOrders, upcomingEvents, sortedDistricts, postsForDistrict, subjectName } from '~/lib/content';
+import { allPosts, latestOrders, upcomingEvents, sortedDistricts, postsForDistrict, subjectName } from '~/lib/sample';
 import { t, langOf, formatDate, dateParts, monthName } from '~/lib/i18n';
 import { topicBySlug, districtBySlug } from '~/data/districts';
-import { magazineIssues, videos } from '~/data/site';
+import { videos } from '~/data/site';
+import { allIssues } from '~/lib/sample';
 import type { Post } from '~/lib/types';
 
 const lang = 'ml' as const;
@@ -52,7 +53,7 @@ const districtPosts = posts.filter((p) => p.district);
 const EVENT_LIMIT = 4;
 const NEWS_LIMIT = 5;
 const shortName = (en: string) => en.replace('Thiruvananthapuram', 'TVM');
-const issue = magazineIssues[0];
+const issue = allIssues()[0];
 const ARTICLE = '/wireframes/article';
 // "G.O.(P) No.112/2026/Fin" -> type "G.O.(P)", number "112", year "2026", department "Fin"
 const goParts = (go: string) => {

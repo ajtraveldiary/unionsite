@@ -1,8 +1,11 @@
 ---
 import ArticleView from '~/views/ArticleView.astro';
-import { postPaths } from '~/lib/paths';
+import { postByPath } from '~/lib/content';
+import { cachePage, tags } from '~/lib/cache';
 
-export function getStaticPaths() { return postPaths(); }
-const { id } = Astro.props;
+export const prerender = false;
+const post = await postByPath(Astro.params.year!, Astro.params.slug!);
+if (!post) return new Response(null, { status: 404 });
+cachePage(Astro, 'item', [tags.post(post.id)]);
 ---
-<ArticleView lang="en" id={id} />
+<ArticleView lang="en" post={post} />

@@ -10,11 +10,12 @@ import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
 import KeralaMap from '~/components/ds/KeralaMap.astro';
 import type { Lang } from '~/lib/types';
 import { t, langOf, formatDate } from '~/lib/i18n';
-import { sortedDistricts, postsForDistrict, eventsForDistrict, districtUrl } from '~/lib/content';
+import { sortedDistricts, latestPerDistrict, districtPostCounts, eventsForDistrict, districtUrl } from '~/lib/content';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
-const list = sortedDistricts().map((d) => ({ d, posts: postsForDistrict(d.slug), events: eventsForDistrict(d.slug) }));
+const [latest, counts] = await Promise.all([latestPerDistrict(1), districtPostCounts()]);
+const list = sortedDistricts().map((d) => ({ d, latest: latest[d.slug][0], count: counts[d.slug] ?? 0, events: eventsForDistrict(d.slug) }));
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 ---
 <AppLayout lang={lang} title="Districts" description="The Kerala NGO Union's 15 district committees: news, events and office-bearers from every district.">
@@ -25,17 +26,17 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
     <div class="mt-6 grid gap-x-12 md:grid-cols-[minmax(0,1fr)_240px] lg:grid-cols-[minmax(0,1fr)_300px]">
       <ol class="divide-y divide-line border-y border-line" data-district-list>
-        {list.map(({ d, posts, events }) => (
+        {list.map(({ d, latest, count, events }) => (
           <li data-district-row={d.slug}>
             <article class="group relative flex gap-4 py-3.5">
               <span lang="en" class="w-6 shrink-0 pt-0.5 text-right text-sm font-semibold tabular text-ink-3" aria-hidden="true">{d.sortOrder}</span>
               <div class="min-w-0 flex-1">
                 <h2 lang="en" class="t-h3"><a href={districtUrl(d.slug, lang)} class="stretched group-hover:text-accent-ink">{d.name.en}</a></h2>
-                <p lang="en" class="t-meta">HQ {d.hq.en} · {plural(posts.length, 'post')}{events.length > 0 && ` · ${plural(events.length, 'upcoming event')}`}</p>
-                {posts[0] && (
+                <p lang="en" class="t-meta">HQ {d.hq.en} · {plural(count, 'post')}{events.length > 0 && ` · ${plural(events.length, 'upcoming event')}`}</p>
+                {latest && (
                   <p class="mt-1 text-sm text-ink-2">
-                    <span lang="en" class="text-ink-3">Latest, {formatDate(posts[0].date, 'en', 'short')}: </span>
-                    <span lang={langOf(posts[0].title, lang)}>{t(posts[0].title, lang)}</span>
+                    <span lang="en" class="text-ink-3">Latest, {formatDate(latest.date, 'en', 'short')}: </span>
+                    <span lang={langOf(latest.title, lang)}>{t(latest.title, lang)}</span>
                   </p>
                 )}
               </div>
@@ -46,7 +47,7 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
       <div class="hidden md:block">
         <div class="sticky top-24">
-          <KeralaMap lang={lang} class="max-h-[calc(100dvh-8rem)]" />
+          <KeralaMap lang={lang} withNews={Object.keys(counts)} class="max-h-[calc(100dvh-8rem)]" />
           <p lang="en" class="t-meta mt-2 flex items-center justify-end gap-2"><span class="inline-block size-3 rounded-sm border border-line-strong bg-accent-soft"></span> Has news</p>
         </div>
       </div>

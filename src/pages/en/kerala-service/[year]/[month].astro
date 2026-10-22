@@ -1,8 +1,13 @@
 ---
 import IssueView from '~/views/IssueView.astro';
-import { issuePaths } from '~/lib/paths';
+import { allIssues } from '~/lib/content';
+import { cachePage, tags } from '~/lib/cache';
 
-export function getStaticPaths() { return issuePaths(); }
-const { year, month } = Astro.props;
+export const prerender = false;
+const year = Number(Astro.params.year);
+const month = Number(Astro.params.month);
+const issues = await allIssues();
+if (Astro.params.month!.length !== 2 || !issues.some((i) => i.year === year && i.month === month)) return new Response(null, { status: 404 });
+cachePage(Astro, 'item', [tags.issues]);
 ---
-<IssueView lang="en" year={year} month={month} />
+<IssueView lang="en" issues={issues} year={year} month={month} />

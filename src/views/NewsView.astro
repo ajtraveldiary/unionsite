@@ -19,15 +19,17 @@ import EventCard from '~/components/ds/EventCard.astro';
 import EmptyState from '~/components/ds/EmptyState.astro';
 import type { Lang, Post } from '~/lib/types';
 import { href, monthName } from '~/lib/i18n';
-import { allPosts, sortedDistricts, upcomingEvents } from '~/lib/content';
+import { latestPosts, topicPostCounts, sortedDistricts, upcomingEvents } from '~/lib/content';
 import { topics } from '~/data/districts';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
 const L = (p: string) => href(lang, p);
-const posts = allPosts();
-const lead = posts[0];
 const PAGE = 12;
+// The lead and the first page; the rest comes from /news-index.json
+const [posts, topicCounts] = await Promise.all([latestPosts({ limit: PAGE + 1 }), topicPostCounts()]);
+const total = Object.values(topicCounts).reduce((a, b) => a + b, 0);
+const lead = posts[0];
 
 // Months of the newest year, then whole years before it (the script groups the same way)
 const newestYear = Number(lead.date.slice(0, 4));
@@ -43,7 +45,7 @@ for (const p of posts.slice(1, PAGE + 1)) {
   groups.at(-1)!.items.push(p);
 }
 
-const usedTopics = topics.filter((tp) => posts.some((p) => p.topic === tp.slug));
+const usedTopics = topics.filter((tp) => topicCounts[tp.slug]);
 const events = upcomingEvents(3);
 ---
 <AppLayout lang={lang} title="News" description="News from the Kerala NGO Union and its 15 district committees.">
@@ -72,7 +74,7 @@ const events = upcomingEvents(3);
   </div>
 
   <div class="wrap mt-8 grid gap-x-12 gap-y-14 lg:grid-cols-[minmax(0,1fr)_300px]">
-    <div data-news data-lang={lang} data-page={PAGE} data-total={posts.length - 1} data-newest-year={newestYear} data-lead-id={lead.id}>
+    <div data-news data-lang={lang} data-page={PAGE} data-total={total - 1} data-newest-year={newestYear} data-lead-id={lead.id}>
       <div data-news-lead class="mb-8">
         <StoryLead post={lead} lang={lang} headingLevel="h2" ratio="2/1" />
       </div>
@@ -95,8 +97,8 @@ const events = upcomingEvents(3);
         </EmptyState>
       </div>
       <div lang="en" class="text-center">
-        <p class="t-meta" data-news-count>Showing {Math.min(PAGE, posts.length - 1)} of {posts.length - 1}</p>
-        <button type="button" data-news-more class="btn btn-secondary mt-2" hidden={posts.length - 1 <= PAGE}>Load more</button>
+        <p class="t-meta" data-news-count>Showing {Math.min(PAGE, total - 1)} of {total - 1}</p>
+        <button type="button" data-news-more class="btn btn-secondary mt-2" hidden={total - 1 <= PAGE}>Load more</button>
       </div>
     </div>
 
@@ -116,7 +118,7 @@ const events = upcomingEvents(3);
             <li>
               <a href={L(`/news?topic=${tp.slug}`)} data-news-topic-link={tp.slug} class="flex items-center justify-between gap-3 py-2 hover:text-accent-ink">
                 <span class="font-medium">{tp.name.en}</span>
-                <span class="t-meta">{posts.filter((p) => p.topic === tp.slug).length}</span>
+                <span class="t-meta">{topicCounts[tp.slug]}</span>
               </a>
             </li>
           ))}

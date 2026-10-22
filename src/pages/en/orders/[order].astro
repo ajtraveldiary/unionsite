@@ -1,8 +1,14 @@
 ---
 import OrderView from '~/views/OrderView.astro';
-import { orderPaths } from '~/lib/paths';
+import { orderById, orderUrl } from '~/lib/content';
+import { cachePage, tags } from '~/lib/cache';
 
-export function getStaticPaths() { return orderPaths(); }
-const { id } = Astro.props;
+export const prerender = false;
+// /orders/{id}-{slug}: the id finds the order; an old or mistyped slug redirects to the right one
+const param = Astro.params.order!;
+const order = await orderById(parseInt(param, 10));
+if (!order) return new Response(null, { status: 404 });
+if (param !== `${order.id}-${order.slug}`) return Astro.redirect(orderUrl(order, 'en'), 301);
+cachePage(Astro, 'item', [tags.order(order.id)]);
 ---
-<OrderView lang="en" id={id} />
+<OrderView lang="en" order={order} />

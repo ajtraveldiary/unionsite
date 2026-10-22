@@ -16,7 +16,7 @@ import { site } from '~/data/site';
 interface Props { lang: Lang }
 const { lang } = Astro.props;
 const L = (p: string) => href(lang, p);
-const magazineIssues = allIssues();
+const magazineIssues = await allIssues();
 const current = magazineIssues[0];
 const since = `${monthName(magazineIssues.at(-1)!.month, 'en')} ${magazineIssues.at(-1)!.year}`;
 const years = [...new Set(magazineIssues.map((i) => i.year))];
@@ -30,7 +30,7 @@ const byYear = years.map((y) => ({ y, issues: magazineIssues.filter((i) => i.yea
 
     <section class="mt-6 flex gap-5 border-y border-line py-5 sm:gap-8" aria-labelledby="current">
       <a href={L(issuePath(current.year, current.month))} class="block w-32 shrink-0 self-start overflow-hidden rounded-md border border-line sm:w-44" tabindex="-1" aria-hidden="true">
-        <MagazineCover year={current.year} month={current.month} class="block h-auto w-full" />
+        <MagazineCover issue={current} class="block h-auto w-full" />
       </a>
       <div class="flex min-w-0 flex-col">
         <p class="t-label">Current issue</p>
@@ -61,7 +61,7 @@ const byYear = years.map((y) => ({ y, issues: magazineIssues.filter((i) => i.yea
               <li>
                 <a href={L(issuePath(iss.year, iss.month))} class="group block">
                   <span class="block overflow-hidden rounded-md border border-line transition-colors group-hover:border-accent">
-                    <MagazineCover year={iss.year} month={iss.month} class="block h-auto w-full" />
+                    <MagazineCover issue={iss} class="block h-auto w-full" />
                   </span>
                   <span class="mt-1.5 block text-center text-sm font-medium group-hover:text-accent-ink">{monthName(iss.month, 'en').slice(0, 3)}<span class="sr-only"> {iss.year}</span></span>
                 </a>

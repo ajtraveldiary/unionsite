@@ -5,8 +5,8 @@ Kerala State Government employees since 1962. It replaces the current WordPress 
 phone-first site on Cloudflare, in Malayalam with English versions of articles.
 
 > **Status: preview, not live.** The public site is designed and built, and it runs on real
-> content read from the current site. The admin panel is wireframed but not built, and nothing is
-> deployed to keralangounion.in yet.
+> content read from the current site, served from a local Cloudflare D1 database. The admin panel
+> is wireframed but not built, and nothing is deployed to keralangounion.in yet.
 
 ## What's in it
 
@@ -84,13 +84,17 @@ path (for example `/news` and `/en/news`).
 
 ## Tech
 
-- [Astro](https://astro.build) 7 with the Cloudflare adapter, pages built ahead of time
+- [Astro](https://astro.build) 7 with the Cloudflare adapter. Content pages render on request from
+  [Cloudflare D1](https://developers.cloudflare.com/d1/) (through [Drizzle](https://orm.drizzle.team))
+  and are kept in Cloudflare's edge cache until something they show is published; the other pages
+  are built ahead of time
 - [Tailwind CSS](https://tailwindcss.com) 4 with the project's own design tokens (`src/styles/app.css`)
 - Noto Sans Malayalam and Anek Malayalam (self-hosted via Fontsource), Lucide icons
 - No client-side framework: small page scripts only
 
-Planned for later phases: a Cloudflare D1 database (SQLite, with FTS5 trigram search), Cloudflare
-R2 for PDFs and photos, Cloudflare Access for admin login, and the admin panel itself.
+Planned for later phases: the union's Cloudflare account (the D1 database so far runs only
+locally), FTS5 trigram search in D1, Cloudflare R2 for PDFs and photos, Cloudflare Access for
+admin login, and the admin panel itself.
 
 ## Getting started
 
@@ -98,17 +102,25 @@ You need Node.js 22.12 or newer.
 
 ```bash
 npm install
+npm run db:migrate
+npm run db:seed
 npm run dev
 ```
 
-The dev server runs at http://localhost:4321.
+`db:migrate` creates the tables in a local D1 database (wrangler keeps it in `.wrangler/`), and
+`db:seed` loads the crawled content into it. The dev server runs at http://localhost:4321 and
+logs the D1 queries of each request.
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Dev server on port 4321 |
+| `npm run dev` | Dev server on port 4321 (never caches) |
 | `npm run check` | Type check (should report 0 errors, 0 warnings) |
-| `npm run build` | Builds every page into `dist/` (about 4,300 pages, about 75 seconds) |
-| `npm run preview` | Serves the built site locally |
+| `npm run build` | Builds the Worker and the static pages into `dist/` (about 10 seconds) |
+| `npm run preview` | Serves the built site locally on the local D1 |
+| `npm run preview:cached` | Builds with an in-memory page cache and serves it, to try caching and purges locally |
+| `npm run db:migrate` | Applies the migrations in `migrations/` to the local D1 |
+| `npm run db:seed` | Replaces the local D1 content with the crawl in `src/data/live/` |
+| `npm run db:generate` | Writes a new migration after a change to `src/db/schema.ts` |
 | `npm run map` | Rebuilds the Kerala district map data (rarely needed) |
 
 There are no automated tests yet; changes are checked in the browser at phone and laptop width,
@@ -127,8 +139,8 @@ node scripts/import-crawl.mjs   # turn the crawl into src/data/live/*.json
 ```
 
 `src/data/live/` is generated: change `scripts/import-crawl.mjs` and rerun it rather than editing
-the JSON. Pages read content only through `src/lib/content.ts`, so a database can replace the
-JSON files later without changing the pages.
+the JSON, then run `npm run db:seed` to load it into D1. Pages read content only through
+`src/lib/content.ts`; the prebuilt wireframes and style guide read the JSON directly (`src/lib/sample.ts`).
 
 ## Project layout
 
@@ -141,11 +153,14 @@ src/
     ds/         design-system components (Banner, StoryLead, OrderRow …)
     ui/         Icon, Brand, MagazineCover
     wire/       wireframe kit (public and admin)
-  lib/          content queries, search, i18n, types
+  db/           D1 tables (schema.ts) and the database client
+  lib/          content queries, cache rules, search, i18n, types
   data/         site data; live/ holds the crawled content
   styles/       app.css (design system), wire.css (wireframes)
-scripts/        crawl, import and map scripts
+migrations/     SQL migrations generated from src/db/schema.ts
+scripts/        crawl, import, D1 seed and map scripts
 docs/           plan.md, the rebuild plan
+todo.md         everything left to do, by phase
 ```
 
 `CLAUDE.md` has the full working notes: design rules agreed with the union, conventions, and
@@ -156,4 +171,4 @@ where everything lives.
 The project follows the rebuild plan in [`docs/plan.md`](docs/plan.md): goals, information
 architecture, tech stack and costs, content model, design, page specifications, admin panel,
 features, migration, SEO and security, analytics, roadmap and open questions. Code comments that
-say "plan, section N" refer to it.
+say "plan, section N" refer to it. What's left to do is listed in [`todo.md`](todo.md).

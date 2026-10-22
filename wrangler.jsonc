@@ -3,6 +3,11 @@
   "name": "kerala-ngo-union",
   "main": "@astrojs/cloudflare/entrypoints/server",
   "compatibility_date": "2026-09-01",
-  "compatibility_flags": ["nodejs_compat"]
-  // Phase 2 adds: "d1_databases" (DB), "r2_buckets" (MEDIA), "analytics_engine_datasets"
+  "compatibility_flags": ["nodejs_compat"],
+  // Content (plan, section 4). Locally wrangler keeps this database in .wrangler/state; the real
+  // database_id comes when the union's Cloudflare account exists (plan, section 17).
+  "d1_databases": [
+    { "binding": "DB", "database_name": "union", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "migrations" }
+  ]
+  // Later: "r2_buckets" (MEDIA), "analytics_engine_datasets"
 }

@@ -12,15 +12,14 @@ import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
 import SectionHead from '~/components/ds/SectionHead.astro';
 import ShareBar from '~/components/ds/ShareBar.astro';
 import OrderRow from '~/components/ds/OrderRow.astro';
-import type { Lang } from '~/lib/types';
+import type { Lang, Order } from '~/lib/types';
 import { t, langOf, href, formatDate, formatKb, hasEn, ui } from '~/lib/i18n';
 import { subjectBySlug, orderGroups } from '~/data/orders';
-import { orderById, orderPath, relatedOrders } from '~/lib/content';
+import { orderPath, relatedOrders } from '~/lib/content';
 
-interface Props { lang: Lang; id: number }
-const { lang, id } = Astro.props;
+interface Props { lang: Lang; order: Order }
+const { lang, order: o } = Astro.props;
 const L = (p: string) => href(lang, p);
-const o = orderById(id)!;
 const subj = subjectBySlug[o.subject];
 const group = orderGroups.find((g) => g.slug === o.group)!;
 const title = t(o.title, lang);
@@ -28,7 +27,7 @@ const otherTitle = lang === 'en' ? o.title.ml : o.title.en;
 const pageUrl = new URL(L(orderPath(o)), Astro.site).toString();
 const pdfInfo = [o.pages && `${o.pages} ${o.pages === 1 ? 'page' : 'pages'}`, o.pdfKb && formatKb(o.pdfKb)].filter(Boolean).join(' · ');
 const dateLabel = o.dateIsUpload ? 'Added' : 'Date';
-const related = relatedOrders(o);
+const related = await relatedOrders(o);
 const sameSubject = related.every((r) => r.subject === o.subject);
 // "DA orders", but "Pension Orders" stays as it is
 const subjOrders = /orders$/i.test(subj.name.en) ? subj.name.en : `${subj.name.en} orders`;

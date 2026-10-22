@@ -2,7 +2,7 @@
 
 Oct 4, 2026 · @Sherlock · last updated 22 Oct 2026
 
-This is the master plan, kept in the repository at `docs/plan.md`. Code comments that say "plan, section N" refer to it. The plan was written before the build; where a section has a dated **Update** note, the note describes what was decided or built and wins over the original text below it. The README has the built site map.
+This is the master plan, kept in the repository at `docs/plan.md`. Code comments that say "plan, section N" refer to it. The plan was written before the build; where a section has a dated **Update** note, the note describes what was decided or built and wins over the original text below it. The README has the built site map. What is left to do, item by item and phase by phase, is in [`todo.md`](../todo.md) at the repository root; it is kept in step with this plan (items are added, ticked, rewritten or removed as the plan and the work change).
 
 ## 1. Overview
 
@@ -55,7 +55,8 @@ The new keralangounion.in will be a fast, mobile-first site on Cloudflare, manag
 | Home additions | Done: the home banner (one post or event, section 8) and an Articles section (the 3 newest posts in the new Articles topic) |
 | Admin wireframes | Done and approved: all 12 screens at `/wireframes/admin`, with a "View as" switch for the four roles (section 10) |
 | Database | Decided 22 Oct 2026: Cloudflare D1 (section 4); Malayalam search tested on a local D1 with the crawled content (section 11) |
-| Phase 1 onwards (section 15) | Not started: union-owned accounts, D1 and R2 setup, edge caching, the admin panel build, WordPress import |
+| Phase 1, local part | Done 22 Oct 2026: D1 tables and migrations, the crawl loaded into a local D1, every content page reading D1 on request, and the edge cache with purge by tag, tested locally (sections 4, 5 and 15) |
+| Phase 1 onwards (section 15) | Not started: union-owned accounts, deploying D1 and R2, admin login, the admin panel build, WordPress import |
 
 Still open from the design work: whether to build the Tools & guides calculators and how-to guides (their home-page tiles show "Coming soon"), and moving History, Conferences, Struggles and Documents over from the old site (their About cards show "Coming soon"). Section 17 lists every open question.
 
@@ -224,7 +225,7 @@ Members only ever hit cached pages and files; admins pass Cloudflare Access befo
 | Analytics | Own cookie-less analytics on Workers Analytics Engine + Cloudflare Web Analytics for speed metrics | Visits, page views and per-article view counts without cookies or a consent banner (section 14) |
 | CI/CD | GitHub → Cloudflare Pages builds; preview URL per branch with its own D1 database | Every change is reviewable before going live |
 
-**Build note.** The preview builds every page ahead of time (about 4,330 pages from the crawled JSON). Once content comes from D1, pages are built on their first request and kept in the edge cache, as described below. `src/lib/content.ts` is the only place pages get content from, so its functions become D1 queries with the same signatures.
+**Build note.** Until 22 Oct 2026 the preview built every page ahead of time (about 4,330 pages from the crawled JSON, about 75 s). Now pages that show posts, orders or Kerala Service issues render on request from D1 and are kept in the edge cache, as described below; only the fixed pages (about 40) are built ahead, in about 10 s. `src/lib/content.ts` is still the only place pages get content from; its functions are Drizzle queries that each read only what their page shows. The wireframes and `/design-system` stay prebuilt from the crawled JSON.
 
 **Hosting note.** Cloudflare Pages is used as requested. Cloudflare now steers new full-stack projects towards Workers with static assets, while Pages remains fully supported. The same Astro build deploys to either, so this can be switched later without code changes.
 
@@ -236,7 +237,9 @@ Members only ever hit cached pages and files; admins pass Cloudflare Access befo
 2. Every later visit is a cache hit: zero database reads.
 3. When an admin publishes or edits, only the affected URLs are purged (see above). The next visit to each rebuilds it once.
 
-Cloudflare does not cache HTML by default, so the Worker stores pages itself (Cache API, or a cache rule with `Cache-Control: s-maxage`) and the publish step purges them by URL. Phase 1 proves this works before any content page reads D1.
+Cloudflare does not cache HTML by default. The site uses Astro 7's route caching with the Cloudflare adapter's provider: each page sends `Cloudflare-CDN-Cache-Control` (lists 1 hour, single items 1 day, both served stale while they refresh) and `Cache-Tag` headers naming what it shows (`posts`, `post:18039`, `orders`, `order:11494`, `issues`, `banner`), and Cloudflare's Worker cache keeps it. Publishing purges by tag (`src/lib/cache.ts`, `purgeTags`), so a new post rebuilds the home page, News, the district hubs and the indexes, but no other article. Missing pages (404) are never cached.
+
+> **Update, 22 Oct 2026: tested locally.** Cloudflare's Worker cache doesn't run on a laptop, so `npm run preview:cached` builds the same site with Astro's in-memory cache. On the local D1: the first visit to `/news` ran 2 D1 queries; every later visit was a cache hit with 0 queries. Purging `posts` made News and the home page read D1 once more while Orders stayed cached; purging one post's tag rebuilt only that article (both languages). The normal build sends the Cloudflare headers above; seeing them take effect at the edge needs the union's account.
 
 | Measure | What it saves |
 | --- | --- |
@@ -250,7 +253,9 @@ Cloudflare does not cache HTML by default, so the Worker stores pages itself (Ca
 
 What still reads D1: the first visit to a changed page, uncached searches, the admin panel, the contact form and the hourly analytics roll-up.
 
-Rough numbers at 50,000 visitors a day (about 4 pages each, 200,000 page views, about 100 rows read to build a page): with no caching at all, about 20 million rows a day, over the free plan's 5 million but about 2 % of the Workers Paid monthly allowance; with caching, well under a million rows a day, inside the free plan. Each page's query plan is checked (`EXPLAIN QUERY PLAN`, and `rows_read` in D1's query results) before it ships, and usage alerts fire at 80 % of the daily limit (section 13).
+Rough numbers at 50,000 visitors a day (about 4 pages each, 200,000 page views, about 100 rows read to build a page): with no caching at all, about 20 million rows a day, over the free plan's 5 million but about 2 % of the Workers Paid monthly allowance; with caching, well under a million rows a day, inside the free plan.
+
+> **Update, 22 Oct 2026: what each page actually costs to build.** Every query was checked with `EXPLAIN QUERY PLAN`: all walk an index, none scans a table or sorts in memory. Local D1 doesn't report rows read, so these are estimates from the plans (each post on a list reads about 4 rows: the post, two translations and its photo): an article or order about 10–30 rows; a district hub about 150; Orders about 760; Kerala Service about 420; the Districts page about 1,400 and News about 1,700 (their per-district and per-topic counts walk every post's index entry); the home page about 2,300 (26 small queries, run in parallel); `/news-index.json` and `/search-index.json` about 6,400 and 7,200 (every post, for the browser search). If every list page were rebuilt every hour at each of three Cloudflare locations serving Kerala, and every article and order once a day, that is at most about 2.5 million rows a day, inside the free plan. Moving search into D1 (section 11) later removes the two indexes, the largest share. Each page's query plan is checked (`EXPLAIN QUERY PLAN`, and `rows_read` in D1's query results) before it ships, and usage alerts fire at 80 % of the daily limit (section 13).
 
 **Images.** The admin app resizes uploads in the browser into a fixed set of WebP sizes and sends them straight to R2. This keeps pages fast without a paid image service; the full rules are under "Media and thumbnails" in section 9.
 
@@ -268,6 +273,8 @@ Sources: [D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/), [
 ## 5. Content model
 
 Every content type is a D1 (SQLite) table. Readable text sits in a separate `*_translations` table with one row per language (ml, en), so the site can show Malayalam, English, or a fallback for any item.
+
+> **Update, 22 Oct 2026: the first tables.** `src/db/schema.ts` (Drizzle) defines the tables for the content that exists: `districts`, `topics`, `order_subjects` (fixed lists, copied from `src/data/`), `media`, `posts` + `post_translations`, `orders`, `magazine_issues` and `site_settings` (the home banner). `npm run db:generate` writes migrations into `migrations/`; `npm run db:seed` loads the crawl. Differences from the list below: districts, topics and subjects are keyed by their slug; a post's slug sits on `posts` (both languages share the URL); crawled files are `media` rows with the old site's `source_url` until they move to R2 (`r2_key`); order titles stay as columns on `orders`, as listed. Events, videos and people are still hand-written in `src/data/site.ts`; their tables come with the admin screens that edit them.
 
 **Shared columns on every content table:** `id`, `district_id` (null = state level), `status` (draft · in\_review · scheduled · published · archived), `published_at`, `created_by`, `updated_by`, `created_at`, `updated_at`, `legacy_url` (old WordPress URL, for redirects).
 
@@ -942,7 +949,7 @@ Version 1 takes about 15 weeks with one full-time developer and a part-time desi
 
 Phases: 0 · Design → 1 · Foundations → 2 · Demo data and core site → 3 · Feature pages → 4 · Admin panel and translation → 5 · Import, testing and launch. The union signs off at four gates along the way.
 
-> **Where things stand, 22 Oct 2026.** Phase 0's design work is done, built as real pages rather than static screens (the redesign steps in section 1); its interviews, tree test and usability test with members are still to do. Much of the public side of Phases 2 and 3 already runs in the preview on crawled data without a database: every template, search, the orders library and the events page. The next build phase is Phase 1: union-owned accounts, D1 and R2, the edge cache test and admin login.
+> **Where things stand, 22 Oct 2026.** Phase 0's design work is done, built as real pages rather than static screens (the redesign steps in section 1); its interviews, tree test and usability test with members are still to do. Much of the public side of Phases 2 and 3 already runs in the preview on crawled data without a database: every template, search, the orders library and the events page. The next build phase is Phase 1: union-owned accounts, D1 and R2, the edge cache test and admin login. **Update, 22 Oct 2026:** Phase 1's local part is done: the D1 tables, the crawl loaded into a local D1, every content page reading D1, and the edge cache tested with an in-memory stand-in (section 4). What is left needs the union's Cloudflare account: create the real D1 database and R2 bucket, deploy, confirm the cache at the edge, and set up admin login.
 
 The weeks are estimates; the gates matter more than the dates, because each one catches problems while they are still cheap to fix.
 

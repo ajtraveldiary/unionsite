@@ -22,7 +22,7 @@ import { orderGroups, orderSubjects } from '~/data/orders';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
-const orders = allOrders();
+const orders = await allOrders();
 const years = [...new Set(orders.map((o) => o.goDate.slice(0, 4)))].sort().reverse();
 const groups = [{ slug: 'all', label: 'All', count: orders.length }, ...orderGroups.map((g) => ({ slug: g.slug, label: g.name.en, count: orders.filter((o) => o.group === g.slug).length }))];
 const PAGE = 50;

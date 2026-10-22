@@ -23,41 +23,46 @@ import EmptyState from '~/components/ds/EmptyState.astro';
 import VideoCard from '~/components/ds/VideoCard.astro';
 import type { Lang, Post } from '~/lib/types';
 import { href, monthName } from '~/lib/i18n';
-import { allPosts, latestOrders, upcomingEvents, sortedDistricts, postsForDistrict, allIssues, issuePath, activeBanner } from '~/lib/content';
+import { latestPosts, featuredPost, latestPerDistrict, districtPostCounts, latestOrders, upcomingEvents, sortedDistricts, allIssues, issuePath, activeBanner } from '~/lib/content';
 import { videos, site } from '~/data/site';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
 const L = (p: string) => href(lang, p);
 // The banner's post or event shows only in the banner, never again further down
-const banner = activeBanner();
-const posts = allPosts().filter((p) => !(banner?.kind === 'post' && p.id === banner.post.id));
+const banner = await activeBanner();
+const skip = banner?.kind === 'post' ? [banner.post.id] : [];
 
 // Top news: the featured story leads, the next four sit beside it (three on phones)
-const lead = posts.find((p) => p.featured) ?? posts[0];
-const topRest = posts.filter((p) => p !== lead).slice(0, 4);
+const [featured, recent] = await Promise.all([featuredPost(), latestPosts({ limit: 5, exclude: skip })]);
+const lead = featured && !skip.includes(featured.id) ? featured : recent[0];
+const topRest = recent.filter((p) => p.id !== lead.id).slice(0, 4);
 
 // From the union: three columns that carry on where Top news stops, so nothing repeats.
-// Each opens with a photo story when one exists, then lists three more as text.
-const used = new Set<number>([lead, ...topRest].map((p) => p.id));
-const take = (list: Post[], n: number) => {
-  const out = list.filter((p) => !used.has(p.id)).slice(0, n);
+// Each opens with a photo story when one exists, then lists three more as text. The topics of
+// Articles and the three columns don't overlap, so each only has to skip what Top news showed.
+const used = new Set<number>([...skip, lead.id, ...topRest.map((p) => p.id)]);
+const notTop = [...used];
+const [articles, secretary, fseto, news] = await Promise.all([
+  latestPosts({ limit: 3, topic: 'articles', exclude: notTop }),
+  latestPosts({ limit: 4, topic: 'secretary', exclude: notTop }),
+  latestPosts({ limit: 4, topic: 'fseto', exclude: notTop }),
+  latestPosts({ limit: 4, notTopics: ['secretary', 'fseto', 'articles'], exclude: notTop }),
+]);
+const take = (out: Post[]) => {
   out.forEach((p) => used.add(p.id));
   const i = out.findIndex((p) => p.cover.kind === 'photo');
   return i > 0 ? [out[i], ...out.filter((_, j) => j !== i)] : out;
 };
-// Articles: the three newest posts editors marked as articles, newest first. Claimed before the
-// columns below so an article never shows twice.
-const articles = posts.filter((p) => p.topic === 'articles' && !used.has(p.id)).slice(0, 3);
 articles.forEach((p) => used.add(p.id));
 const columns = [
-  { name: 'Secretary’s page', more: '/news?topic=secretary', posts: take(posts.filter((p) => p.topic === 'secretary'), 4) },
-  { name: 'FSETO', more: '/news?topic=fseto', posts: take(posts.filter((p) => p.topic === 'fseto'), 4) },
+  { name: 'NGO Union News', more: '/news', posts: take(news) },
+  { name: 'Secretary’s page', more: '/news?topic=secretary', posts: take(secretary) },
+  { name: 'FSETO', more: '/news?topic=fseto', posts: take(fseto) },
 ];
-columns.unshift({ name: 'NGO Union News', more: '/news', posts: take(posts.filter((p) => !['secretary', 'fseto', 'articles'].includes(p.topic)), 4) });
 
 // Orders and the tools beside them
-const orders = latestOrders(5);
+const orders = await latestOrders(5);
 const popular = [
   { label: 'DA', path: '/orders?s=da' },
   { label: 'Pay Revision', path: '/orders?s=pay-revision' },
@@ -86,18 +91,12 @@ const districtEvents = events.filter((e) => e.district);
 // The page carries a few per district (enough to fill the list when one is picked), not all.
 const EVENT_LIMIT = 4;
 const NEWS_LIMIT = 5;
-const perDistrict = new Map<string, number>();
-const districtPosts = posts.filter((p) => {
-  if (!p.district) return false;
-  const n = perDistrict.get(p.district) ?? 0;
-  perDistrict.set(p.district, n + 1);
-  return n < NEWS_LIMIT + 2;
-});
-const districts = sortedDistricts().map((d) => ({ d, count: postsForDistrict(d.slug).length }));
+const [perDistrict, counts, issues] = await Promise.all([latestPerDistrict(NEWS_LIMIT + 2, skip), districtPostCounts(), allIssues()]);
+const districtPosts = Object.values(perDistrict).flat().sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+const districts = sortedDistricts().map((d) => ({ d, count: counts[d.slug] ?? 0 }));
 const districtOptions = districts.map(({ d }) => ({ value: d.slug, label: d.name.en, short: d.name.en.replace('Thiruvananthapuram', 'TVM') }));
 const firstNews = districtPosts.filter((p) => !used.has(p.id)).slice(0, NEWS_LIMIT);
 
-const issues = allIssues();
 const issue = issues[0];
 const oldest = issues.at(-1)!;
 ---
@@ -236,7 +235,7 @@ const oldest = issues.at(-1)!;
       <SectionHead title="Kerala Service" href={L('/kerala-service')} linkLabel="Archive" />
       <div class="flex flex-1 gap-5">
         <a href={L(issuePath(issue.year, issue.month))} class="block w-32 shrink-0 self-start overflow-hidden rounded-md border border-line" aria-label={`Read Kerala Service, ${monthName(issue.month, 'en')} ${issue.year}`}>
-          <MagazineCover year={issue.year} month={issue.month} class="h-auto w-full" />
+          <MagazineCover issue={issue} class="h-auto w-full" />
         </a>
         <div lang="en" class="flex min-w-0 flex-col">
           <p class="t-label">Current issue</p>

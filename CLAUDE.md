@@ -4,24 +4,39 @@ The new keralangounion.in: an Astro 7 site on Cloudflare for the union of Kerala
 employees. The master plan is `docs/plan.md`; code comments that say "plan, section N" refer to it.
 Keep its dated **Update** notes and section 1's status table current when something is decided or built.
 
+`todo.md` (repo root) lists everything left to do, by phase. Keep it current in the same change as
+the work: tick an item (`[x]` with the date) and move it to **Done** when it's finished; add an item
+when the owner asks for something or the work turns up a new task; delete an item the plan drops;
+rewrite an item when the plan changes. Items only the union can do or decide are marked **(union)**.
+
 Right now the site is a **preview**. News, GO orders and Kerala Service are real content crawled
-from the current keralangounion.in (`src/data/live/*.json`; photos and PDFs are still linked from
-the old site). Events, videos, the state committee and the home-page `banner` (one post or event, set by a state
-editor; it stays until replaced) are hand-written in `src/data/site.ts`;
-events are sample data. The admin panel, database (Cloudflare D1, decided) and file storage are not built yet.
+from the current keralangounion.in into `src/data/live/*.json`, then loaded into a **local D1
+database** (photos and PDFs are still linked from the old site). Pages that show this content read
+D1 on request and are cached (plan, section 4, "Caching and database reads"). Events, videos and
+the state committee are hand-written in `src/data/site.ts`; events are sample data. The home-page
+banner (one post or event, set by a state editor; it stays until replaced) lives in D1
+(`site_settings.home_banner`), first set from `firstBanner` in `site.ts`. The Cloudflare account,
+R2 file storage and the admin panel are not set up yet.
 
 ## Commands
 
-- `npm run dev`: dev server on port 4321 (in the desktop app, start it with the "site" entry in `.claude/launch.json`)
+- First time, and after changing the schema or the crawl: `npm run db:migrate`, then `npm run db:seed`.
+  Without them the content pages fail (no tables).
+- `npm run dev`: dev server on port 4321 (in the desktop app, start it with the "site" entry in `.claude/launch.json`).
+  It never caches; the terminal logs D1 queries per request (`[d1] GET /news · 2 queries`).
 - `npm run check`: Astro/TypeScript check. Must show 0 errors, 0 warnings.
-- `npm run build`: builds every page (about 4,330 with the crawled archive, ~75 s). Run it after changing pages or data.
+- `npm run build`: builds the Worker plus the static pages (about 40, ~10 s). Content pages render on request.
+- `npm run preview:cached` (the "cached" entry in `.claude/launch.json`, port 4322): builds with an
+  in-memory page cache and serves it on the local D1, to see cache hits (0 queries) and purges.
+  `GET /api/dev/cache` counts queries; `POST /api/dev/cache?tags=posts` purges a tag. Both are 404 in a normal build.
+- `npm run db:generate`: after changing `src/db/schema.ts`, writes the next SQL migration into `migrations/`.
 - `npm run map`: regenerates `src/data/geo/kerala-map.json` from the district GeoJSON (rarely needed)
 - `node scripts/crawl.mjs`: reads the current site into `scripts/.cache/` (one request at a time,
   cached; a full run from scratch takes hours because the old server is slow). `--cache-only` builds
   from the cache without fetching. Watch it with `node scripts/crawl-progress.mjs` in another terminal.
 - `node scripts/import-crawl.mjs`: turns the crawl into `src/data/live/*.json` (topics, districts,
   subjects, GO numbers, transliterated slugs). Never edit those JSON files by hand; change the
-  script and rerun it.
+  script and rerun it, then `npm run db:seed` to reload D1.
 
 There are no automated tests. Check changes in the browser at phone (375 px) and laptop width,
 in light and dark themes.
@@ -37,8 +52,16 @@ in light and dark themes.
 - `src/styles/app.css`: design tokens (light/dark) and the few shared classes (`.btn`, `.chip`,
   `.card`, `.field`, `.t-display`/`.t-h1…`, `.wrap`, `.section`, `.col`/`.col-foot`, `.balance-list`).
   Everything else is Tailwind 4 utilities using these tokens.
-- `src/lib/content.ts`: all content queries. Pages call these, never the data files directly, so the
-  Phase 2 database can replace them with the same function signatures.
+- `src/lib/content.ts`: all content queries (async, Drizzle on D1) plus the URL helpers. Pages call
+  these, never the database or data files directly. Each query reads only what its page shows,
+  through an index (`latestPosts({ limit, topic, district, exclude })`, counts by `GROUP BY`);
+  never load the whole archive for a page.
+- `src/db/`: `schema.ts` (tables, plan section 5) and `client.ts` (the D1 binding, opened on first
+  use). `migrations/` holds the generated SQL; `scripts/seed-d1.mjs` loads the crawl.
+- `src/lib/cache.ts`: cache rules and tags. Every on-demand page calls `cachePage(Astro, 'list' | 'item', [tags])`;
+  `purgeTags` lists what a publish must purge. Content routes set `export const prerender = false`
+  and return `new Response(null, { status: 404 })` for missing items (not `Astro.rewrite`).
+- `src/lib/sample.ts`: the crawled JSON, synchronous, only for the prebuilt `/wireframes` and `/design-system`.
 - `src/lib/search.ts`: search scoring shared by `/search` and the Orders page (index at `/search-index.json`).
 - The News page renders only the newest stories; filters, search and "Load more" read
   `/news-index.json`. Lists that could hold the whole archive must stay limited like this.
