@@ -68,8 +68,7 @@ How this list is kept:
 
 ## Phase 4 · Admin panel and translation (§6, §10, §14)
 
-- [ ] The admin app at `/admin`, built from the 12 approved wireframes: Dashboard, News, Post editor, Orders upload, Home & banner, Users, Events, Kerala Service upload, People & committees, Media, Inbox, Settings
-- [ ] Not wireframed yet: Pages and documents, Districts, Import, Audit log screens
+- [ ] The admin app at `/admin`, built from the 18 wireframes: Dashboard, News, Post editor, Events, Orders upload, Kerala Service upload, Pages & documents, People & committees, Districts, Media, Home & banner, Inbox, Analytics, Users, Audit log, Import, Settings, Help
 - [ ] Post editor: TipTap, autosave every 10 s, version history with restore, phone/desktop preview, "Being edited by …" lock
 - [ ] Roles and district limits enforced in the API on every request (§10 table)
 - [ ] Publishing purges the edge cache by tag (`purgeTags` in `src/lib/cache.ts`)
@@ -99,6 +98,7 @@ How this list is kept:
 
 ## Done
 
+- [x] 2026-10-22 Wireframes for the last six admin screens (Pages & documents, Districts, Analytics, Audit log, Import, Help), approved by the owner; all 18 admin screens are now wireframed
 - [x] 2026-10-22 Phase 1 local work and todo.md committed and pushed
 - [x] 2026-10-22 Phase 1, local part: D1 tables and migrations, the crawl loaded into a local D1, every content page reading D1 on request, the edge cache with purge by tag tested locally
 - [x] 2026-10-22 The rebuild plan moved into the repo as `docs/plan.md` and brought up to date

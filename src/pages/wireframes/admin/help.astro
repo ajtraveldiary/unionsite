@@ -1,0 +1,66 @@
+---
+/**
+ * Admin wireframe: help (plan, section 8 "Admin help" and section 15 training). A short how-to for
+ * every common task, in Malayalam with screenshots, filtered to what the reader's role can do.
+ * The task names are shown in English here for review; the guide itself is written in Malayalam
+ * by the state office.
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import Ph from '~/components/wire/Ph.astro';
+
+const tasks: { name: string; roles?: string }[] = [
+  { name: 'Log in with the email code' },
+  { name: 'Post news from your phone' },
+  { name: 'Add photos and pick the main one' },
+  { name: 'Send a post for review', roles: 'editor' },
+  { name: 'Review and publish a post', roles: 'super state district' },
+  { name: 'Check and approve the English version', roles: 'super state district' },
+  { name: 'Add an event' },
+  { name: 'Update office-bearers' },
+  { name: 'Add or change an office address' },
+  { name: 'Upload a government order', roles: 'super state' },
+  { name: 'Add a Kerala Service issue', roles: 'super state' },
+  { name: 'Change the home banner', roles: 'super state' },
+  { name: 'Answer a message from the contact form', roles: 'super state district' },
+  { name: 'Invite a new admin', roles: 'super district' },
+];
+---
+<AdminWireLayout title="Help" page="help">
+  <h1 class="t-h1">Help</h1>
+  <input class="wf-input mt-4 max-w-xl" placeholder="Search the guide" aria-label="Search the guide" />
+  <Note n={1}>One page per task, a few steps each, with a screenshot for every step. The list only shows what the reader's role can do (try "View as"). The guide is in Malayalam; the task names are in English here only for review.</Note>
+
+  <div class="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+    <section aria-labelledby="tasks">
+      <h2 id="tasks" class="t-h2 mb-2">How do I…</h2>
+      <ul class="divide-y divide-zinc-200 border-y border-zinc-200">
+        {tasks.map((t, i) => (
+          <li data-roles={t.roles}><a href="#task" class:list={['flex items-center justify-between gap-3 py-3', i === 1 && 'font-semibold']}>{t.name}<span aria-hidden="true" class="text-zinc-400">›</span></a></li>
+        ))}
+      </ul>
+    </section>
+
+    <section id="task" class="scroll-mt-16" aria-labelledby="task-title">
+      <p class="t-label">Guide · 2 minutes</p>
+      <h2 id="task-title" class="t-h2 mt-1">Post news from your phone</h2>
+      <Ph label="60-second video" ratio="16/9" class="mt-3" />
+      <ol class="mt-4 space-y-5">
+        {[1, 2, 3, 4].map((n) => (
+          <li class="grid grid-cols-[2rem_minmax(0,1fr)] gap-3">
+            <span class="grid size-8 place-items-center rounded-full bg-zinc-800 text-sm font-bold text-white">{n}</span>
+            <div>
+              <p lang="ml">ഘട്ടം {n}: …</p>
+              <Ph label="Screenshot" ratio="9/12" class="mt-2 max-w-[12rem]" />
+            </div>
+          </li>
+        ))}
+      </ol>
+      <div class="wf-box mt-6 p-4">
+        <p class="font-semibold">Still stuck?</p>
+        <p class="t-meta mt-1">Call or WhatsApp the state office · the number from Settings</p>
+      </div>
+      <Note n={2}>The same pages are the hand-out for the one-hour training session before launch (plan, section 15). When a screen changes, its guide page is updated in the same release.</Note>
+    </section>
+  </div>
+</AdminWireLayout>

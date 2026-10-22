@@ -99,7 +99,7 @@ const cards = [
       </section>
 
       <section aria-labelledby="today">
-        <div class="wf-section-head"><h2 id="today" class="t-h2">Today</h2></div>
+        <div class="wf-section-head"><h2 id="today" class="t-h2">Today</h2><a href="/wireframes/admin/analytics" class="wf-link">Analytics</a></div>
         <Note n={5}>Cookie-less visit counts (plan, section 14). District admins see their own district's numbers.</Note>
         <div class="grid grid-cols-2 gap-3">
           <div class="wf-box p-4"><p class="text-2xl font-bold tabular-nums">1,248</p><p class="t-meta">Visitors</p></div>
@@ -112,7 +112,7 @@ const cards = [
       </section>
 
       <section data-roles="super state district" aria-labelledby="inbox">
-        <div class="wf-section-head"><h2 id="inbox" class="t-h2">Messages</h2><a href="#" class="wf-link">Inbox</a></div>
+        <div class="wf-section-head"><h2 id="inbox" class="t-h2">Messages</h2><a href="/wireframes/admin/inbox" class="wf-link">Inbox</a></div>
         <ul class="divide-y divide-zinc-200 text-sm">
           {['Membership question', 'Kerala Service subscription', 'Website: order PDF not opening', 'General'].map((s) => <li class="py-2"><p class="font-medium">{s}</p><p class="t-meta">From the contact form · unassigned</p></li>)}
         </ul>

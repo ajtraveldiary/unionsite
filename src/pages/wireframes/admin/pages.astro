@@ -1,0 +1,109 @@
+---
+/**
+ * Admin wireframe: pages and documents (plan, section 10; tables "pages", "documents" and
+ * "conferences", section 5). The About section's own pages, the organisation's documents (Bye-Law,
+ * resolutions, jubilee books) and the conference timeline. State roles only. A page that isn't
+ * published yet shows "Coming soon" on the site, as History and the others do today.
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import { site } from '~/data/site';
+
+const pages = [
+  { title: 'About the Union', path: '/about', status: 'Published', updated: '21 Oct 2026' },
+  { title: 'History', path: '/about/history', status: 'Not published · shows "Coming soon"', updated: '—' },
+  { title: 'Struggles', path: '/about/struggles', status: 'Not published · shows "Coming soon"', updated: '—' },
+  { title: 'Privacy', path: '/privacy', status: 'Published', updated: '21 Oct 2026' },
+  { title: 'Accessibility', path: '/accessibility', status: 'Published', updated: '21 Oct 2026' },
+];
+const documents = [
+  { title: 'Bye-Law', kind: 'Bye-Law', year: '—' },
+  { title: '1965 policy resolution', kind: 'Resolution', year: '1965' },
+  { title: 'Silver Jubilee document', kind: 'Jubilee', year: '—' },
+  { title: 'Golden Jubilee document', kind: 'Jubilee', year: '—' },
+];
+// The newest few; the list runs back to the 1st conference
+const conferences = [site.conferences, site.conferences - 1, site.conferences - 2, site.conferences - 3];
+const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
+---
+<AdminWireLayout title="Pages & documents" page="pages">
+  <div data-roles="district editor" class="wf-box p-6 text-center">
+    <p class="font-semibold">The About pages and documents are managed by the state office.</p>
+    <p class="t-meta mt-1">Your district's own pages are under Districts.</p>
+  </div>
+
+  <div data-roles="super state">
+    <h1 class="t-h1">Pages & documents</h1>
+    <div class="mt-4 flex gap-1 overflow-x-auto border-b border-zinc-200" role="tablist" aria-label="Sections">
+      {['Pages', 'Documents', 'Conferences'].map((tb, i) => <a href={`#${tb.toLowerCase()}`} role="tab" aria-selected={i === 0 ? 'true' : 'false'} class:list={['-mb-px whitespace-nowrap border-b-2 px-3 py-2.5', i === 0 ? 'border-zinc-800 font-semibold' : 'border-transparent text-zinc-600']}>{tb}</a>)}
+    </div>
+    <Note n={1}>Three tabs; shown one under another here so all three can be reviewed.</Note>
+
+    <section id="pages" class="mt-6 scroll-mt-16" aria-labelledby="pg">
+      <div class="wf-section-head"><h2 id="pg" class="t-h2">Pages</h2><span class="wf-btn wf-btn-line !min-h-9 text-sm">+ New page</span></div>
+      <ul class="divide-y divide-zinc-200 border-y border-zinc-200">
+        {pages.map((p) => (
+          <li class="flex flex-wrap items-center gap-x-4 gap-y-1 py-3">
+            <div class="min-w-0 flex-1"><p class="font-semibold">{p.title}</p><p class="t-meta">{p.path} · {p.status}</p></div>
+            <span class="t-meta">Updated {p.updated}</span>
+            <a href="/wireframes/admin/editor" class="wf-link">Edit</a>
+          </li>
+        ))}
+      </ul>
+      <Note n={2}>A page opens in the same editor as a news post (Malayalam and English tabs, history, preview), with a page template instead of topic and district. History gets a side table of contents and a milestones list; the editor builds both from the page's headings.</Note>
+    </section>
+
+    <section id="documents" class="mt-10 scroll-mt-16" aria-labelledby="doc">
+      <div class="wf-section-head"><h2 id="doc" class="t-h2">Documents</h2></div>
+      <ul class="divide-y divide-zinc-200 border-y border-zinc-200">
+        {documents.map((d) => (
+          <li class="flex items-center gap-3 py-3">
+            <span class="wf-ph h-12 w-9 shrink-0 !rounded"><span class="sr-only">PDF</span></span>
+            <div class="min-w-0 flex-1"><p class="font-semibold">{d.title}</p><p class="t-meta">{d.kind} · {d.year} · PDF</p></div>
+            <a href="#doc-form" class="wf-link">Edit</a>
+          </li>
+        ))}
+      </ul>
+      <div id="doc-form" class="wf-box mt-4 max-w-3xl space-y-3 p-4">
+        <p class="font-semibold">Add a document</p>
+        <div class="grid min-h-24 place-items-center rounded-xl border-2 border-dashed border-zinc-300 p-4 text-center text-sm text-zinc-600">Drop the PDF here, or <span class="underline">choose a file</span></div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label class="block"><span class="t-label">Title · Malayalam</span><input class="wf-input mt-1" lang="ml" /></label>
+          <label class="block"><span class="t-label">Title · English</span><input class="wf-input mt-1" /></label>
+          <label class="block"><span class="t-label">Kind</span><select class="wf-input mt-1"><option>Bye-Law</option><option>Resolution</option><option>Jubilee</option><option>Other</option></select></label>
+          <label class="block"><span class="t-label">Year</span><input class="wf-input mt-1" inputmode="numeric" /></label>
+        </div>
+        <label class="block"><span class="t-label">Short description · optional</span><textarea class="wf-input mt-1 min-h-20 py-3" lang="ml"></textarea></label>
+        <span class="wf-btn wf-btn-dark">Publish</span>
+      </div>
+      <Note n={3}>Each document gets its own page (/about/documents/…) with a reader and a download button. A new version of the Bye-Law replaces the file but keeps the address, so shared links still work; the old file stays in History.</Note>
+    </section>
+
+    <section id="conferences" class="mt-10 scroll-mt-16" aria-labelledby="conf">
+      <div class="wf-section-head"><h2 id="conf" class="t-h2">Conferences</h2><a href="#conf-form" class="wf-link">+ Add the next one</a></div>
+      <ul class="divide-y divide-zinc-200 border-y border-zinc-200">
+        {conferences.map((n) => (
+          <li class="flex items-center gap-3 py-3">
+            <span class="grid size-11 shrink-0 place-items-center rounded-full border border-zinc-300 text-sm font-bold tabular-nums">{n}</span>
+            <div class="min-w-0 flex-1"><p class="font-semibold">{ordinal(n)} state conference</p><p class="t-meta">Year and place · report · album</p></div>
+            <a href="#conf-form" class="wf-link">Edit</a>
+          </li>
+        ))}
+        <li class="py-3 text-sm text-zinc-500">… back to the 1st conference</li>
+      </ul>
+      <div id="conf-form" class="wf-box mt-4 max-w-3xl space-y-3 p-4">
+        <p class="font-semibold">{ordinal(site.conferences + 1)} state conference</p>
+        <div class="grid gap-3 sm:grid-cols-3">
+          <label class="block"><span class="t-label">Number</span><input class="wf-input mt-1" value={site.conferences + 1} inputmode="numeric" /></label>
+          <label class="block"><span class="t-label">Starts</span><input class="wf-input mt-1" type="date" /></label>
+          <label class="block"><span class="t-label">Ends</span><input class="wf-input mt-1" type="date" /></label>
+          <label class="block sm:col-span-3"><span class="t-label">Place · Malayalam</span><input class="wf-input mt-1" lang="ml" /></label>
+        </div>
+        <label class="block"><span class="t-label">Report · optional</span><textarea class="wf-input mt-1 min-h-24 py-3" lang="ml" placeholder="Decisions, office-bearers elected, resolutions"></textarea></label>
+        <div class="flex flex-wrap gap-2"><span class="wf-chip">Link the photo album</span><span class="wf-chip">Attach documents</span><span class="wf-chip">Link the event</span></div>
+        <span class="wf-btn wf-btn-dark">Save</span>
+      </div>
+      <Note n={4}>The timeline on /about/conferences is built from this list. The 63 past conferences come over from the old site with the import; after each new conference the office adds one entry and starts the new committee term in People & committees.</Note>
+    </section>
+  </div>
+</AdminWireLayout>

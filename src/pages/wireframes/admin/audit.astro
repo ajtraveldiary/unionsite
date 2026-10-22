@@ -1,0 +1,71 @@
+---
+/**
+ * Admin wireframe: audit log (plan, section 10; table "audit_log", section 5). Who changed what and
+ * when, with the changes and a one-click restore of the earlier version. State roles see every
+ * district, a district admin their own; district editors have no audit log. Headlines are from the
+ * crawl; people and times are made up.
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import { allPosts, allOrders, sortedDistricts } from '~/lib/sample';
+
+const posts = allPosts();
+const kollam = posts.filter((p) => p.district === 'kollam');
+const order = allOrders()[0];
+const entries = [
+  { when: 'Today 10:42', who: 'Kollam district admin', action: 'Published', item: kollam[0]?.title.ml, ml: true, district: 'Kollam', diff: true },
+  { when: 'Today 10:05', who: 'Kollam district editor', action: 'Sent for review', item: kollam[0]?.title.ml, ml: true, district: 'Kollam', diff: true },
+  { when: 'Today 09:30', who: 'State editor 1', action: 'Approved English', item: posts[1].title.ml, ml: true, district: 'State' },
+  { when: 'Yesterday 18:12', who: 'State editor 2', action: 'Changed the home banner', item: posts[2].title.ml, ml: true, district: 'State' },
+  { when: 'Yesterday 16:40', who: 'Office staff 1', action: 'Uploaded an order', item: order.title.en, ml: false, district: 'State' },
+  { when: 'Mon 11:02', who: 'Super admin', action: 'Invited a user', item: 'Kannur district admin', ml: false, district: 'Kannur' },
+  { when: 'Mon 10:15', who: 'Kollam district admin', action: 'Deleted a draft', item: kollam[1]?.title.ml, ml: true, district: 'Kollam', diff: true },
+];
+---
+<AdminWireLayout title="Audit log" page="audit">
+  <div data-roles="editor" class="wf-box p-6 text-center">
+    <p class="font-semibold">The audit log is for admins.</p>
+    <p class="t-meta mt-1">Your own post's history is in the editor, under History.</p>
+  </div>
+
+  <div data-roles="super state district">
+    <h1 class="t-h1">Audit log</h1>
+    <div class="mt-4 flex flex-col gap-3 md:flex-row md:flex-wrap">
+      <input class="wf-input md:max-w-xs" placeholder="Search an item or a person" aria-label="Search the log" />
+      <select class="wf-input md:w-44" aria-label="Kind of change"><option>Every change</option><option>Published</option><option>Edited</option><option>Deleted</option><option>English approved</option><option>Users and roles</option><option>Settings</option><option>Logins</option></select>
+      <select class="wf-input md:w-52" aria-label="District" data-roles="super state"><option>All districts and state</option><option>State only</option>{sortedDistricts().map((d) => <option>{d.name.en}</option>)}</select>
+      <select class="wf-input md:w-40" aria-label="When"><option>Last 7 days</option><option>Last 30 days</option><option>Last 12 months</option><option>Choose dates…</option></select>
+    </div>
+    <Note n={1}>Every create, edit, publish, delete, approval, role change, setting change and login is written here and can't be edited or removed. A district admin sees only their district's entries (try "View as").</Note>
+
+    <ul class="mt-4 divide-y divide-zinc-200 border-y border-zinc-200">
+      {entries.map((e) => (
+        <li class="grid gap-1 py-3 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:items-baseline sm:gap-4" data-roles={e.district === 'Kollam' ? undefined : 'super state'}>
+          <span class="t-meta">{e.when}</span>
+          <div class="min-w-0">
+            <p><span class="font-semibold">{e.who}</span> · {e.action}</p>
+            <p lang={e.ml ? 'ml' : 'en'} class="clamp-2 text-sm text-zinc-600">{e.item}</p>
+          </div>
+          {e.diff ? <a href="#changes" class="wf-link">See changes</a> : <span></span>}
+        </li>
+      ))}
+    </ul>
+    <a href="#" class="wf-link mt-3 inline-block">Older entries</a>
+
+    <section id="changes" class="mt-10 scroll-mt-16" aria-labelledby="chg">
+      <div class="wf-section-head"><h2 id="chg" class="t-h2">Changes</h2><span class="t-meta">Today 10:42 · Kollam district admin · Published</span></div>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div class="wf-box p-4">
+          <p class="t-label">Before</p>
+          <p lang="ml" class="mt-2 text-sm"><span class="bg-zinc-200 line-through">പഴയ വാചകം</span> …</p>
+        </div>
+        <div class="wf-box p-4">
+          <p class="t-label">After</p>
+          <p lang="ml" class="mt-2 text-sm"><span class="bg-zinc-300 font-semibold">പുതിയ വാചകം</span> …</p>
+        </div>
+      </div>
+      <div class="mt-3 flex flex-wrap gap-2"><span class="wf-btn wf-btn-line">Restore the earlier version</span><a href="/wireframes/admin/editor" class="wf-btn wf-btn-line">Open the post</a></div>
+      <Note n={2}>Restoring makes a new version from the old one, so nothing is lost and the restore itself shows in the log. A deleted post can be brought back from its "Deleted" entry, because its versions are kept (plan, section 13).</Note>
+    </section>
+  </div>
+</AdminWireLayout>

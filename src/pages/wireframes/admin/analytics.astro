@@ -1,0 +1,120 @@
+---
+/**
+ * Admin wireframe: analytics (plan, section 14). The site's own cookie-less numbers: summary cards
+ * with the change from the previous period, a daily chart, who is reading now, and ranked tables.
+ * State roles see the whole site; a district admin their district plus site totals; a district
+ * editor only their own posts. Headlines and order titles are from the crawl; every number is made up.
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import Ph from '~/components/wire/Ph.astro';
+import { allPosts, allOrders, sortedDistricts } from '~/lib/sample';
+
+const posts = allPosts();
+const topPosts = posts.slice(0, 5).map((p, i) => ({ title: p.title.ml, views: [4210, 2980, 2511, 1874, 1302][i] }));
+const topOrders = allOrders().slice(0, 5).map((o, i) => ({ title: o.title.en, opens: [1650, 980, 744, 512, 390][i] }));
+const cards = [
+  ['Visitors', '18,420', '+12 %'],
+  ['Visits', '24,105', '+9 %'],
+  ['Pages read', '61,980', '+15 %'],
+  ['Average reading time', '1 min 48 s', '−4 %'],
+  ['PDF opens', '6,212', '+31 %'],
+];
+const ranked = [
+  { head: 'Search terms', rows: [['ക്ഷാമബത്ത', '812'], ['DA', '640'], ['ശമ്പള പരിഷ്കരണം', '402'], ['MEDISEP', '355'], ['bonus 2026', '210']] },
+  { head: 'Searches with no results', rows: [['leave encashment 2026', '41'], ['GO 45/2026', '28'], ['transfer norms', '19']], note: 'Which GOs members look for and can’t find' },
+  { head: 'Where visitors come from', rows: [['WhatsApp', '58 %'], ['Google', '21 %'], ['Direct', '12 %'], ['Facebook', '7 %'], ['Other sites', '2 %']] },
+  { head: 'Devices', rows: [['Phones', '86 %'], ['Computers', '12 %'], ['Tablets', '2 %']] },
+  { head: 'Pages not found (404)', rows: [['/fseto-copy/', '96'], ['/k/', '31'], ['/test-2022/', '12']], note: 'Old links that may need a redirect' },
+];
+---
+<AdminWireLayout title="Analytics" page="analytics">
+  <h1 class="t-h1">Analytics</h1>
+  <div class="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label="Period">
+    {['Today', '7 days', '30 days', '12 months', 'Choose dates…'].map((p, i) => <button type="button" class="wf-chip" aria-pressed={i === 2 ? 'true' : 'false'}>{p}</button>)}
+    <span class="t-meta md:ml-2">compared with the 30 days before</span>
+    <a href="#" class="wf-link md:ml-auto" data-roles="super state district">Download CSV</a>
+  </div>
+  <p class="t-meta mt-2" data-roles="district">Kollam district · site-wide totals are under the chart</p>
+  <p class="t-meta mt-2" data-roles="editor">Your own posts only</p>
+  <Note n={1}>Counted without cookies, so there is no consent banner (plan, section 14). A visitor is an anonymous code that changes every day; no address or personal data is kept. Bots and admin previews are left out.</Note>
+
+  <ul class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5" data-roles="super state district">
+    {cards.map(([label, n, change]) => <li class="wf-box p-4"><p class="text-2xl font-bold tabular-nums">{n}</p><p class="t-meta">{label} · {change}</p></li>)}
+  </ul>
+
+  <div class="mt-6 grid gap-6 *:min-w-0 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <section aria-labelledby="daily">
+      <div class="wf-section-head"><h2 id="daily" class="t-h2">Every day</h2><span class="t-meta">Visitors and pages read</span></div>
+      <Ph label="Line chart: visitors and pages read per day" ratio="16/7" />
+      <p class="t-meta mt-2" data-roles="district">Site-wide: 18,420 visitors · Kollam: 1,960 (11 %)</p>
+    </section>
+    <section aria-labelledby="live" data-roles="super state district">
+      <div class="wf-section-head"><h2 id="live" class="t-h2">Right now</h2></div>
+      <div class="wf-box p-4">
+        <p class="text-3xl font-bold tabular-nums">37</p>
+        <p class="t-meta">reading in the last 30 minutes</p>
+        <ul class="mt-3 space-y-1 text-sm">
+          {posts.slice(0, 3).map((p) => <li lang="ml" class="truncate">{p.title.ml}</li>)}
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <div class="mt-8 grid gap-8 *:min-w-0 lg:grid-cols-2">
+    <section aria-labelledby="top-posts">
+      <div class="wf-section-head"><h2 id="top-posts" class="t-h2">Most read</h2></div>
+      <ol class="divide-y divide-zinc-200 border-y border-zinc-200">
+        {topPosts.map((p, i) => (
+          <li class="flex items-baseline gap-3 py-2.5">
+            <span class="t-meta w-4">{i + 1}</span>
+            <span lang="ml" class="clamp-2 min-w-0 flex-1 text-sm font-medium leading-snug">{p.title}</span>
+            <span class="text-sm tabular-nums">{p.views.toLocaleString('en-IN')}</span>
+          </li>
+        ))}
+      </ol>
+      <p class="t-meta mt-2">Read rate (past 75 % of the article), reading time, shares and sources for each post open from its row, and in the editor.</p>
+    </section>
+    <section aria-labelledby="top-orders" data-roles="super state">
+      <div class="wf-section-head"><h2 id="top-orders" class="t-h2">Most opened orders</h2></div>
+      <ol class="divide-y divide-zinc-200 border-y border-zinc-200">
+        {topOrders.map((o, i) => (
+          <li class="flex items-baseline gap-3 py-2.5">
+            <span class="t-meta w-4">{i + 1}</span>
+            <span class="clamp-2 min-w-0 flex-1 text-sm font-medium leading-snug">{o.title}</span>
+            <span class="text-sm tabular-nums">{o.opens.toLocaleString('en-IN')}</span>
+          </li>
+        ))}
+      </ol>
+      <p class="t-meta mt-2">Kerala Service issues opened and pages read are listed the same way.</p>
+    </section>
+  </div>
+
+  <div class="mt-8 grid gap-6 *:min-w-0 md:grid-cols-2 xl:grid-cols-3" data-roles="super state">
+    {ranked.map((r) => (
+      <section aria-label={r.head}>
+        <h2 class="t-h3">{r.head}</h2>
+        {r.note && <p class="t-meta">{r.note}</p>}
+        <ul class="mt-2 divide-y divide-zinc-200 border-y border-zinc-200 text-sm">
+          {r.rows.map(([k, v]) => <li class="flex justify-between gap-3 py-2"><span lang={/[ഀ-ൿ]/.test(k) ? 'ml' : 'en'}>{k}</span><span class="tabular-nums">{v}</span></li>)}
+        </ul>
+      </section>
+    ))}
+  </div>
+  <Note n={2}>Location (state or city, approximate), Malayalam vs English reading, shares by channel and add-to-calendar clicks come as further tables in the same form. Any table downloads as CSV.</Note>
+
+  <section class="mt-8" aria-labelledby="by-district" data-roles="super state">
+    <div class="wf-section-head"><h2 id="by-district" class="t-h2">Districts compared</h2></div>
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[32rem] border-collapse text-left text-sm">
+        <thead><tr class="border-b-2 border-zinc-800 text-xs uppercase tracking-wide text-zinc-500"><th class="py-2 pr-4 font-semibold">District</th><th class="py-2 pr-4 font-semibold">Hub page views</th><th class="py-2 pr-4 font-semibold">Article views</th><th class="py-2 font-semibold">Posts this month</th></tr></thead>
+        <tbody>
+          {sortedDistricts().slice(0, 6).map((d, i) => <tr class="border-b border-zinc-200"><td class="py-2 pr-4">{d.name.en}</td><td class="py-2 pr-4 tabular-nums">{(1200 - i * 130).toLocaleString('en-IN')}</td><td class="py-2 pr-4 tabular-nums">{(5400 - i * 610).toLocaleString('en-IN')}</td><td class="py-2 tabular-nums">{[6, 4, 9, 2, 5, 3][i]}</td></tr>)}
+          <tr><td colspan="4" class="t-meta py-2">… all 15 districts</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <label class="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" /> Email a monthly summary to the state office</label>
+    <Note n={3}>"Posts this month" is the success measure of 4 or more per district (plan, section 1).</Note>
+  </section>
+</AdminWireLayout>

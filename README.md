@@ -15,7 +15,7 @@ phone-first site on Cloudflare, in Malayalam with English versions of articles.
   events, the Kerala Service magazine archive (138 issues), the state committee, contact and
   site-wide search. Every page exists in Malayalam (`/…`) and English (`/en/…`).
 - **Design system**: a living style guide at `/design-system`.
-- **Wireframes**: greyscale wireframes of the public pages at `/wireframes` and of all 12 admin
+- **Wireframes**: greyscale wireframes of the public pages at `/wireframes` and of all 18 admin
   screens at `/wireframes/admin` (with a "View as" switch for the four admin roles).
 
 Interface text is English on both sites; only content (headlines, articles, names) switches
@@ -73,9 +73,10 @@ path (for example `/news` and `/en/news`).
 ```
 /design-system                       Living style guide
 /wireframes                          Public-site wireframes: news, article, orders, district, about
-/wireframes/admin                    Admin wireframes (12 screens, "View as" role switch):
-                                     news, editor, events, orders, kerala-service, people,
-                                     media, banner, inbox, users, settings
+/wireframes/admin                    Admin wireframes (18 screens, "View as" role switch):
+                                     news, editor, events, orders, kerala-service, pages,
+                                     people, districts, media, banner, inbox, analytics,
+                                     users, audit, import, settings, help
 ```
 
 **Planned, not built yet** (from the rebuild plan): `/about/history`, `/about/conferences`,

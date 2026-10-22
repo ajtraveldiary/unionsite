@@ -53,7 +53,7 @@ The new keralangounion.in will be a fast, mobile-first site on Cloudflare, manag
 | Redesign F · Clean-up | Done: prototype layout, styles, components and Preact removed |
 | Real content | Done 21 Oct 2026: 1,611 news posts, 379 orders and 138 Kerala Service issues crawled from the current site into `src/data/live/` (sections 2 and 12). Photos and PDFs are still linked from the old site |
 | Home additions | Done: the home banner (one post or event, section 8) and an Articles section (the 3 newest posts in the new Articles topic) |
-| Admin wireframes | Done and approved: all 12 screens at `/wireframes/admin`, with a "View as" switch for the four roles (section 10) |
+| Admin wireframes | Done and approved: all 18 screens at `/wireframes/admin` (the last six, Pages & documents, Districts, Analytics, Audit log, Import and Help, on 22 Oct 2026), with a "View as" switch for the four roles (section 10) |
 | Database | Decided 22 Oct 2026: Cloudflare D1 (section 4); Malayalam search tested on a local D1 with the crawled content (section 11) |
 | Phase 1, local part | Done 22 Oct 2026: D1 tables and migrations, the crawl loaded into a local D1, every content page reading D1 on request, and the edge cache with purge by tag, tested locally (sections 4, 5 and 15) |
 | Phase 1 onwards (section 15) | Not started: union-owned accounts, deploying D1 and R2, admin login, the admin panel build, WordPress import |
@@ -465,7 +465,7 @@ A dark theme mirrors these tokens (paper #141312, surface #1E1C1A, brand-500 #E5
 - [x] Component library in Figma (or as a Storybook), covering every component above in light and dark themes (built as code in `src/components/ds/`, shown on `/design-system`)
 - [x] High-fidelity screens for every template in section 8, at 360 px (mobile) and 1440 px (desktop) (built as real pages on sample data instead of static screens)
 - [x] Clickable prototype of the home → news → article and home → orders → order flows (the preview site itself)
-- [x] Admin screens for the post editor, order upload, office-bearer manager and review queue (greyscale wireframes of all 12 admin screens at `/wireframes/admin`, approved Oct 2026; the high-fidelity admin design comes with the build)
+- [x] Admin screens for the post editor, order upload, office-bearer manager and review queue (greyscale wireframes of all 18 admin screens at `/wireframes/admin`, approved Oct 2026; the high-fidelity admin design comes with the build)
 
 ## 8. Page-by-page UX specification
 
@@ -646,6 +646,8 @@ After upload, the admin taps the most important part of the photo (usually faces
 The admin panel at `/admin` lets state staff manage the whole site and lets each district admin manage only their own district. It is mobile-friendly, because many district updates will be posted from phones right after an event.
 
 > **Update, 22 Oct 2026: wireframes.** All 12 screens are wireframed in greyscale at `/wireframes/admin`, with a "View as" switch for super admin, state editor, district admin and district editor: Dashboard, News, Post editor, Orders upload, Home & banner, Users, Events, Kerala Service upload, People & committees, Media, Inbox and Settings (with the glossary and AI key). Shown there: only state roles set the home banner; "Reply by email" opens the admin's own mail app, and the site sends nothing itself; each admin's Gemini key stays in their own browser. Still to decide: how long done inbox messages are kept.
+>
+> The other six screens followed the same day and were approved: **Pages & documents** (About pages in the post editor, organisation documents, the conference list behind the timeline), **Districts** (state roles see what each district lacks; a district admin edits their cover photo, history, area committees and office addresses), **Analytics** (section 14's dashboard, narrowed by role), **Audit log** (filters, before/after, restore), **Import** (the section 12 wizard, super admin only) and **Help** (the Malayalam how-to, filtered by role). Albums and videos live in Media, and the glossary in Settings.
 
 **How an admin logs in**
 

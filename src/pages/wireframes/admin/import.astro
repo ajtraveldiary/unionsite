@@ -1,0 +1,127 @@
+---
+/**
+ * Admin wireframe: WordPress import (plan, section 12, "Path B"). The final migration as a wizard:
+ * Upload → Scan → Map → Dry run → Import → Report. It writes through the same importer as the
+ * crawl, so a re-run updates records instead of duplicating them. Super admin only. Counts come
+ * from the crawl; the category names and problems are examples.
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import { sortedDistricts } from '~/lib/sample';
+import { topics } from '~/data/districts';
+
+const steps = ['Upload', 'Scan', 'Map', 'Dry run', 'Import', 'Report'];
+const current = 2;
+const counts = [
+  ['Posts', '1,711', 'News 1,611 · district data 100'],
+  ['Pages', '55', 'Elementor content read from its saved layout'],
+  ['Downloads (orders)', '379', 'WP Download Manager packages'],
+  ['Flipbooks (Kerala Service)', '138', 'Real3D Flipbook issues'],
+  ['Categories', '56', 'To map to topics and districts'],
+  ['Uploads', 'from the .zip', 'Photos and PDFs at full quality'],
+];
+const categories = [
+  { name: 'Kollam district news', topic: '(from the post)', district: 'Kollam' },
+  { name: 'Kollam gallery', topic: 'Album', district: 'Kollam' },
+  { name: 'FSETO news', topic: 'FSETO', district: 'State' },
+  { name: 'Secretary’s page', topic: "Secretary's page", district: 'State' },
+  { name: 'GIS', topic: 'Order subject: GIS & SLI', district: '—' },
+  { name: 'GIS (duplicate)', topic: 'Order subject: GIS & SLI', district: '—' },
+];
+const problems = [
+  'Post "…" has no title (id 15526)',
+  '3 downloads have no category: they go to "Other orders"',
+  '5 flipbooks are a second copy of an issue: the newer copy is kept',
+  '12 images are missing from the uploads .zip: the old URL is kept for now',
+];
+---
+<AdminWireLayout title="Import" page="import">
+  <div data-roles="state district editor" class="wf-box p-6 text-center">
+    <p class="font-semibold">The WordPress import is run by the super admin.</p>
+  </div>
+
+  <div data-roles="super">
+    <h1 class="t-h1">WordPress import</h1>
+    <ol class="mt-4 flex flex-wrap gap-2 text-sm" aria-label="Steps">
+      {steps.map((s, i) => (
+        <li aria-current={i === current ? 'step' : undefined} class:list={['flex items-center gap-2 rounded-full border px-3 py-1.5', i === current ? 'border-zinc-800 bg-zinc-800 text-white' : i < current ? 'border-zinc-300' : 'border-zinc-200 text-zinc-400']}>
+          <span class="tabular-nums">{i + 1}</span>{s}{i < current && ' ✓'}
+        </li>
+      ))}
+    </ol>
+    <Note n={1}>The wizard shows one step at a time; here they are one under another so every step can be reviewed. Nothing on the old WordPress site changes: the import only reads the export files.</Note>
+
+    <section class="mt-6" aria-labelledby="upload">
+      <div class="wf-section-head"><h2 id="upload" class="t-h2">1 · Upload</h2></div>
+      <div class="grid gap-3 md:grid-cols-3">
+        {[['WXR export (.xml)', 'WordPress admin → Tools → Export → All content', 'Required'], ['Uploads archive (.zip)', 'wp-content/uploads from the hosting file manager', 'Recommended'], ['Database dump (.sql)', 'phpMyAdmin → Export', 'Optional: downloads and flipbooks in full']].map(([name, how, need]) => (
+          <div class="grid min-h-32 content-center gap-1 rounded-xl border-2 border-dashed border-zinc-300 p-4 text-center">
+            <p class="font-semibold">{name}</p><p class="t-meta">{how}</p><p class="text-xs font-semibold text-zinc-500">{need}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section class="mt-10" aria-labelledby="scan">
+      <div class="wf-section-head"><h2 id="scan" class="t-h2">2 · Scan</h2></div>
+      <table class="w-full max-w-3xl border-collapse text-left text-sm">
+        <tbody>{counts.map(([what, n, note]) => <tr class="border-b border-zinc-200"><th class="py-2 pr-4 font-semibold">{what}</th><td class="py-2 pr-4 tabular-nums">{n}</td><td class="t-meta py-2">{note}</td></tr>)}</tbody>
+      </table>
+    </section>
+
+    <section class="mt-10" aria-labelledby="map">
+      <div class="wf-section-head"><h2 id="map" class="t-h2">3 · Map</h2><span class="t-meta">41 of 56 categories mapped</span></div>
+      <Note n={2}>Each old category becomes a topic, a district, an album or an order subject. The crawl's mapping is filled in already, so most rows only need a look. Old authors are matched to admin users by email.</Note>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[36rem] border-collapse text-left text-sm">
+          <thead><tr class="border-b-2 border-zinc-800 text-xs uppercase tracking-wide text-zinc-500"><th class="py-2 pr-4 font-semibold">Old category</th><th class="py-2 pr-4 font-semibold">Becomes</th><th class="py-2 font-semibold">District</th></tr></thead>
+          <tbody>
+            {categories.map((c) => (
+              <tr class="border-b border-zinc-200">
+                <td class="py-2 pr-4">{c.name}</td>
+                <td class="py-2 pr-4"><select class="wf-input !min-h-9 text-sm"><option>{c.topic}</option>{topics.map((t) => <option>{t.name.en}</option>)}</select></td>
+                <td class="py-2"><select class="wf-input !min-h-9 text-sm"><option>{c.district}</option>{sortedDistricts().map((d) => <option>{d.name.en}</option>)}</select></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="mt-10" aria-labelledby="dry">
+      <div class="wf-section-head"><h2 id="dry" class="t-h2">4 · Dry run</h2></div>
+      <Note n={3}>A trial on 20 random items of each kind, shown as they would look on the new site, plus every problem found. Nothing is saved until "Import".</Note>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div class="wf-box p-4"><p class="font-semibold">20 sample posts, 20 orders, 5 issues</p><p class="t-meta mt-1">Open each to compare with the old page</p><a href="#" class="wf-link mt-2 inline-block">Open the samples</a></div>
+        <div class="wf-box p-4">
+          <p class="font-semibold">Problems · {problems.length}</p>
+          <ul class="mt-2 list-disc space-y-1 pl-5 text-sm">{problems.map((p) => <li>{p}</li>)}</ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-10" aria-labelledby="run">
+      <div class="wf-section-head"><h2 id="run" class="t-h2">5 · Import</h2></div>
+      <div class="max-w-3xl">
+        <div class="h-3 overflow-hidden rounded-full bg-zinc-200"><div class="h-full w-2/3 bg-zinc-700"></div></div>
+        <p class="t-meta mt-1">Posts 1,140 of 1,711 · runs in the background; this page can be closed</p>
+        <label class="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" checked /> Replace the demo content from the crawl (matched by old address or WordPress id)</label>
+      </div>
+    </section>
+
+    <section class="mt-10" aria-labelledby="report">
+      <div class="wf-section-head"><h2 id="report" class="t-h2">6 · Report</h2><a href="#" class="wf-link">Download as CSV</a></div>
+      <div class="grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4">
+        {[['Created', '96'], ['Updated', '2,187'], ['Skipped', '14'], ['Failed', '2']].map(([l, n]) => <div class="wf-box p-4"><p class="text-2xl font-bold tabular-nums">{n}</p><p class="t-meta">{l}</p></div>)}
+      </div>
+      <Note n={4}>Each line of the report links to the new item and the old page. Old addresses are kept on every item, so the redirects (on hold for now) can be switched on later without another import.</Note>
+    </section>
+
+    <section class="mt-10" aria-labelledby="runs">
+      <div class="wf-section-head"><h2 id="runs" class="t-h2">Earlier runs</h2></div>
+      <ul class="divide-y divide-zinc-200 border-y border-zinc-200 text-sm">
+        <li class="py-2.5"><p class="font-medium">Public crawl · demo data</p><p class="t-meta">21 Oct 2026 · 1,611 posts, 379 orders, 138 issues</p></li>
+      </ul>
+    </section>
+  </div>
+</AdminWireLayout>

@@ -1,0 +1,114 @@
+---
+/**
+ * Admin wireframe: districts (plan, section 10; tables "area_committees" and "offices",
+ * section 5). State roles see all 15 districts and what each still lacks; a district role goes
+ * straight to its own district's page: cover photo, history, area committees and office
+ * addresses. Office-bearers are edited in People & committees. Kollam stands in for "your district".
+ * Post counts come from the crawl; the office-bearer and office columns are made up.
+ */
+import AdminWireLayout from '~/components/wire/AdminWireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import Ph from '~/components/wire/Ph.astro';
+import { sortedDistricts, postsForDistrict } from '~/lib/sample';
+import { formatDate } from '~/lib/i18n';
+
+const rows = sortedDistricts().map((d, i) => {
+  const posts = postsForDistrict(d.slug);
+  return { d, posts: posts.length, latest: posts[0]?.date, offices: i % 4 === 1 ? 0 : 3 + (i % 5), checked: i % 3 !== 2 };
+});
+// Placeholders: the real area committees come over from the old site's district pages
+const areas = Array.from({ length: 6 }, (_, i) => `Area committee ${i + 1}`);
+const offices = [
+  { kind: 'District committee office', place: 'Kollam' },
+  { kind: 'Area committee office', place: areas[0] },
+  { kind: 'Area committee office', place: areas[1] },
+];
+---
+<AdminWireLayout title="Districts" page="districts">
+  <h1 class="t-h1">Districts</h1>
+
+  <!-- State roles: every district at a glance -->
+  <section class="mt-4" data-roles="super state" aria-label="All districts">
+    <Note n={1}>What each district page still lacks, so the state office can chase it. Open a district to edit it as its admin would.</Note>
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[40rem] border-collapse text-left text-sm">
+        <thead><tr class="border-b-2 border-zinc-800 text-xs uppercase tracking-wide text-zinc-500"><th class="py-2 pr-4 font-semibold">District</th><th class="py-2 pr-4 font-semibold">Posts</th><th class="py-2 pr-4 font-semibold">Latest post</th><th class="py-2 pr-4 font-semibold">Office-bearers</th><th class="py-2 pr-4 font-semibold">Offices</th><th class="py-2"><span class="sr-only">Open</span></th></tr></thead>
+        <tbody>
+          {rows.map(({ d, posts, latest, offices: n, checked }) => (
+            <tr class="border-b border-zinc-200">
+              <td class="py-2.5 pr-4 font-semibold">{d.name.en}</td>
+              <td class="py-2.5 pr-4 tabular-nums">{posts}</td>
+              <td class="py-2.5 pr-4">{latest ? formatDate(latest, 'en', 'short') : '—'}</td>
+              <td class="py-2.5 pr-4">{checked ? 'Confirmed' : 'Needs checking'}</td>
+              <td class="py-2.5 pr-4">{n ? `${n} addresses` : 'None yet'}</td>
+              <td class="py-2.5 text-right"><a href="#district" class="wf-link">Open</a></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- One district's page (what a district admin sees first) -->
+  <section id="district" class="mt-10 scroll-mt-16" aria-labelledby="dist">
+    <div class="wf-section-head"><h2 id="dist" class="t-h2">Kollam district page</h2><a href="/districts/kollam" class="wf-link">View on the site</a></div>
+    <Note n={2}>A district admin lands here from "Districts" in the menu. District editors can change everything, but their changes wait for the district admin (marked "Waiting for review").</Note>
+
+    <div class="grid gap-8 lg:grid-cols-2">
+      <div class="space-y-8">
+        <div>
+          <p class="t-label">Cover photo</p>
+          <Ph label="Cover photo" ratio="16/9" class="mt-1" />
+          <div class="mt-2 flex gap-2"><span class="wf-btn wf-btn-line !min-h-9 text-sm">Replace</span><span class="wf-btn wf-btn-line !min-h-9 text-sm">Set focal point</span></div>
+        </div>
+
+        <div>
+          <div class="wf-section-head !mb-1"><p class="t-label">History</p><a href="/wireframes/admin/editor" class="wf-link">Edit history</a></div>
+          <p lang="ml" class="text-sm text-zinc-600">ജില്ലാ കമ്മിറ്റിയുടെ ചരിത്രം ഇവിടെ…</p>
+          <p class="t-meta mt-1">Malayalam · English to approve · updated 2 Oct 2026</p>
+          <Note n={3}>History opens in the post editor, like any page. The old site's district history pages come over with the import, ready to check.</Note>
+        </div>
+
+        <div>
+          <div class="wf-section-head !mb-1"><p class="t-label">Area committees</p><a href="#area" class="wf-link">+ Add</a></div>
+          <ul class="divide-y divide-zinc-200 border-y border-zinc-200">
+            {areas.map((a) => (
+              <li class="flex items-center gap-3 py-2">
+                <span class="cursor-grab select-none text-zinc-400" aria-label="Drag to reorder">⋮⋮</span>
+                <span class="min-w-0 flex-1">{a}</span>
+                <a href="/wireframes/admin/people" class="wf-link">Office-bearers</a>
+                <a href="#area" class="wf-link">Rename</a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <div class="wf-section-head !mb-1"><p class="t-label">Office addresses</p><a href="#office-form" class="wf-link">+ Add</a></div>
+        <ul class="divide-y divide-zinc-200 border-y border-zinc-200">
+          {offices.map((o) => (
+            <li class="flex items-start gap-3 py-3">
+              <div class="min-w-0 flex-1"><p class="font-semibold">{o.kind}</p><p class="t-meta">{o.place} · address · office phone · map pin</p></div>
+              <a href="#office-form" class="wf-link">Edit</a>
+            </li>
+          ))}
+        </ul>
+        <div id="office-form" class="wf-box mt-4 space-y-3 p-4">
+          <p class="font-semibold">Add an office</p>
+          <label class="block"><span class="t-label">Kind</span><select class="wf-input mt-1"><option>District committee office</option><option>Area committee office</option></select></label>
+          <label class="block"><span class="t-label">Area committee</span><select class="wf-input mt-1">{areas.map((a) => <option>{a}</option>)}</select></label>
+          <label class="block"><span class="t-label">Address · Malayalam</span><textarea class="wf-input mt-1 min-h-20 py-3" lang="ml"></textarea></label>
+          <label class="block"><span class="t-label">Address · English · optional</span><textarea class="wf-input mt-1 min-h-20 py-3"></textarea></label>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <label class="block"><span class="t-label">Office phone</span><input class="wf-input mt-1" type="tel" /></label>
+            <label class="block"><span class="t-label">Email · optional</span><input class="wf-input mt-1" type="email" /></label>
+          </div>
+          <div><p class="t-label">Map pin</p><Ph label="Tap the map to place the office" ratio="16/9" class="mt-1" /></div>
+          <span class="wf-btn wf-btn-dark">Save</span>
+        </div>
+        <Note n={4}>Only office phone numbers are published, never personal ones (plan, section 13). The pin gives the Contact page and the district page a "Directions" button.</Note>
+      </div>
+    </div>
+  </section>
+</AdminWireLayout>
