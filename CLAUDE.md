@@ -9,6 +9,10 @@ the work: tick an item (`[x]` with the date) and move it to **Done** when it's f
 when the owner asks for something or the work turns up a new task; delete an item the plan drops;
 rewrite an item when the plan changes. Items only the union can do or decide are marked **(union)**.
 
+`wireframelist.md` (repo root) lists every wireframed page, public and admin, with its address, its
+built page and its review status. Add a new wireframe as **To review**, mark it **Approved** with the
+date when the owner approves it, fill in **Built** when the real page exists, and remove pages the plan drops.
+
 Right now the site is a **preview**. News, GO orders and Kerala Service are real content crawled
 from the current keralangounion.in into `src/data/live/*.json`, then loaded into a **local D1
 database** (photos and PDFs are still linked from the old site). Pages that show this content read
@@ -66,8 +70,10 @@ in light and dark themes.
 - The News page renders only the newest stories; filters, search and "Load more" read
   `/news-index.json`. Lists that could hold the whole archive must stay limited like this.
 - `src/lib/i18n.ts`: `t()` / `langOf()` for bilingual text, `href()` for `/en` paths, date formatting.
-- `/design-system`: the living style guide. `/wireframes`: the greyscale Phase A wireframes, kept on
-  purpose (noindex) with their own `wire.css` and `components/wire/`.
+- `/design-system`: the living style guide. `/wireframes` and `/wireframes/admin`: the greyscale
+  wireframes (all listed in `wireframelist.md`), kept on purpose (noindex) with their own `wire.css`
+  and `components/wire/`. New public wireframes go in `WireLayout`'s page list, admin ones in
+  `AdminWireLayout`'s page list and menu.
 
 ## Design rules (agreed with the owner; ask before changing any)
 

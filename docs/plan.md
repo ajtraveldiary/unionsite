@@ -45,7 +45,7 @@ The new keralangounion.in will be a fast, mobile-first site on Cloudflare, manag
 | Step | Status |
 | --- | --- |
 | Prototype (Phase 1 preview) | Done in early Oct 2026; replaced by the redesign below |
-| Redesign A · Wireframes | Done: greyscale wireframes at `/wireframes` (Home, News, Article, Orders, District, About) |
+| Redesign A · Wireframes | Done: greyscale wireframes at `/wireframes` (Home, News, Article, Orders, District, About). On 22 Oct 2026 ten more followed for pages not built yet (History, Conferences and one conference, Struggles, Documents and one document, one event, a photo album, the Kerala Service reader, the offline page), approved the same day. Every wireframe and its status is in [`wireframelist.md`](../wireframelist.md) |
 | Redesign B · Design system | Done and approved: tokens, components and the living style guide at `/design-system` (see section 7) |
 | Redesign C · Main pages | Done: Home, News, Article, Orders, Single order, Search |
 | Redesign D · Remaining pages | Done and approved: Districts, District hub, Events, Kerala Service + issue, About hub, State committee, Contact, Media, Useful links, Privacy, Accessibility, 404 |

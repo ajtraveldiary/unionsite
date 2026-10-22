@@ -72,7 +72,9 @@ path (for example `/news` and `/en/news`).
 
 ```
 /design-system                       Living style guide
-/wireframes                          Public-site wireframes: news, article, orders, district, about
+/wireframes                          Public-site wireframes: news, article, orders, district, about,
+                                     history, conferences, conference, struggles, documents,
+                                     document, event, album, reader, offline
 /wireframes/admin                    Admin wireframes (18 screens, "View as" role switch):
                                      news, editor, events, orders, kerala-service, pages,
                                      people, districts, media, banner, inbox, analytics,
@@ -162,6 +164,7 @@ migrations/     SQL migrations generated from src/db/schema.ts
 scripts/        crawl, import, D1 seed and map scripts
 docs/           plan.md, the rebuild plan
 todo.md         everything left to do, by phase
+wireframelist.md  every wireframe, its built page and its review status
 ```
 
 `CLAUDE.md` has the full working notes: design rules agreed with the union, conventions, and
@@ -172,4 +175,5 @@ where everything lives.
 The project follows the rebuild plan in [`docs/plan.md`](docs/plan.md): goals, information
 architecture, tech stack and costs, content model, design, page specifications, admin panel,
 features, migration, SEO and security, analytics, roadmap and open questions. Code comments that
-say "plan, section N" refer to it. What's left to do is listed in [`todo.md`](todo.md).
+say "plan, section N" refer to it. What's left to do is listed in [`todo.md`](todo.md), and every wireframe with its review status in
+[`wireframelist.md`](wireframelist.md).

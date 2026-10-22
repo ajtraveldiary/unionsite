@@ -6,11 +6,11 @@ import { site, stateCommittee, roleLabels } from '~/data/site';
 
 const leaders = stateCommittee.filter((p) => ['president', 'general_secretary', 'treasurer'].includes(p.role));
 const sections = [
-  { title: 'History', text: 'From the 1920 NGO Association to today' },
+  { title: 'History', text: 'From the 1920 NGO Association to today', path: '/wireframes/history' },
   { title: 'State committee', text: 'Office-bearers and secretariat' },
-  { title: 'Conferences', text: `${site.conferences} state conferences since ${site.founded}` },
-  { title: 'Struggles', text: 'Major strikes and campaigns' },
-  { title: 'Documents', text: 'Bye-law, policy resolutions, jubilee documents' },
+  { title: 'Conferences', text: `${site.conferences} state conferences since ${site.founded}`, path: '/wireframes/conferences' },
+  { title: 'Struggles', text: 'Major strikes and campaigns', path: '/wireframes/struggles' },
+  { title: 'Documents', text: 'Bye-law, policy resolutions, jubilee documents', path: '/wireframes/documents' },
   { title: 'Media', text: 'Photo albums and videos' },
   { title: 'Contact', text: 'State Centre and district offices' },
 ];
@@ -26,7 +26,7 @@ const docs = ['Bye-Law', 'Policy resolution, 1965', 'Silver Jubilee conference p
     <ul class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {sections.map((s) => (
         <li class="wf-box relative p-4 hover:bg-zinc-50">
-          <a href="#" class="stretched t-h3 block">{s.title}</a>
+          <a href={s.path ?? '#'} class="stretched t-h3 block">{s.title}</a>
           <p class="mt-1 text-sm text-zinc-600">{s.text}</p>
         </li>
       ))}
@@ -51,7 +51,7 @@ const docs = ['Bye-Law', 'Policy resolution, 1965', 'Silver Jubilee conference p
       <div class="wf-section-head"><h2 class="t-h1">Documents</h2></div>
       <Note n={3}>Founding documents as a simple list, each opening a readable page with a PDF download.</Note>
       <ul class="divide-y divide-zinc-200">
-        {docs.map((d) => <li class="flex items-center justify-between gap-4 py-3"><a href="#" class="font-medium">{d}</a><span class="t-meta">PDF</span></li>)}
+        {docs.map((d) => <li class="flex items-center justify-between gap-4 py-3"><a href="/wireframes/document" class="font-medium">{d}</a><span class="t-meta">PDF</span></li>)}
       </ul>
     </div>
     <div>

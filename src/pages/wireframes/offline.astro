@@ -1,0 +1,38 @@
+---
+/**
+ * Wireframe: offline page (plan, section 8 "Home-screen app (PWA)": "an offline page that keeps
+ * recently opened orders available without signal"). What a member sees when there's no signal and
+ * the page they asked for isn't saved on the phone. Order titles are from the crawl.
+ */
+import WireLayout from '~/components/wire/WireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import { allOrders } from '~/lib/sample';
+import { formatDate } from '~/lib/i18n';
+
+const saved = allOrders().slice(0, 4);
+---
+<WireLayout title="Offline" page="offline">
+  <div lang="en" class="wf-wrap max-w-2xl pt-10 text-center">
+    <span class="wf-ph mx-auto size-16 !rounded-full" aria-hidden="true"><span>No signal</span></span>
+    <h1 class="t-h1 mt-4">You're offline</h1>
+    <p class="mt-2 text-zinc-600">This page isn't saved on your phone yet. It will open when you're back online.</p>
+    <span class="wf-btn wf-btn-dark mt-4">Try again</span>
+    <Note n={1}>Shown only when there's no connection and the page isn't saved. The header and bottom bar stay, so members can still move around the saved pages.</Note>
+  </div>
+
+  <section lang="en" class="wf-wrap mt-10 max-w-2xl" aria-labelledby="saved">
+    <div class="wf-section-head"><h2 id="saved" class="t-h2">Saved on this phone</h2><span class="t-meta">Opened recently</span></div>
+    <ul class="divide-y divide-zinc-200 border-y border-zinc-200">
+      {saved.map((o) => (
+        <li class="flex items-center gap-3 py-3">
+          <span class="wf-doc !h-12 !w-10" aria-hidden="true"></span>
+          <div class="min-w-0 flex-1">
+            <a href="/wireframes/orders" class="clamp-2 font-medium leading-snug">{o.title.en}</a>
+            <p class="t-meta">{o.goNumber || 'No GO number'} · {formatDate(o.goDate, 'en', 'short')} · PDF saved</p>
+          </div>
+        </li>
+      ))}
+    </ul>
+    <Note n={2}>The last orders a member opened (page and PDF) stay on the phone, so a GO can be shown at the office without signal. Older ones drop off as new ones are saved. Suggestion, to decide: save the home page and the Orders list too.</Note>
+  </section>
+</WireLayout>

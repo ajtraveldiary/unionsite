@@ -1,0 +1,42 @@
+---
+/**
+ * Wireframe: Conferences (plan, section 8: "vertical timeline from the 1st to the 63rd conference
+ * (year, place, highlights); each opens its page"). Built from the admin's conference list. Years,
+ * places and highlights are placeholders until the old site's conference pages are moved over.
+ */
+import WireLayout from '~/components/wire/WireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import { site } from '~/data/site';
+
+const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
+const shown = Array.from({ length: 6 }, (_, i) => site.conferences - i);
+---
+<WireLayout title="Conferences" page="conferences">
+  <div class="wf-wrap pt-6">
+    <nav lang="en" class="t-meta" aria-label="Breadcrumb"><a href="/wireframes">Home</a> / <a href="/wireframes/about">About</a> / Conferences</nav>
+    <h1 lang="en" class="t-display mt-2">State conferences</h1>
+    <p lang="en" class="mt-3 max-w-2xl text-lg text-zinc-600">{site.conferences} conferences since {site.founded}. Each set the union's demands and elected its state committee.</p>
+    <div lang="en" class="mt-5 flex flex-wrap items-center gap-2">
+      <button type="button" class="wf-chip" aria-pressed="true">Newest first</button>
+      <button type="button" class="wf-chip" aria-pressed="false">From the 1st</button>
+      <label class="ml-auto flex items-center gap-2 text-sm">Go to <input class="wf-input !min-h-9 w-20 text-sm" inputmode="numeric" placeholder="No." aria-label="Conference number" /></label>
+    </div>
+    <Note n={1}>The plan lists them from the 1st to the {ordinal(site.conferences)}. Here the newest comes first, with a switch to read from the 1st, because members mostly look for the latest. To decide.</Note>
+  </div>
+
+  <ol class="wf-wrap mt-6">
+    {shown.map((n, i) => (
+      <li class="relative grid grid-cols-[3.5rem_minmax(0,1fr)] gap-4 pb-6">
+        {i < shown.length - 1 && <span class="absolute bottom-0 left-[1.75rem] top-14 w-0.5 bg-zinc-200" aria-hidden="true"></span>}
+        <span lang="en" class:list={['relative grid size-14 place-items-center rounded-full text-lg font-bold tabular-nums', i === 0 ? 'bg-zinc-800 text-white' : 'border-2 border-zinc-300 bg-white']}>{n}</span>
+        <a href="/wireframes/conference" class="wf-box block p-4 hover:bg-zinc-50">
+          <p lang="en" class="t-label">{ordinal(n)} conference · Year · Place</p>
+          <p lang="ml" class="mt-1 font-semibold">പ്രധാന തീരുമാനങ്ങൾ (main decisions, one line)</p>
+          <p lang="en" class="t-meta mt-1">{i === 0 ? 'Report · documents · album' : i % 2 ? 'Report' : 'Report · album'}</p>
+        </a>
+      </li>
+    ))}
+    <li lang="en" class="t-meta pl-[4.5rem]">… back to the 1st conference, {site.founded}</li>
+  </ol>
+  <div class="wf-wrap"><Note n={2}>The {site.conferences} entries load in steps ("Show older") rather than all at once. Entries with only a year and place still appear, so the record is complete.</Note></div>
+</WireLayout>

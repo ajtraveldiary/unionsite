@@ -12,6 +12,9 @@ How this list is kept:
 
 ## Answers needed from the union (§17)
 
+- [ ] **(union)** Conferences page order: newest first (as wireframed, with a switch) or from the 1st (as the plan says)?
+- [ ] **(union)** Offline copy: keep only recently opened orders, or also the home page and the Orders list?
+
 - [ ] **(union)** Who owns keralangounion.in and its DNS? It must move to, or point at, a union-owned Cloudflare account. *Before Phase 1 deploy*
 - [ ] **(union)** Which Cloudflare and GitHub accounts to use, and in whose name (union-owned recommended). *Before Phase 1 deploy*
 - [ ] **(union)** A vector version of the logo (SVG, AI or PDF) and any colour rules
@@ -98,6 +101,7 @@ How this list is kept:
 
 ## Done
 
+- [x] 2026-10-22 Wireframes for the 10 public pages the plan has but the site doesn't yet (listed in `wireframelist.md`), approved by the owner
 - [x] 2026-10-22 Wireframes for the last six admin screens (Pages & documents, Districts, Analytics, Audit log, Import, Help), approved by the owner; all 18 admin screens are now wireframed
 - [x] 2026-10-22 Phase 1 local work and todo.md committed and pushed
 - [x] 2026-10-22 Phase 1, local part: D1 tables and migrations, the crawl loaded into a local D1, every content page reading D1 on request, the edge cache with purge by tag tested locally

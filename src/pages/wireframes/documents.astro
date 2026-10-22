@@ -1,0 +1,42 @@
+---
+/**
+ * Wireframe: Documents (plan, section 8: "cards for Bye-Law, 1965 policy resolution, Silver and
+ * Golden Jubilee documents · read online or download PDF"). The organisation's founding papers,
+ * each opening its own page with a reader. Titles as in the About wireframe; years and sizes are
+ * placeholders.
+ */
+import WireLayout from '~/components/wire/WireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import Ph from '~/components/wire/Ph.astro';
+
+const docs = [
+  { title: 'Bye-Law', kind: 'Bye-Law', year: 'Year of the current version' },
+  { title: 'Policy resolution, 1965', kind: 'Resolution', year: '1965' },
+  { title: 'Silver Jubilee conference programme', kind: 'Jubilee', year: 'Year' },
+  { title: 'Golden Jubilee organisational document', kind: 'Jubilee', year: 'Year' },
+];
+---
+<WireLayout title="Documents" page="documents">
+  <div lang="en" class="wf-wrap pt-6">
+    <nav class="t-meta" aria-label="Breadcrumb"><a href="/wireframes">Home</a> / <a href="/wireframes/about">About</a> / Documents</nav>
+    <h1 class="t-display mt-2">Documents</h1>
+    <p class="mt-3 max-w-2xl text-lg text-zinc-600">The union's Bye-Law, policy resolutions and jubilee documents, to read online or download.</p>
+    <Note n={1}>One card per document: a cover from page 1, title, kind and year, and two actions. Conference resolutions live on each conference's page, not here.</Note>
+
+    <ul class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {docs.map((d) => (
+        <li class="wf-box relative flex flex-col p-4">
+          <Ph label="Cover" ratio="210/297" class="mx-auto w-28" />
+          <p class="t-label mt-4">{d.kind} · {d.year}</p>
+          <a href="/wireframes/document" class="stretched mt-1 font-semibold leading-snug">{d.title}</a>
+          <p class="t-meta mt-1">PDF · pages · size</p>
+          <div class="relative z-10 mt-auto flex gap-2 pt-4">
+            <a href="/wireframes/document" class="wf-btn wf-btn-dark !min-h-10 flex-1 text-sm">Read</a>
+            <span class="wf-btn wf-btn-line !min-h-10 flex-1 text-sm">Download</span>
+          </div>
+        </li>
+      ))}
+    </ul>
+    <Note n={2}>Titles show in the page's language once an English title exists. The PDFs themselves stay as published (plan, section 6).</Note>
+  </div>
+</WireLayout>

@@ -1,0 +1,61 @@
+---
+/**
+ * Wireframe: one state conference (plan, section 8: "each opens its page with report, documents and
+ * album"). Report, resolutions and documents, the committee it elected, the photo album and the
+ * conferences either side. The newest conference stands in; its details are placeholders.
+ */
+import WireLayout from '~/components/wire/WireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import Ph from '~/components/wire/Ph.astro';
+import { site, stateCommittee, roleLabels } from '~/data/site';
+
+const n = site.conferences;
+const ordinal = (k: number) => `${k}${k % 100 >= 11 && k % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][k % 10] ?? 'th'}`;
+const leaders = stateCommittee.filter((p) => ['president', 'general_secretary', 'treasurer'].includes(p.role));
+---
+<WireLayout title={`${ordinal(n)} conference`} page="conference">
+  <div class="wf-wrap max-w-[860px] pt-6">
+    <nav lang="en" class="t-meta" aria-label="Breadcrumb"><a href="/wireframes">Home</a> / <a href="/wireframes/about">About</a> / <a href="/wireframes/conferences">Conferences</a> / {ordinal(n)}</nav>
+    <p lang="en" class="t-label mt-4">{ordinal(n)} state conference</p>
+    <h1 lang="ml" class="t-display mt-1">സ്ഥലം (place)</h1>
+    <p lang="en" class="mt-2 text-zinc-600">Dates · Year</p>
+    <Note n={1}>The number and place lead; dates and the year sit under them. Every conference page has the same parts, and parts with nothing in them are left out.</Note>
+
+    <Ph label="Conference photo" ratio="16/9" class="mt-6" />
+
+    <section class="mt-8" aria-labelledby="report">
+      <h2 id="report" lang="en" class="t-h2">Report</h2>
+      <div lang="ml" class="mt-3 space-y-4 text-[1.125rem] leading-[1.85] text-zinc-700"><p>സമ്മേളന റിപ്പോർട്ട് (the conference report)</p><p>…</p></div>
+    </section>
+
+    <section class="mt-8" aria-labelledby="elected">
+      <div class="wf-section-head"><h2 id="elected" lang="en" class="t-h2">Committee elected</h2><a href="#" lang="en" class="wf-link">Full committee</a></div>
+      <ul class="grid gap-4 sm:grid-cols-3">
+        {leaders.map((p) => (
+          <li class="flex items-center gap-3">
+            <Ph label="" class="size-14 shrink-0 !rounded-full" />
+            <div><p lang="en" class="t-label">{roleLabels[p.role].en}</p><p lang="ml" class="font-semibold">{p.name.ml}</p></div>
+          </li>
+        ))}
+      </ul>
+      <Note n={2}>From the committee term this conference started (People & committees in the admin). For the newest conference it is today's committee; for older ones, the committee of that term.</Note>
+    </section>
+
+    <section lang="en" class="mt-8" aria-labelledby="docs">
+      <h2 id="docs" class="t-h2">Resolutions and documents</h2>
+      <ul class="mt-2 divide-y divide-zinc-200 border-y border-zinc-200">
+        {['Political resolution', 'Organisational report', 'Demands charter'].map((d) => <li class="flex items-center justify-between gap-3 py-3"><a href="/wireframes/document" class="font-medium">{d}</a><span class="t-meta">PDF</span></li>)}
+      </ul>
+    </section>
+
+    <section lang="en" class="mt-8" aria-labelledby="photos">
+      <div class="wf-section-head"><h2 id="photos" class="t-h2">Photos</h2><a href="/wireframes/album" class="wf-link">Whole album</a></div>
+      <ul class="grid grid-cols-3 gap-2 sm:grid-cols-6">{Array.from({ length: 6 }, () => <li><Ph label="" ratio="1/1" /></li>)}</ul>
+    </section>
+
+    <nav lang="en" class="mt-10 grid grid-cols-2 gap-3 border-t border-zinc-200 pt-6" aria-label="Other conferences">
+      <a href="/wireframes/conference" class="wf-box p-4"><p class="t-meta">Older</p><p class="font-semibold">{ordinal(n - 1)} conference</p></a>
+      <span class="wf-box p-4 text-zinc-400"><span class="t-meta">Newer</span><span class="block font-semibold">None yet</span></span>
+    </nav>
+  </div>
+</WireLayout>

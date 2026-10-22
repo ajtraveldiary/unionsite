@@ -5,7 +5,10 @@
  */
 import '~/styles/wire.css';
 
-interface Props { title: string; page: 'home' | 'news' | 'article' | 'orders' | 'district' | 'about' }
+type Page =
+  | 'home' | 'news' | 'article' | 'orders' | 'district' | 'about'
+  | 'history' | 'conferences' | 'conference' | 'struggles' | 'documents' | 'document' | 'event' | 'album' | 'reader' | 'offline';
+interface Props { title: string; page: Page }
 const { title, page } = Astro.props;
 
 const pages = [
@@ -15,6 +18,17 @@ const pages = [
   { id: 'orders', label: 'Orders', path: '/wireframes/orders' },
   { id: 'district', label: 'District', path: '/wireframes/district' },
   { id: 'about', label: 'About', path: '/wireframes/about' },
+  // Pages planned but not built yet (wireframed 22 Oct 2026)
+  { id: 'history', label: 'History', path: '/wireframes/history' },
+  { id: 'conferences', label: 'Conferences', path: '/wireframes/conferences' },
+  { id: 'conference', label: 'One conference', path: '/wireframes/conference' },
+  { id: 'struggles', label: 'Struggles', path: '/wireframes/struggles' },
+  { id: 'documents', label: 'Documents', path: '/wireframes/documents' },
+  { id: 'document', label: 'One document', path: '/wireframes/document' },
+  { id: 'event', label: 'One event', path: '/wireframes/event' },
+  { id: 'album', label: 'Photo album', path: '/wireframes/album' },
+  { id: 'reader', label: 'Kerala Service reader', path: '/wireframes/reader' },
+  { id: 'offline', label: 'Offline', path: '/wireframes/offline' },
 ];
 // The five main sections from the plan; Events sits under News, Media under About
 const nav = [

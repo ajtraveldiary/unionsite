@@ -1,0 +1,76 @@
+---
+/**
+ * Wireframe: History (plan, section 8: "long-form article with a side table of contents and a
+ * milestones timeline"). One page in the About section, written by the state office. Only the
+ * founding years come from the union's own pages; every other milestone and all the text are
+ * placeholders until the history is moved over from the old site.
+ */
+import WireLayout from '~/components/wire/WireLayout.astro';
+import Note from '~/components/wire/Note.astro';
+import Ph from '~/components/wire/Ph.astro';
+import { site } from '~/data/site';
+
+const chapters = ['ആരംഭം', 'അധ്യായം 2', 'അധ്യായം 3', 'അധ്യായം 4', 'അധ്യായം 5'];
+const milestones = [
+  { year: '1920', text: 'NGO Association, the union’s roots' },
+  { year: String(site.founded), text: 'Kerala NGO Union formed' },
+  { year: '1965', text: 'Policy resolution' },
+  { year: 'Year', text: 'Milestone from the history text' },
+  { year: 'Year', text: 'Milestone from the history text' },
+  { year: 'Year', text: `Latest state conference (no. ${site.conferences})` },
+];
+---
+<WireLayout title="History" page="history">
+  <div class="wf-wrap pt-6">
+    <nav lang="en" class="t-meta" aria-label="Breadcrumb"><a href="/wireframes">Home</a> / <a href="/wireframes/about">About</a> / History</nav>
+    <h1 lang="en" class="t-display mt-2">History</h1>
+    <p lang="ml" class="mt-3 max-w-2xl text-lg text-zinc-600">ചരിത്രത്തിന്റെ ചുരുക്കം (a two-line summary of the history)</p>
+  </div>
+
+  <section class="wf-wrap mt-8" aria-labelledby="milestones">
+    <h2 id="milestones" lang="en" class="t-h2 mb-3">Milestones</h2>
+    <ol lang="en" class="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 lg:mx-0 lg:grid lg:grid-cols-6 lg:overflow-visible lg:px-0">
+      {milestones.map((m) => (
+        <li class="wf-box w-40 shrink-0 snap-start p-3 lg:w-auto">
+          <p class="text-xl font-bold tabular-nums">{m.year}</p>
+          <p class="mt-1 text-sm text-zinc-600">{m.text}</p>
+        </li>
+      ))}
+    </ol>
+    <Note n={1}>A strip of key dates above the text: swipe on phones, one row on laptops. Each jumps to its place in the history. Only 1920, {site.founded} and 1965 are known now; the rest come from the history text.</Note>
+  </section>
+
+  <div class="wf-wrap mt-8 grid gap-10 lg:grid-cols-[14rem_minmax(0,1fr)]">
+    <!-- Contents: a dropdown on phones, a sticky list beside the text on laptops -->
+    <nav aria-label="Contents" lang="en">
+      <label class="block lg:hidden"><span class="t-label">Contents</span>
+        <select class="wf-input mt-1" lang="ml">{chapters.map((c) => <option>{c}</option>)}</select>
+      </label>
+      <div class="hidden lg:sticky lg:top-24 lg:block">
+        <p class="t-label">Contents</p>
+        <ol lang="ml" class="mt-2 space-y-1 border-l border-zinc-200 text-sm">
+          {chapters.map((c, i) => <li><a href={`#ch${i}`} class:list={['-ml-px block border-l-2 py-1 pl-3', i === 0 ? 'border-zinc-800 font-semibold' : 'border-transparent text-zinc-600']}>{c}</a></li>)}
+        </ol>
+      </div>
+    </nav>
+
+    <article class="max-w-[720px]">
+      <Note n={2}>Long read, about 68 characters a line. The contents come from the page's headings and highlight the one being read. On phones they become a dropdown at the top.</Note>
+      {chapters.map((c, i) => (
+        <section id={`ch${i}`} class="scroll-mt-24">
+          <h2 lang="ml" class="t-h2 mt-8">{c}</h2>
+          <div lang="ml" class="mt-3 space-y-4 text-[1.125rem] leading-[1.85] text-zinc-700">
+            <p>ചരിത്രത്തിന്റെ വാചകം ഇവിടെ… (history text)</p>
+            <p>…</p>
+          </div>
+          {i === 1 && <figure class="mt-5"><Ph label="Archive photo" ratio="3/2" /><figcaption lang="ml" class="t-meta mt-2">അടിക്കുറിപ്പ് (caption, with the year)</figcaption></figure>}
+        </section>
+      ))}
+      <div lang="en" class="mt-10 grid gap-3 border-t border-zinc-200 pt-6 sm:grid-cols-3">
+        <a href="/wireframes/conferences" class="wf-box p-4"><p class="font-semibold">Conferences</p><p class="t-meta">All {site.conferences}, in order</p></a>
+        <a href="/wireframes/struggles" class="wf-box p-4"><p class="font-semibold">Struggles</p><p class="t-meta">Major strikes and campaigns</p></a>
+        <a href="/wireframes/documents" class="wf-box p-4"><p class="font-semibold">Documents</p><p class="t-meta">Bye-Law and resolutions</p></a>
+      </div>
+    </article>
+  </div>
+</WireLayout>
