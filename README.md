@@ -89,7 +89,7 @@ path (for example `/news` and `/en/news`).
 - Noto Sans Malayalam and Anek Malayalam (self-hosted via Fontsource), Lucide icons
 - No client-side framework: small page scripts only
 
-Planned for later phases: a database (Neon Postgres or Cloudflare D1, not yet decided), Cloudflare
+Planned for later phases: a Cloudflare D1 database (SQLite, with FTS5 trigram search), Cloudflare
 R2 for PDFs and photos, Cloudflare Access for admin login, and the admin panel itself.
 
 ## Getting started
