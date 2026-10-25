@@ -12,14 +12,21 @@ import type { Lang } from '~/lib/types';
 import notoMl from '@fontsource-variable/noto-sans-malayalam/files/noto-sans-malayalam-malayalam-wght-normal.woff2?url';
 import notoLatin from '@fontsource-variable/noto-sans-malayalam/files/noto-sans-malayalam-latin-wght-normal.woff2?url';
 
-interface Props { title?: string; description?: string; lang: Lang; noindex?: boolean }
-const { title, description = 'Kerala NGO Union: news, government orders, district committees and the Kerala Service magazine.', lang, noindex = false } = Astro.props;
+interface Props {
+  title?: string;
+  description?: string;
+  lang: Lang;
+  noindex?: boolean;
+  /** The 404 page: analytics counts it as a page not found */
+  notFound?: boolean;
+}
+const { title, description = 'Kerala NGO Union: news, government orders, district committees and the Kerala Service magazine.', lang, noindex = false, notFound = false } = Astro.props;
 const fullTitle = title ? `${title} · Kerala NGO Union` : 'Kerala NGO Union · കേരള എൻ.ജി.ഒ യൂണിയൻ';
 const alt = altPath(Astro.url.pathname);
 const canonical = new URL(lang === 'en' ? alt.en : alt.ml, Astro.site);
 ---
 <!doctype html>
-<html lang={lang}>
+<html lang={lang} data-not-found={notFound ? '' : undefined}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -57,6 +64,31 @@ const canonical = new URL(lang === 'en' ? alt.en : alt.ml, Astro.site);
 </html>
 
 <script>
+  // Analytics (plan, section 14): a beacon for the page view, then for reading past 75 % of an
+  // article, opening a PDF, sharing and (from the Search page) searching. No cookies, nothing kept here.
+  const track = (t: string, d?: string, v?: number) => {
+    try { navigator.sendBeacon('/api/e', JSON.stringify({ t, p: location.pathname, d, v, r: t === 'view' ? document.referrer : undefined })); } catch { /* no beacon: nothing counted */ }
+  };
+  (window as unknown as { unionTrack: typeof track }).unionTrack = track;
+  if (!location.pathname.startsWith('/admin')) {
+    track(document.documentElement.hasAttribute('data-not-found') ? 'notfound' : 'view');
+    const prose = document.querySelector('article .prose');
+    if (prose) {
+      const onScroll = () => {
+        const r = prose.getBoundingClientRect();
+        if (r.top + r.height * 0.75 < innerHeight) { track('read'); removeEventListener('scroll', onScroll); }
+      };
+      addEventListener('scroll', onScroll, { passive: true });
+    }
+    document.addEventListener('click', (e) => {
+      const el = e.target as HTMLElement;
+      const a = el.closest('a');
+      if (a && /\.pdf($|\?)|\/media\/pdfs\//i.test(a.href)) track('pdf', a.href);
+      const share = el.closest<HTMLElement>('[data-share] a, [data-share] button');
+      if (share) track('share', share.getAttribute('aria-label') ?? share.textContent?.trim() ?? '');
+    });
+  }
+
   const root = document.documentElement;
   document.addEventListener('click', (e) => {
     const el = e.target as HTMLElement;

@@ -1,4 +1,8 @@
 ---
 import EventsView from '~/views/EventsView.astro';
+import { cachePage, tags } from '~/lib/cache';
+
+export const prerender = false;
+cachePage(Astro, 'list', [tags.events]);
 ---
 <EventsView lang="en" />

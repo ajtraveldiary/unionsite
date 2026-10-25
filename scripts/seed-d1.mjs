@@ -1,6 +1,7 @@
 // Loads the crawled content (src/data/live/*.json) into the local D1 database, replacing what's
 // there: posts and their translations, orders, Kerala Service issues, their files (as media rows
-// that still point at the old site), the home banner and the search index. Run `npm run db:migrate` first.
+// that still point at the old site), the home banner, the search index and one local test user
+// per admin role. Anything made in the admin is wiped too. Run `npm run db:migrate` first.
 //
 //   node scripts/seed-d1.mjs
 //
@@ -10,8 +11,9 @@ import { readFileSync } from 'node:fs';
 import { getPlatformProxy } from 'wrangler';
 import { districts, topics } from '../src/data/districts.ts';
 import { orderSubjects } from '../src/data/orders.ts';
-import { firstBanner } from '../src/data/site.ts';
-import { postEntry, orderEntry } from '../src/lib/search-entries.ts';
+import { firstBanner, events, stateCommittee, videos } from '../src/data/site.ts';
+import { glossaryTerms } from '../src/data/glossary.ts';
+import { postEntry, orderEntry, eventEntry } from '../src/lib/search-entries.ts';
 
 const live = (name) => JSON.parse(readFileSync(new URL(`../src/data/live/${name}.json`, import.meta.url), 'utf8'));
 const posts = live('posts');
@@ -23,10 +25,11 @@ const db = env.DB;
 const stmts = [];
 const add = (sql, ...params) => stmts.push(db.prepare(sql).bind(...params.map((p) => (p === undefined ? null : p))));
 
-for (const table of ['search_fts', 'search_docs', 'post_translations', 'posts', 'orders', 'magazine_issues', 'media', 'site_settings', 'districts', 'topics', 'order_subjects']) {
+const adminTables = ['import_jobs', 'search_terms_daily', 'site_stats_daily', 'content_views_daily', 'analytics_raw', 'glossary', 'contact_messages', 'audit_log', 'revisions', 'edit_locks', 'post_drafts', 'users', 'events', 'album_items', 'albums', 'videos', 'conferences', 'documents', 'pages', 'district_extras', 'offices', 'positions', 'area_committees', 'people'];
+for (const table of [...adminTables, 'search_fts', 'search_docs', 'post_translations', 'posts', 'orders', 'magazine_issues', 'media', 'site_settings', 'districts', 'topics', 'order_subjects']) {
   add(`DELETE FROM ${table}`);
 }
-add(`DELETE FROM sqlite_sequence WHERE name IN ('media', 'magazine_issues', 'search_docs')`);
+add(`DELETE FROM sqlite_sequence WHERE name IN ('media', 'magazine_issues', 'search_docs', ${adminTables.map((t) => `'${t}'`).join(', ')})`);
 
 // Search: the result row in search_docs, the normalised text in search_fts under the same id
 let searchId = 0;
@@ -77,12 +80,49 @@ for (const i of issues) {
   add('INSERT INTO magazine_issues (year, month, cover_media_id, pdf_media_id, legacy_url) VALUES (?, ?, ?, ?, ?)', i.year, i.month, cover, pdf, i.legacyUrl);
 }
 
+// The preview's sample events (src/data/site.ts); real ones are added in Admin → Events
+let eventId = 0;
+for (const e of events) {
+  add(
+    `INSERT INTO events (id, slug, title_ml, title_en, venue_ml, venue_en, en_source, start_at, end_at, district, status, sample)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?)`,
+    ++eventId, e.slug, e.title.ml, e.title.en, e.venue.ml, e.venue.en, e.title.en ? 'human' : null, e.start, e.end, e.district, e.sample ? 1 : 0,
+  );
+  addSearch('event', eventId, eventEntry(e));
+}
+
+// The state committee (src/data/site.ts): one person each, in the order the site shows them
+let personId = 0;
+const order = {};
+for (const p of stateCommittee) {
+  add('INSERT INTO people (id, name_ml, name_en) VALUES (?, ?, ?)', ++personId, p.name.ml, p.name.en);
+  const key = p.body;
+  order[key] = (order[key] ?? 0) + 1;
+  add(`INSERT INTO positions (person_id, body, role, sort_order, term, status) VALUES (?, ?, ?, ?, ?, 'published')`, personId, p.body, p.role, order[key], '63rd state conference');
+}
+
+// The channel's latest videos (src/data/site.ts); Admin → Media syncs the channel after this
+for (const v of videos) add(`INSERT INTO videos (youtube_id, title_ml, title_en, published_at, source) VALUES (?, ?, ?, ?, 'channel')`, v.id, v.title.ml, v.title.en, v.date);
+
+// The glossary for AI translation (src/data/glossary.ts); state editors keep it in Admin → Settings
+for (const [ml, en] of glossaryTerms) add('INSERT INTO glossary (ml, en) VALUES (?, ?)', ml, en);
+
 add('INSERT INTO site_settings (key, value) VALUES (?, ?)', 'home_banner', JSON.stringify(firstBanner));
+
+// Local admin users, one per role, for the stand-in login at /admin/login (plan, section 10).
+// The real users are invited in Admin → Users once the site runs behind Cloudflare Access.
+const testUsers = [
+  ['super@example.org', 'Test super admin', 'super_admin', null],
+  ['state@example.org', 'Test state editor', 'state_editor', null],
+  ['kollam.admin@example.org', 'Test Kollam admin', 'district_admin', 'kollam'],
+  ['kollam.editor@example.org', 'Test Kollam editor', 'district_editor', 'kollam'],
+];
+for (const [email, name, role, district] of testUsers) add('INSERT INTO users (email, name, role, district) VALUES (?, ?, ?, ?)', email, name, role, district);
 
 // One batch is one transaction; a few hundred statements per batch keeps each one small
 const SIZE = 200;
 for (let i = 0; i < stmts.length; i += SIZE) await db.batch(stmts.slice(i, i + SIZE));
 
 const count = async (t) => (await db.prepare(`SELECT count(*) AS n FROM ${t}`).first()).n;
-console.log(`posts ${await count('posts')} · translations ${await count('post_translations')} · orders ${await count('orders')} · issues ${await count('magazine_issues')} · media ${await count('media')} · search ${await count('search_docs')}/${await count('search_fts')}`);
+console.log(`posts ${await count('posts')} · translations ${await count('post_translations')} · orders ${await count('orders')} · issues ${await count('magazine_issues')} · events ${await count('events')} · people ${await count('people')} · videos ${await count('videos')} · media ${await count('media')} · search ${await count('search_docs')}/${await count('search_fts')} · admin users ${await count('users')}`);
 await dispose();

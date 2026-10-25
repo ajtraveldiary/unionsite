@@ -1,4 +1,8 @@
 ---
 import GalleryView from '~/views/GalleryView.astro';
+import { cachePage, tags } from '~/lib/cache';
+
+export const prerender = false;
+cachePage(Astro, 'list', [tags.videos, tags.albums]);
 ---
 <GalleryView lang="en" />

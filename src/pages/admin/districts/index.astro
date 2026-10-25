@@ -1,0 +1,10 @@
+---
+import DistrictsAdminView from '~/views/admin/DistrictsAdminView.astro';
+import { isState } from '~/lib/admin/roles';
+
+export const prerender = false;
+// District roles have one district: go straight to it
+const user = Astro.locals.user!;
+if (!isState(user)) return Astro.redirect(`/admin/districts/${user.district}`);
+---
+<DistrictsAdminView />

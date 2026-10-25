@@ -1,0 +1,31 @@
+---
+/** Home & banner in the admin. Each form posts an action here (src/lib/admin/home.ts checks every rule). */
+import HomeBannerView from '~/views/admin/HomeBannerView.astro';
+import { declineRequest, setBanner, setHeadline, setLead, showAgain, writeBanner, mustFeature } from '~/lib/admin/home';
+import { AdminError } from '~/lib/admin/publish';
+
+export const prerender = false;
+const user = Astro.locals.user!;
+let error: string | undefined;
+if (Astro.request.method === 'POST') {
+  const f = Object.fromEntries([...(await Astro.request.formData()).entries()].map(([k, v]) => [k, String(v)]));
+  try {
+    mustFeature(user);
+    switch (f.action) {
+      case 'set': await setBanner(user, f as Parameters<typeof setBanner>[1]); break;
+      case 'headline': await setHeadline(user, f.headlineMl, f.headlineEn); break;
+      case 'remove': await writeBanner(user, null); break;
+      case 'lead': await setLead(user, Number(f.post) || null); break;
+      case 'lead_clear': await setLead(user, null); break;
+      case 'decline': await declineRequest(user, Number(f.post)); break;
+      case 'again': await showAgain(user, Number(f.revision)); break;
+      default: throw new AdminError('Unknown action.');
+    }
+    return Astro.redirect(`/admin/banner?done=${f.action}`);
+  } catch (err) {
+    if (!(err instanceof AdminError)) throw err;
+    error = err.message;
+  }
+}
+---
+<HomeBannerView error={error} done={Astro.url.searchParams.get('done') ?? undefined} />

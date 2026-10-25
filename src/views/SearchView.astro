@@ -126,6 +126,8 @@ const sections = [
     let hits: SearchDoc[] = [];
     // Each search gets a number, so a slow answer to an older query can't replace a newer one
     let latest = 0;
+    // A search counts once the reader stops typing (for the admin's top searches and zero-result list)
+    let trackTimer: ReturnType<typeof setTimeout> | undefined;
 
     const row = (d: SearchDoc) => {
       const li = document.createElement('li');
@@ -216,6 +218,8 @@ const sections = [
       if (mine !== latest) return;
       loading.hidden = true;
       hits = found;
+      clearTimeout(trackTimer);
+      if (term) trackTimer = setTimeout(() => (window as unknown as { unionTrack?: (t: string, d?: string, v?: number) => void }).unionTrack?.('search', term, found.length), 2000);
       if (first) {
         const target = goTarget();
         if (target) { location.replace(urlFor(target)); return; }

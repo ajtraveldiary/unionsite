@@ -1,0 +1,160 @@
+---
+/**
+ * Admin: Kerala Service (plan, section 10; approved wireframe "Kerala Service"). Add an issue: drop
+ * the month's PDF, the cover is made from page 1 and the year and month are guessed from the file
+ * name; the editor checks them, adds contents lines if they like, and publishes or saves a draft.
+ * Below, the newest issues, each opening its own page (edit, replace the PDF). State roles only.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import MagazineCover from '~/components/ui/MagazineCover.astro';
+import { recentIssues, MONTH_NAMES } from '~/lib/admin/issues';
+import { isState } from '~/lib/admin/roles';
+
+const user = Astro.locals.user!;
+const issues = isState(user) ? await recentIssues(user) : [];
+const thisYear = new Date().getFullYear();
+const years = Array.from({ length: thisYear + 2 - 2014 }, (_, i) => thisYear + 1 - i);
+---
+<AdminLayout title="Kerala Service" section="magazine">
+  {!isState(user) ? (
+    <p class="card p-6 text-ink-2">Kerala Service is managed by the state office.</p>
+  ) : (
+    <Fragment>
+      <h1 class="t-h1">Kerala Service</h1>
+      <p class="t-meta mt-1">The union’s monthly magazine: one issue per month, as a PDF</p>
+
+      <section class="mt-6" aria-labelledby="new-issue" data-issue-add>
+        <h2 id="new-issue" class="t-h2 border-b border-line pb-2">Add an issue</h2>
+        <div class="mt-4 grid gap-6 md:grid-cols-[200px_minmax(0,1fr)]">
+          <div>
+            <label class="grid aspect-[210/297] w-full cursor-pointer place-items-center rounded-[var(--radius-card)] border-2 border-dashed border-line-strong bg-surface p-3 text-center hover:border-ink-3" data-drop>
+              <span class="flex flex-col items-center gap-2" data-drop-text><Icon name="BookOpen" size={28} class="text-ink-3" /><span class="text-sm font-semibold">Drop the PDF here</span><span class="btn btn-secondary btn-sm">Choose file</span></span>
+              <img alt="Cover from page 1" class="hidden size-full rounded-[8px] object-cover" data-cover />
+              <input type="file" accept="application/pdf,.pdf" class="sr-only" data-file />
+            </label>
+            <p class="t-meta mt-2" data-file-info aria-live="polite">The cover is made from page 1.</p>
+          </div>
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-3 sm:max-w-sm">
+              <label class="block"><span class="t-label">Year</span><select class="field mt-1" data-year>{years.map((y) => <option value={y} selected={y === thisYear}>{y}</option>)}</select></label>
+              <label class="block"><span class="t-label">Month</span><select class="field mt-1" data-month>{MONTH_NAMES.map((m, i) => <option value={i + 1} selected={i === new Date().getMonth()}>{m}</option>)}</select></label>
+            </div>
+            <div>
+              <span class="t-label">Contents · optional</span>
+              <p class="t-meta">A few lines are enough: article title, author, page. They let readers jump to an article.</p>
+              <ul class="mt-2 space-y-2" data-toc>
+                {[1, 2, 3].map((n) => (
+                  <li class="grid grid-cols-[minmax(0,1fr)_minmax(0,0.7fr)_4.5rem] gap-2" data-toc-line>
+                    <input lang="ml" class="field" placeholder={`Article ${n} title`} aria-label={`Article ${n} title`} data-toc-title />
+                    <input lang="ml" class="field" placeholder="Author" aria-label={`Article ${n} author`} data-toc-author />
+                    <input class="field" placeholder="Page" inputmode="numeric" aria-label={`Article ${n} page`} data-toc-page />
+                  </li>
+                ))}
+              </ul>
+              <button type="button" class="link mt-2" data-toc-add>+ Add a line</button>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" class="btn btn-primary" data-save="publish" disabled><Icon name="Check" size={18} /> Publish issue</button>
+              <button type="button" class="btn btn-secondary" data-save="draft" disabled>Save draft</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mt-10" aria-labelledby="recent">
+        <div class="flex items-baseline justify-between gap-3 border-b border-line pb-2"><h2 id="recent" class="t-h2">Recent issues</h2><a href="/kerala-service" class="link" target="_blank" rel="noopener">See the archive</a></div>
+        <ul class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          {issues.map((i) => (
+            <li class="relative">
+              <MagazineCover issue={{ year: i.year, month: i.month, ...(i.coverUrl && { coverUrl: i.coverUrl }) }} />
+              <a href={`/admin/kerala-service/${i.id}`} class="stretched mt-2 block text-sm font-semibold">{MONTH_NAMES[i.month - 1]} {i.year}</a>
+              <p class="t-meta">{i.status === 'draft' ? 'Draft' : i.pdfUrl ? `${i.pageCount ? `${i.pageCount} pages` : 'PDF'}` : 'No PDF'}</p>
+            </li>
+          ))}
+        </ul>
+        <p class="t-meta mt-3">Replacing a PDF keeps the issue’s web address, so links people have shared keep working.</p>
+      </section>
+    </Fragment>
+  )}
+</AdminLayout>
+
+<script>
+  import { api, toast } from '~/lib/admin/client';
+  import { uploadIssue, type IssueUpload } from '~/lib/admin/issue-client';
+
+  function initIssueAdd() {
+    const root = document.querySelector<HTMLElement>('[data-issue-add]');
+    if (!root || root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const $ = <T extends Element = HTMLElement>(s: string) => root.querySelector<T>(s)!;
+    let upload: IssueUpload | null = null;
+    const buttons = root.querySelectorAll<HTMLButtonElement>('[data-save]');
+
+    async function take(file: File) {
+      if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') return toast('Choose a PDF.', 'error');
+      buttons.forEach((b) => (b.disabled = true));
+      const info = $('[data-file-info]');
+      try {
+        upload = await uploadIssue(file, (t) => (info.textContent = t));
+        if (upload.guess) {
+          $<HTMLSelectElement>('[data-year]').value = String(upload.guess.year);
+          $<HTMLSelectElement>('[data-month]').value = String(upload.guess.month);
+        }
+        if (upload.coverUrl) {
+          $<HTMLImageElement>('[data-cover]').src = upload.coverUrl;
+          $('[data-cover]').classList.remove('hidden');
+          $('[data-drop-text]').classList.add('hidden');
+        }
+        const size = upload.bytes >= 1024 * 1024 ? `${(upload.bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(upload.bytes / 1024))} KB`;
+        info.textContent = `${file.name} · ${size} · ${upload.pages} ${upload.pages === 1 ? 'page' : 'pages'}${upload.guess ? '' : ' · check the month'}${upload.coverUrl ? '' : ' · no cover could be made'}`;
+        buttons.forEach((b) => (b.disabled = false));
+      } catch (err) {
+        upload = null;
+        info.textContent = '';
+        toast(err instanceof Error ? err.message : 'The PDF could not be used.', 'error');
+      }
+    }
+    $<HTMLInputElement>('[data-file]').addEventListener('change', (e) => {
+      const input = e.currentTarget as HTMLInputElement;
+      if (input.files?.[0]) take(input.files[0]);
+      input.value = '';
+    });
+    const drop = $('[data-drop]');
+    drop.addEventListener('dragover', (e) => e.preventDefault());
+    drop.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const f = e.dataTransfer?.files[0];
+      if (f) take(f);
+    });
+    $('[data-toc-add]').addEventListener('click', () => {
+      const lines = root.querySelectorAll('[data-toc-line]');
+      const copy = lines[lines.length - 1].cloneNode(true) as HTMLElement;
+      copy.querySelectorAll('input').forEach((i) => (i.value = ''));
+      $('[data-toc]').append(copy);
+      copy.querySelector('input')?.focus();
+    });
+    buttons.forEach((b) => b.addEventListener('click', async () => {
+      if (!upload) return;
+      buttons.forEach((x) => (x.disabled = true));
+      const toc = [...root.querySelectorAll('[data-toc-line]')].map((l) => ({
+        title: l.querySelector<HTMLInputElement>('[data-toc-title]')!.value,
+        author: l.querySelector<HTMLInputElement>('[data-toc-author]')!.value,
+        page: Number(l.querySelector<HTMLInputElement>('[data-toc-page]')!.value) || undefined,
+      }));
+      try {
+        const { id } = await api<{ id: number }>('/api/admin/issues', {
+          body: {
+            publish: b.dataset.save === 'publish',
+            issue: { year: $<HTMLSelectElement>('[data-year]').value, month: $<HTMLSelectElement>('[data-month]').value, pdfMediaId: upload.pdfMediaId, coverMediaId: upload.coverMediaId, pageCount: upload.pages, toc },
+          },
+        });
+        location.assign(`/admin/kerala-service/${id}?done=${b.dataset.save}`);
+      } catch (err) {
+        toast(err instanceof Error ? err.message : 'Not saved.', 'error');
+        buttons.forEach((x) => (x.disabled = false));
+      }
+    }));
+  }
+  initIssueAdd();
+</script>

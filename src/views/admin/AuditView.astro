@@ -1,0 +1,101 @@
+---
+/**
+ * Admin: the Audit log (plan, sections 5 and 10; approved wireframe "Audit log"). Every create,
+ * edit, publish, removal, approval, role change, setting and sign-in, newest first; it can't be
+ * edited. Filters by text, kind, district and period live in the URL. An entry with changes shows
+ * them before and after; restoring an earlier version is done from the item's own History, which
+ * keeps every published version, so the restore itself shows here too. District admins see their
+ * district's entries; district editors see their own post's history in the editor instead.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import { actionLabels, itemLink, KINDS, listAudit } from '~/lib/admin/audit';
+import { isState } from '~/lib/admin/roles';
+import { districtBySlug } from '~/data/districts';
+import { sortedDistricts } from '~/lib/content';
+
+const user = Astro.locals.user!;
+const allowed = user.role !== 'district_editor';
+const p = Astro.url.searchParams;
+const filter = {
+  q: p.get('q')?.slice(0, 100) || undefined,
+  kind: KINDS[p.get('kind') ?? ''] ? p.get('kind')! : undefined,
+  district: isState(user) && (p.get('district') === 'state' || districtBySlug[p.get('district') ?? '']) ? p.get('district')! : undefined,
+  days: [7, 30, 365].includes(Number(p.get('days'))) ? Number(p.get('days')) : p.get('days') === 'all' ? undefined : 30,
+  before: Number(p.get('before')) || undefined,
+};
+const rows = allowed ? await listAudit(user, filter) : [];
+const open = rows.find((r) => r.id === Number(p.get('e')));
+const when = (at: string) => new Date(`${at.replace(' ', 'T')}Z`).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+const show = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v));
+const older = (id: number) => { const u = new URLSearchParams(Astro.url.search); u.set('before', String(id)); u.delete('e'); return `/admin/audit?${u}`; };
+const entryLink = (id: number) => { const u = new URLSearchParams(Astro.url.search); u.set('e', String(id)); return `/admin/audit?${u}#changes`; };
+---
+<AdminLayout title="Audit log" section="audit">
+  {!allowed ? (
+    <div class="card p-6 text-ink-2"><p>The audit log is for admins.</p><p class="t-meta mt-1">Your own post’s history is in the editor, under History.</p></div>
+  ) : (
+    <Fragment>
+      <h1 class="t-h1">Audit log</h1>
+      <p class="t-meta mt-1">Every change, approval, role change, setting and sign-in{isState(user) ? '' : ` in ${districtBySlug[user.district ?? '']?.name.en}`}. Entries can’t be edited or removed.</p>
+      <form method="get" class="mt-5 grid grid-cols-2 gap-3 md:flex md:flex-wrap" data-filters>
+        <input type="search" name="q" value={filter.q ?? ''} class="field col-span-2 md:w-64" placeholder="Search an item or a person" aria-label="Search the log" />
+        <select name="kind" class="field md:w-52" aria-label="Kind of change" data-autosubmit><option value="">Every change</option>{Object.entries(KINDS).map(([k, v]) => <option value={k} selected={filter.kind === k}>{v.label}</option>)}</select>
+        {isState(user) && <select name="district" class="field md:w-52" aria-label="District" data-autosubmit><option value="">All districts and state</option><option value="state" selected={filter.district === 'state'}>State only</option>{sortedDistricts().map((d) => <option value={d.slug} selected={filter.district === d.slug}>{d.name.en}</option>)}</select>}
+        <select name="days" class="field md:w-44" aria-label="When" data-autosubmit>
+          {[['7', 'Last 7 days'], ['30', 'Last 30 days'], ['365', 'Last 12 months'], ['all', 'Any time']].map(([v, l]) => <option value={v} selected={String(filter.days ?? 'all') === v}>{l}</option>)}
+        </select>
+        <button class="btn btn-secondary">Filter</button>
+      </form>
+
+      <div class="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        <ul class="divide-y divide-line border-y border-line self-start">
+          {rows.map((r) => {
+            const href = itemLink(r);
+            return (
+              <li class:list={['flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2.5 text-sm', r.id === open?.id && 'bg-surface']}>
+                <span class="t-meta w-36 shrink-0">{when(r.at)}</span>
+                <p class="min-w-0 flex-1">
+                  <span class="font-semibold">{r.by ?? 'The site'}</span> {actionLabels[r.action] ?? r.action}{' '}
+                  {r.summary && (href ? <a href={href} class="link font-normal" lang={/[ഀ-ൿ]/.test(r.summary) ? 'ml' : 'en'}>{r.summary}</a> : <span lang={/[ഀ-ൿ]/.test(r.summary) ? 'ml' : 'en'}>{r.summary}</span>)}
+                  {r.district && <span class="t-meta"> · {districtBySlug[r.district]?.name.en}</span>}
+                </p>
+                {r.diff ? <a href={entryLink(r.id)} class="link shrink-0">See changes</a> : null}
+              </li>
+            );
+          })}
+          {rows.length === 0 && <li class="t-meta py-4">Nothing in this period.</li>}
+        </ul>
+
+        <section id="changes" class="scroll-mt-20" aria-labelledby="chg">
+          {open ? (
+            <div class="card p-4">
+              <h2 id="chg" class="t-h3">Changes</h2>
+              <p class="t-meta">{when(open.at)} · {open.by ?? 'The site'} · {actionLabels[open.action] ?? open.action}</p>
+              <table class="mt-3 w-full text-left text-sm">
+                <thead><tr class="text-xs uppercase tracking-wide text-ink-3"><th class="py-1 pr-2 font-semibold">What</th><th class="py-1 pr-2 font-semibold">Before</th><th class="py-1 font-semibold">After</th></tr></thead>
+                <tbody>
+                  {Object.entries((open.diff ?? {}) as Record<string, [unknown, unknown]>).map(([k, [a, b]]) => (
+                    <tr class="border-t border-line align-top"><th class="py-2 pr-2 font-semibold">{k}</th><td class="py-2 pr-2 text-ink-2" lang={/[ഀ-ൿ]/.test(show(a)) ? 'ml' : 'en'}>{show(a)}</td><td class="py-2" lang={/[ഀ-ൿ]/.test(show(b)) ? 'ml' : 'en'}>{show(b)}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+              {itemLink(open) && <p class="mt-3 text-sm"><a href={itemLink(open)!} class="link">Open it</a>{open.entity === 'post' && <span class="t-meta"> · earlier versions are under History in the editor, where any can be restored</span>}</p>}
+            </div>
+          ) : <p id="chg" class="t-meta">Pick “See changes” on an entry to compare before and after.</p>}
+        </section>
+      </div>
+      {rows.length === 50 && <div class="mt-4"><a href={older(rows[rows.length - 1].id)} class="btn btn-secondary btn-sm">Older entries</a></div>}
+    </Fragment>
+  )}
+</AdminLayout>
+
+<script>
+  function initAuditFilters() {
+    const form = document.querySelector<HTMLFormElement>('[data-filters]');
+    if (!form || form.dataset.ready) return;
+    form.dataset.ready = '1';
+    form.querySelectorAll('[data-autosubmit]').forEach((el) => el.addEventListener('change', () => form.requestSubmit()));
+    form.addEventListener('formdata', (e) => { for (const [k, v] of [...e.formData.entries()]) if (v === '') e.formData.delete(k); });
+  }
+  initAuditFilters();
+</script>

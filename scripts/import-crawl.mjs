@@ -6,6 +6,8 @@
 // Malayalam title, the old WordPress address kept as `legacyUrl` for redirects.
 // Run: node scripts/import-crawl.mjs
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { tidyMl, slugify } from '../src/lib/slug.ts';
+import { norm, DISTRICT, TOPIC, NOT_NEWS, KEYWORDS, cleanText, htmlParagraphs, cutText } from '../src/lib/wp-map.ts';
 
 const raw = JSON.parse(readFileSync(new URL('./.cache/raw.json', import.meta.url), 'utf8'));
 const OUT = new URL('../src/data/live/', import.meta.url);
@@ -13,71 +15,14 @@ mkdirSync(OUT, { recursive: true });
 const report = [];
 const note = (s) => { report.push(s); console.log(s); };
 
-// ── Text helpers ──────────────────────────────────────────────────────────────────────────
-const entities = (s) => s
-  .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
-  .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
-  .replace(/&(amp|lt|gt|quot|apos|nbsp);/g, (_, e) => ({ amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' })[e]);
-/** Old chillu sequences (consonant + virama + ZWJ) → atomic chillu letters, stray joiners out */
-const tidyMl = (s) => s.replace(/ണ്‍/g, 'ൺ').replace(/ന്‍/g, 'ൻ').replace(/ര്‍/g, 'ർ').replace(/ല്‍/g, 'ൽ').replace(/ള്‍/g, 'ൾ').replace(/ക്‍/g, 'ൿ').replace(/[‌‍]/g, '');
-const clean = (s) => tidyMl(entities(s)).replace(/\s+/g, ' ').trim();
-const paragraphs = (html) => html
-  .replace(/<(script|style|figure|figcaption)[\s\S]*?<\/\1>/g, '')
-  .split(/<\/p>|<br\s*\/?>|<\/h\d>|<\/li>|<\/div>/i)
-  .map((p) => clean(p.replace(/<[^>]+>/g, ' ')))
-  .filter((p) => p && !/^(&nbsp;|\.|-)+$/.test(p));
-const cut = (s, n) => (s.length <= n ? s : `${s.slice(0, s.lastIndexOf(' ', n) > n * 0.6 ? s.lastIndexOf(' ', n) : n)}…`);
+// ── Text helpers (shared with the admin's WordPress import) ──────────────────────────────
+const clean = cleanText;
+const paragraphs = htmlParagraphs;
+const cut = cutText;
 const istDate = (iso) => new Date(new Date(iso).getTime() + 330 * 60_000).toISOString().slice(0, 10);
 
-// Malayalam → readable Latin for slugs ("സെക്രട്ടറിയറ്റ് മാർച്ച്" → "sekrattariyatt-maarch")
-const CONS = { 'ക': 'k', 'ഖ': 'kh', 'ഗ': 'g', 'ഘ': 'gh', 'ങ': 'ng', 'ച': 'ch', 'ഛ': 'chh', 'ജ': 'j', 'ഝ': 'jh', 'ഞ': 'nj', 'ട': 't', 'ഠ': 'th', 'ഡ': 'd', 'ഢ': 'dh', 'ണ': 'n', 'ത': 'th', 'ഥ': 'th', 'ദ': 'd', 'ധ': 'dh', 'ന': 'n', 'പ': 'p', 'ഫ': 'ph', 'ബ': 'b', 'ഭ': 'bh', 'മ': 'm', 'യ': 'y', 'ര': 'r', 'റ': 'r', 'ല': 'l', 'ള': 'l', 'ഴ': 'zh', 'വ': 'v', 'ശ': 'sh', 'ഷ': 'sh', 'സ': 's', 'ഹ': 'h' };
-const VOW = { 'അ': 'a', 'ആ': 'aa', 'ഇ': 'i', 'ഈ': 'ee', 'ഉ': 'u', 'ഊ': 'oo', 'ഋ': 'ru', 'എ': 'e', 'ഏ': 'e', 'ഐ': 'ai', 'ഒ': 'o', 'ഓ': 'o', 'ഔ': 'au' };
-const SIGN = { 'ാ': 'aa', 'ി': 'i', 'ീ': 'ee', 'ു': 'u', 'ൂ': 'oo', 'ൃ': 'ru', 'െ': 'e', 'േ': 'e', 'ൈ': 'ai', 'ൊ': 'o', 'ോ': 'o', 'ൌ': 'au', 'ൗ': 'au' };
-const OTHER = { 'ം': 'm', 'ഃ': 'h', 'ൺ': 'n', 'ൻ': 'n', 'ർ': 'r', 'ൽ': 'l', 'ൾ': 'l', 'ൿ': 'k' };
-// Clusters that read differently from their letters (ന്റ is "nt", റ്റ is "tt"), as stand-in consonants
-const CLUSTERS = [[/ന്റ/g, '', 'nt'], [/റ്റ/g, '', 'tt'], [/ങ്ക/g, '', 'nk'], [/ഞ്ച/g, '', 'nch'], [/ച്ച/g, '', 'cch'], [/ത്ത/g, '', 'tth']];
-for (const [, mark, latin] of CLUSTERS) CONS[mark] = latin;
-function translit(input) {
-  const s = CLUSTERS.reduce((acc, [re, mark]) => acc.replace(re, mark), tidyMl(input));
-  let out = '';
-  for (let i = 0; i < s.length; i++) {
-    const c = s[i], next = s[i + 1];
-    if (CONS[c]) { out += CONS[c]; if (next === '്') { i++; } else if (!SIGN[next]) out += 'a'; continue; }
-    out += VOW[c] ?? SIGN[c] ?? OTHER[c] ?? c;
-  }
-  return out;
-}
-/** Lowercase Latin slug: at most `words` words and 60 characters, cut between words */
-function slugify(s, words = 7) {
-  let out = '';
-  for (const w of translit(s).toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').split('-').filter(Boolean).slice(0, words)) {
-    if (out && out.length + w.length >= 60) break;
-    out = out ? `${out}-${w}` : w;
-  }
-  return out;
-}
 
 // ── News posts ────────────────────────────────────────────────────────────────────────────
-const norm = (c) => tidyMl(c).toUpperCase().replace(/\s+GALLERY$/, '').replace(/[’']/g, "'").trim();
-const DISTRICT = {
-  'TVM NORTH': 'tvm-north', 'TVM NORTH COMMITTEE': 'tvm-north', 'THIRUVANANTHAPURAM NORTH': 'tvm-north', 'TVM SOUTH': 'tvm-south', 'THIRUVANANTHAPURAM SOUTH': 'tvm-south',
-  KOLLAM: 'kollam', PATHANAMTHITTA: 'pathanamthitta', ALAPPUZHA: 'alappuzha', KOTTAYAM: 'kottayam', 'കോട്ടയം': 'kottayam', IDUKKI: 'idukki', ERNAKULAM: 'ernakulam',
-  THRISSUR: 'thrissur', PALAKKAD: 'palakkad', MALAPPURAM: 'malappuram', KOZHIKODE: 'kozhikode', WAYANAD: 'wayanad', KANNUR: 'kannur', 'കണ്ണൂർ': 'kannur', KASARAGOD: 'kasaragod',
-};
-const TOPIC = {
-  'FSETO NEWS': 'fseto', "SECRETARY'S PAGE": 'secretary', 'JANAPAKSHA CIVIL SERVICE': 'janapaksha', 'VOLUNTARY ACTIVITIES': 'social-work', 'SOCIAL ACTIVITIES': 'social-work',
-  SPORTS: 'arts-sports', 'NGO UNION CONFERENCES': 'organisation', 'NGO UNION DISTRICT CONFERENCE': 'organisation', 'DISTRICT CONFERENCE': 'organisation', 'ജില്ലാ സമ്മേളനം': 'organisation',
-};
-// Office-bearer lists and committee pages: district data, not news (kept for the district hubs later)
-const NOT_NEWS = new Set(['DISTRICT MEMBERS', 'DISTRICT COMMITTEE', 'TVM NORTH COMMITTEE', 'WAYANAD LEADERS', 'DISTRICT HISTORY', 'DISTRICT ADDRESSES']);
-// Topic from the title when no category says it
-const KEYWORDS = [
-  ['struggles', /പ്രതിഷേധ|സമര|മാർച്ച്|ധർണ|പണിമുടക്ക|പ്രകടന|ഉപരോധ|വളയൽ|പ്രക്ഷോഭ|strike|protest|dharna|march/i],
-  ['seminars', /സെമിനാർ|സെമിനാര|പ്രഭാഷണ|സിമ്പോസിയ|seminar|lecture/i],
-  ['arts-sports', /കായിക|കലാ|ചെസ്സ്|ചെസ്|കാരംസ്|ക്രിക്കറ്റ്|ഫുട്ബോൾ|ഷട്ടിൽ|ഓണാഘോഷ|ഓണം|sports|chess|cricket|football/i],
-  ['social-work', /രക്തദാന|ദുരിതാശ്വാസ|കിറ്റ്|ശുചീകരണ|പ്രളയ|ലഹരി|വൃക്ഷ|ചികിത്സാ|സഹായ|blood|relief|flood/i],
-];
-
 // Posts shown as Articles (old-site post ids, e.g. 18039). Editors tag articles in the admin
 // panel later; until then, add ids here and rerun this script.
 const ARTICLE_IDS = new Set([2045, 2006, 3605, 11673, 11789]);

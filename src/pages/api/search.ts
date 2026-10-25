@@ -10,6 +10,6 @@ export const prerender = false;
 export const GET: APIRoute = async (context) => {
   const q = (context.url.searchParams.get('q') ?? '').slice(0, 100);
   const docs = await searchSite(q);
-  cachePage(context, 'list', [tags.posts, tags.orders]);
+  cachePage(context, 'list', [tags.posts, tags.orders, tags.events]);
   return Response.json(docs);
 };

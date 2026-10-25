@@ -1,0 +1,38 @@
+---
+/** One district's page in the admin. Each form posts an action here (src/lib/admin/districts.ts checks every rule). */
+import DistrictEditorView from '~/views/admin/DistrictEditorView.astro';
+import { deleteArea, deleteOffice, loadDistrict, mayView, moveArea, moveOffice, saveArea, saveOffice, setCover } from '~/lib/admin/districts';
+import { AdminError } from '~/lib/admin/publish';
+
+export const prerender = false;
+const user = Astro.locals.user!;
+const slug = Astro.params.slug!;
+if (!mayView(user, slug)) return new Response(null, { status: 404 });
+let error: string | undefined;
+if (Astro.request.method === 'POST') {
+  const f = Object.fromEntries([...(await Astro.request.formData()).entries()].map(([k, v]) => [k, String(v)]));
+  const id = Number(f.id) || null;
+  let done: string = f.action;
+  try {
+    switch (f.action) {
+      case 'cover': await setCover(user, slug, Number(f.coverMediaId) || null); break;
+      case 'cover_remove': await setCover(user, slug, null); done = 'cover'; break;
+      case 'area_save': await saveArea(user, slug, id, f); done = 'area'; break;
+      case 'area_delete': await deleteArea(user, slug, id!); break;
+      case 'area_up': case 'area_down': await moveArea(user, slug, id!, f.action === 'area_up' ? 'up' : 'down'); done = 'move'; break;
+      case 'office_save': done = (await saveOffice(user, slug, id, f)).pinned ? 'office_pin' : f.mapUrl ? 'office_nopin' : 'office'; break;
+      case 'office_delete': await deleteOffice(user, slug, id!); break;
+      case 'office_up': case 'office_down': await moveOffice(user, slug, id!, f.action === 'office_up' ? 'up' : 'down'); done = 'move'; break;
+      default: throw new AdminError('Unknown action.');
+    }
+    return Astro.redirect(`/admin/districts/${slug}?done=${done}`);
+  } catch (err) {
+    if (!(err instanceof AdminError)) throw err;
+    error = err.message;
+  }
+}
+const d = await loadDistrict(user, slug);
+if (!d) return new Response(null, { status: 404 });
+const p = Astro.url.searchParams;
+---
+<DistrictEditorView d={d} error={error} done={p.get('done') ?? undefined} editOffice={Number(p.get('office')) || null} editArea={Number(p.get('area')) || null} />

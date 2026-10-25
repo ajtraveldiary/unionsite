@@ -16,16 +16,26 @@ date when the owner approves it, fill in **Built** when the real page exists, an
 Right now the site is a **preview**. News, GO orders and Kerala Service are real content crawled
 from the current keralangounion.in into `src/data/live/*.json`, then loaded into a **local D1
 database** (photos and PDFs are still linked from the old site). Pages that show this content read
-D1 on request and are cached (plan, section 4, "Caching and database reads"). Events, videos and
-the state committee are hand-written in `src/data/site.ts`; events are sample data. The home-page
+D1 on request and are cached (plan, section 4, "Caching and database reads"). Events are in D1 too
+(the seed loads four sample events from `src/data/site.ts`), and so are the state committee and videos
+(also seeded from `site.ts`), district office-bearers and offices, pages, documents and albums, all
+managed in the admin. The home-page
 banner (one post or event, set by a state editor; it stays until replaced) lives in D1
-(`site_settings.home_banner`), first set from `firstBanner` in `site.ts`. The Cloudflare account,
-R2 file storage and the admin panel are not set up yet.
+(`site_settings.home_banner`), first set from `firstBanner` in `site.ts`. The Cloudflare account
+is not set up yet; R2 runs locally through wrangler.
+
+The admin panel at `/admin` was built in four slices (plan, section 1), all done locally: 1 (sign-in, roles,
+Dashboard, News, post editor), 2 (Orders, Kerala Service, Events, Home & banner), 3 (People &
+committees, Districts, Pages & documents, Media) and 4 (Inbox, Users, Settings, Audit log, Analytics,
+Import, Help). The Contact form saves messages for the Inbox; pages send a cookie-less analytics
+beacon to `/api/e`, stored in D1 locally (Analytics Engine once the account exists). Locally, sign in at `/admin/login` as one of the four test users
+the seed adds (super admin, state editor, Kollam district admin, Kollam district editor); on the real
+site Cloudflare Access does the sign-in and `src/lib/admin/auth.ts` checks its token.
 
 ## Commands
 
 - First time, and after changing the schema or the crawl: `npm run db:migrate`, then `npm run db:seed`.
-  Without them the content pages fail (no tables).
+  Without them the content pages fail (no tables). The seed also wipes everything made in the admin.
 - `npm run dev`: dev server on port 4321 (in the desktop app, start it with the "site" entry in `.claude/launch.json`).
   It never caches; the terminal logs D1 queries per request (`[d1] GET /news · 2 queries`).
 - `npm run check`: Astro/TypeScript check. Must show 0 errors, 0 warnings.
@@ -66,7 +76,11 @@ in light and dark themes.
   `purgeTags` lists what a publish must purge. Content routes set `export const prerender = false`
   and return `new Response(null, { status: 404 })` for missing items (not `Astro.rewrite`).
 - `src/lib/sample.ts`: the crawled JSON, synchronous, only for the prebuilt `/wireframes` and `/design-system`.
-- Search runs on D1 (plan, section 11): `search_docs` (one result row per post and order) and the
+- Site details (address, phone, email, social links) come from `siteInfo()`/`siteDetails()` in `content.ts`
+  (D1, set in Settings), not `site.ts` directly; every cached page carries the `site` tag so saving them purges all.
+- `src/lib/wp-map.ts`: the old WordPress categories → district and topic, and HTML → paragraphs, shared by
+  `scripts/import-crawl.mjs` and the admin's import. `src/lib/contact.ts` saves contact messages.
+- Search runs on D1 (plan, section 11): `search_docs` (one result row per post, order and event) and the
   FTS5 trigram table `search_fts` (normalised title, keywords and body, same id), made by the
   hand-written migration `migrations/0002_search_fts.sql`. `src/lib/search-entries.ts` builds both
   rows for an item (the seed uses it; the admin must call it on every save). `src/lib/search.ts`
@@ -77,6 +91,30 @@ in light and dark themes.
   `/api/news?topic=&district=&q=&offset=` for one page at a time. Lists that could hold the
   whole archive must stay limited like this.
 - `src/lib/i18n.ts`: `t()` / `langOf()` for bilingual text, `href()` for `/en` paths, date formatting.
+- The admin (plan, section 10): routes in `src/pages/admin/` and `src/pages/api/admin/`, views in
+  `src/views/admin/`, the frame in `src/layouts/AdminLayout.astro`, small parts in `src/components/admin/`,
+  extra styles in `src/styles/admin.css`. All rules live in `src/lib/admin/`: `roles.ts` (who may do
+  what, and the menu), `auth.ts`, `posts.ts` (every post read and write, history, locks, search sync,
+  cache purge), `post-doc.ts` (the editor's document and `cleanDoc`), `media.ts`, `audit.ts`. Every API
+  call checks the role itself; hiding a button is never the only guard. `src/middleware.ts` refuses
+  signed-out requests and writes from other origins, and sets no-store, noindex and the admin CSP.
+  More modules: `events.ts`, `orders.ts`, `issues.ts` (Kerala Service), `home.ts` (banner, lead story),
+  `people.ts` (committees and terms), `districts.ts` (areas, offices), `pages.ts` (pages, documents,
+  conferences), `albums.ts` (albums and videos), `media.ts` (uploads and the library), `inbox.ts`
+  (contact messages), `users.ts`, `settings.ts` (site details, AI switch, glossary, inbox), `analytics.ts`
+  (the dashboard's numbers), `import.ts` (the WordPress import), and `publish.ts` (AdminError, `setSearch()` for the search index, `purge()` for the cache), which every
+  save goes through. Simple screens are plain forms posted to their own route; the route calls the module.
+  Page scripts: `editor-client.ts` (the post editor), `rich-editor.ts` (TipTap, editor page only),
+  `translate.ts` (Gemini, from the browser; `askKey()` uses `components/admin/GeminiKeyDialog`),
+  `image-prep.ts`, `pdf-read.ts` (pdf.js: PDF text, GO number and date, page-1 covers; Orders, Kerala
+  Service and Pages & documents only), `orders-upload.ts`, `issue-client.ts`, `page-editor-client.ts`, `import-client.ts` (reads the WXR
+  export in the browser). These are the only libraries the admin loads. Help's steps live in `src/data/help.ts`.
+- `src/worker.ts` is the Worker's entry (`wrangler.jsonc` "main"): Astro's handler plus the Cron Trigger
+  (every five minutes: scheduled posts go live; hourly: new videos from the channel, the analytics roll-up
+  in `src/lib/analytics.ts`, and deleting old contact messages). Locally, `GET /cdn-cgi/handler/scheduled` runs it once.
+- Article bodies are a list of paragraphs (crawled) or TipTap JSON (written in the admin);
+  `src/lib/richtext.ts` renders both from an allow-list. Use `renderBody()`/`bodyText()`, never the raw body.
+- Uploaded files are in R2 (`MEDIA` binding), served by `src/pages/media/[...key].ts` at `/media/…`.
 - `/design-system`: the living style guide. `/wireframes` and `/wireframes/admin`: the greyscale
   wireframes (all listed in `wireframelist.md`), kept on purpose (noindex) with their own `wire.css`
   and `components/wire/`. New public wireframes go in `WireLayout`'s page list, admin ones in

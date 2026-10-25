@@ -1,0 +1,134 @@
+---
+/**
+ * Admin: the orders library (plan, section 10). Search by title or GO number, narrow by group,
+ * subject and status (all in the URL); a table on laptops, cards on phones, 50 a page, newest GO
+ * first. "Upload orders" adds new ones. State roles only.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import { listOrders, type OrderFilter, type OrderGroup } from '~/lib/admin/orders';
+import { isState } from '~/lib/admin/roles';
+import { orderSubjects, orderGroups, subjectBySlug } from '~/data/orders';
+import { formatDate } from '~/lib/i18n';
+
+const PAGE = 50;
+const user = Astro.locals.user!;
+const p = Astro.url.searchParams;
+const page = Math.max(1, parseInt(p.get('page') ?? '1', 10) || 1);
+const group = orderGroups.find((g) => g.slug === p.get('g'))?.slug as OrderGroup | undefined;
+const filter: OrderFilter = {
+  q: p.get('q')?.slice(0, 100) || undefined,
+  group,
+  subject: subjectBySlug[p.get('s') ?? ''] ? p.get('s')! : undefined,
+  status: (['draft', 'published', 'archived'] as const).find((s) => s === p.get('status')),
+  offset: (page - 1) * PAGE,
+  limit: PAGE,
+};
+const { rows, total } = isState(user) ? await listOrders(user, filter) : { rows: [], total: 0 };
+const pages = Math.max(1, Math.ceil(total / PAGE));
+const link = (change: Record<string, string | undefined>, keepPage = false) => {
+  const u = new URLSearchParams(Astro.url.search);
+  if (!keepPage) u.delete('page');
+  for (const [k, v] of Object.entries(change)) v ? u.set(k, v) : u.delete(k);
+  return `/admin/orders${u.size ? `?${u}` : ''}`;
+};
+const statusTone = { draft: 'badge-neutral', published: 'badge-success', archived: 'badge-neutral' } as const;
+const statusLabel = { draft: 'Draft', published: 'Published', archived: 'Archived' } as const;
+---
+<AdminLayout title="Orders" section="orders">
+  {!isState(user) ? (
+    <p class="card p-6 text-ink-2">Orders are managed by the state office.</p>
+  ) : (
+    <Fragment>
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 class="t-h1">Orders</h1>
+          <p class="t-meta mt-1">Government orders and circulars in the library</p>
+        </div>
+        <a href="/admin/orders/upload" class="btn btn-primary"><Icon name="Upload" size={18} /> Upload orders</a>
+      </div>
+
+      <form method="get" action="/admin/orders" class="mt-5 space-y-3" data-filters>
+        {filter.status && <input type="hidden" name="status" value={filter.status} />}
+        {group && <input type="hidden" name="g" value={group} />}
+        <div class="relative max-w-xl">
+          <Icon name="Search" size={18} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
+          <input type="search" name="q" value={filter.q ?? ''} class="field pl-10" placeholder="Title or GO number" aria-label="Search orders by title or GO number" />
+        </div>
+        <div class="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0" role="group" aria-label="Status">
+          {[[undefined, 'All'], ['draft', 'Drafts'], ['published', 'Published'], ['archived', 'Archived']].map(([s, label]) => (
+            <a href={link({ status: s })} class="chip" aria-current={filter.status === s ? 'page' : undefined}>{label}</a>
+          ))}
+        </div>
+        <div class="grid grid-cols-2 gap-3 md:flex md:flex-wrap">
+          <select name="g" class="field md:w-48" aria-label="Group" data-autosubmit>
+            <option value="">All groups</option>
+            {orderGroups.map((g) => <option value={g.slug} selected={group === g.slug}>{g.name.en}</option>)}
+          </select>
+          <select name="s" class="field md:w-56" aria-label="Subject" data-autosubmit>
+            <option value="">All subjects</option>
+            {orderSubjects.filter((s) => !group || s.group === group).map((s) => <option value={s.slug} selected={filter.subject === s.slug}>{s.name.en}</option>)}
+          </select>
+          <button class="btn btn-secondary">Filter</button>
+        </div>
+      </form>
+
+      <p class="t-meta mt-5">{total.toLocaleString('en-IN')} {total === 1 ? 'order' : 'orders'}{pages > 1 ? ` · page ${page} of ${pages}` : ''}</p>
+      {rows.length === 0 ? (
+        <div class="card mt-3 p-8 text-center"><Icon name="FileText" size={32} class="mx-auto text-ink-3" /><p class="mt-3 font-semibold">No orders here</p></div>
+      ) : (
+        <Fragment>
+          <table class="mt-3 hidden w-full border-collapse text-left text-sm md:table">
+            <thead>
+              <tr class="border-b-2 border-ink text-xs uppercase tracking-wide text-ink-3">
+                <th class="py-2 pr-4 font-semibold">Order</th><th class="py-2 pr-4 font-semibold">Subject</th><th class="py-2 pr-4 font-semibold">Status</th><th class="py-2 font-semibold">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((o) => (
+                <tr class="relative border-b border-line align-top hover:bg-surface">
+                  <td class="max-w-xl py-3 pr-4">
+                    <a href={`/admin/orders/${o.id}`} class="stretched clamp-2 font-semibold leading-snug" lang={/[ഀ-ൿ]/.test(o.title) ? 'ml' : 'en'}>{o.title}</a>
+                    <span class="t-meta block">{o.goNumber || 'No GO number'}{!o.pdfUrl && ' · no PDF'}</span>
+                  </td>
+                  <td class="whitespace-nowrap py-3 pr-4 text-ink-2">{subjectBySlug[o.subject]?.name.en}</td>
+                  <td class="whitespace-nowrap py-3 pr-4"><span class={`badge ${statusTone[o.status]}`}>{statusLabel[o.status]}</span>{o.important && <span class="badge badge-accent ml-1">Important</span>}</td>
+                  <td class="whitespace-nowrap py-3 tabular text-ink-2">{formatDate(o.goDate, 'en', 'short')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <ul class="mt-3 divide-y divide-line border-y border-line md:hidden">
+            {rows.map((o) => (
+              <li class="relative py-3">
+                <p class="flex flex-wrap items-center gap-1.5"><span class={`badge ${statusTone[o.status]}`}>{statusLabel[o.status]}</span>{o.important && <span class="badge badge-accent">Important</span>}<span class="t-meta">{formatDate(o.goDate, 'en', 'short')} · {subjectBySlug[o.subject]?.name.en}</span></p>
+                <a href={`/admin/orders/${o.id}`} class="stretched clamp-2 mt-1.5 block font-semibold leading-snug" lang={/[ഀ-ൿ]/.test(o.title) ? 'ml' : 'en'}>{o.title}</a>
+                <p class="t-meta">{o.goNumber || 'No GO number'}</p>
+              </li>
+            ))}
+          </ul>
+        </Fragment>
+      )}
+      {pages > 1 && (
+        <nav class="mt-6 flex items-center justify-between gap-3" aria-label="Pages">
+          {page > 1 ? <a href={link({ page: String(page - 1) }, true)} class="btn btn-secondary"><Icon name="ChevronLeft" size={18} /> Newer</a> : <span></span>}
+          <span class="t-meta">Page {page} of {pages}</span>
+          {page < pages ? <a href={link({ page: String(page + 1) }, true)} class="btn btn-secondary">Older <Icon name="ChevronRight" size={18} /></a> : <span></span>}
+        </nav>
+      )}
+    </Fragment>
+  )}
+</AdminLayout>
+
+<script>
+  function initOrderFilters() {
+    const form = document.querySelector<HTMLFormElement>('[data-filters]');
+    if (!form || form.dataset.ready) return;
+    form.dataset.ready = '1';
+    form.querySelectorAll('[data-autosubmit]').forEach((el) => el.addEventListener('change', () => form.requestSubmit()));
+    form.addEventListener('formdata', (e) => {
+      for (const [k, v] of [...e.formData.entries()]) if (v === '') e.formData.delete(k);
+    });
+  }
+  initOrderFilters();
+</script>

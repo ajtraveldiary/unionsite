@@ -1,0 +1,169 @@
+---
+/**
+ * Admin: the dashboard (plan, section 10; approved wireframe "Dashboard"). The first screen after
+ * sign-in: what needs this person now (drafts, posts waiting for review, English to approve,
+ * changes not yet live), then the home banner, home-page requests and recent activity. Only the
+ * jobs this role does are shown, so a district editor sees their drafts and what they sent.
+ * Admins also see new contact-form messages; everyone sees today's visitors and most read posts.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import PostList from '~/components/admin/PostList.astro';
+import { dashboardCounts, listPosts } from '~/lib/admin/posts';
+import { recentActivity, actionLabels } from '~/lib/admin/audit';
+import { isState, roleLabels } from '~/lib/admin/roles';
+import { activeBanner } from '~/lib/content';
+import { districtBySlug } from '~/data/districts';
+import { t } from '~/lib/i18n';
+import { inboxCounts, listMessages, mayRead } from '~/lib/admin/inbox';
+import { dashboard } from '~/lib/admin/analytics';
+import { ago } from '~/lib/admin/client';
+
+const user = Astro.locals.user!;
+const editor = user.role === 'district_editor';
+const state = isState(user);
+const inbox = mayRead(user);
+const [counts, review, drafts, english, changes, requests, activity, banner, messages, msgCounts, today] = await Promise.all([
+  dashboardCounts(user),
+  editor ? null : listPosts(user, { status: 'in_review', limit: 5 }),
+  listPosts(user, { status: 'draft', mine: true, limit: 5 }),
+  editor ? null : listPosts(user, { english: 'draft', limit: 5 }),
+  listPosts(user, { status: 'changes', limit: 5 }),
+  state ? listPosts(user, { homeRequested: true, limit: 5 }) : null,
+  editor ? [] : recentActivity(user, 8),
+  state ? activeBanner() : null,
+  inbox ? listMessages(user, 'new') : [],
+  inboxCounts(user),
+  dashboard(user, 1),
+]);
+const hour = new Date(Date.now() + 330 * 60_000).getUTCHours();
+const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+const districtName = (slug: string | null) => (slug ? districtBySlug[slug]?.name.en.replace('Thiruvananthapuram', 'TVM') : 'State');
+const cards = [
+  { n: counts.myDrafts, label: 'My drafts', href: '/admin/news?status=draft', show: true },
+  { n: counts.review, label: 'Waiting for review', href: '/admin/news?status=in_review', show: !editor },
+  { n: counts.englishDraft, label: 'English to approve', href: '/admin/news?english=draft', show: !editor },
+  { n: counts.changes, label: 'Unpublished changes', href: '/admin/news?status=changes', show: true },
+  { n: counts.sent, label: 'Sent for review', href: '/admin/news?status=in_review', show: editor },
+  { n: counts.outdated, label: 'English out of date', href: '/admin/news?english=outdated&status=published', show: !editor && counts.outdated > 0 },
+].filter((c) => c.show);
+---
+<AdminLayout title="Dashboard" section="dashboard">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="t-h1">{greeting}</h1>
+      <p class="t-meta mt-1">{user.name} · {roleLabels[user.role]} · {user.district ? `you manage ${districtName(user.district)} district` : 'you manage the whole site'}</p>
+    </div>
+    <a href="/admin/news/new" class="btn btn-primary hidden lg:inline-flex"><Icon name="Plus" size={18} /> New post</a>
+  </div>
+
+  <ul class="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+    {cards.map((c) => (
+      <li>
+        <a href={c.href} class="card card-hover block p-4">
+          <p class="text-3xl font-bold tabular">{c.n.toLocaleString('en-IN')}</p>
+          <p class="mt-1 text-sm text-ink-2">{c.label}</p>
+        </a>
+      </li>
+    ))}
+  </ul>
+
+  <div class="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+    <div class="space-y-8">
+      {review && (
+        <section aria-labelledby="review">
+          <div class="flex items-baseline justify-between gap-3 border-b border-line pb-2"><h2 id="review" class="t-h2">Waiting for review</h2><a href="/admin/news?status=in_review" class="link">All</a></div>
+          {review.rows.length ? <PostList rows={review.rows} meta={(r) => `${districtName(r.district)} · sent ${ago(r.updatedAt)}${r.updatedBy ? ` by ${r.updatedBy}` : ''}`} action="Review" /> : <p class="t-meta py-3">Nothing is waiting. District editors’ posts appear here when they send them.</p>}
+        </section>
+      )}
+
+      <section aria-labelledby="drafts">
+        <div class="flex items-baseline justify-between gap-3 border-b border-line pb-2"><h2 id="drafts" class="t-h2">My drafts</h2><a href="/admin/news?status=draft" class="link">All drafts</a></div>
+        {drafts.rows.length ? <PostList rows={drafts.rows} meta={(r) => `${state ? `${districtName(r.district)} · ` : ''}changed ${ago(r.updatedAt)}`} /> : <p class="t-meta py-3">No drafts. <a href="/admin/news/new" class="link">Start a post</a></p>}
+      </section>
+
+      {changes.rows.length > 0 && (
+        <section aria-labelledby="changes">
+          <div class="flex items-baseline justify-between gap-3 border-b border-line pb-2"><h2 id="changes" class="t-h2">Changes not live yet</h2><a href="/admin/news?status=changes" class="link">All</a></div>
+          <p class="t-meta pt-2">Published posts with saved changes. Open one and press Update to put them live.</p>
+          <PostList rows={changes.rows} meta={(r) => `${districtName(r.district)} · saved ${ago(r.draftAt ?? r.updatedAt)}`} />
+        </section>
+      )}
+
+      {english && (
+        <section aria-labelledby="english">
+          <div class="flex items-baseline justify-between gap-3 border-b border-line pb-2"><h2 id="english" class="t-h2">English to approve</h2><a href="/admin/news?english=draft" class="link">All</a></div>
+          {english.rows.length
+            ? <PostList rows={english.rows} meta={(r) => `${districtName(r.district)} · AI draft ready`} action="Review" />
+            : <p class="t-meta py-3">No English drafts waiting. In a post, open the English tab and press “Draft English with AI”; nothing shows in English until someone approves it.</p>}
+        </section>
+      )}
+    </div>
+
+    <div class="space-y-8">
+      {state && (
+        <section aria-labelledby="banner-now">
+          <div class="flex items-baseline justify-between gap-3 border-b border-line pb-2"><h2 id="banner-now" class="t-h2">Home banner now</h2><a href="/admin/banner" class="link">Replace</a></div>
+          <div class="card mt-3 p-4">
+            {banner ? (
+              <Fragment>
+                <p class="t-label">{banner.kind === 'post' ? 'Post' : 'Event'}</p>
+                <p lang="ml" class="t-h3 mt-1">{banner.headline ? t(banner.headline, 'ml') : banner.kind === 'post' ? banner.post.title.ml : t(banner.event.title, 'ml')}</p>
+                {banner.kind === 'post' && <a href={`/admin/news/${banner.post.id}`} class="link mt-2 inline-block">Open the post</a>}
+              </Fragment>
+            ) : <p class="t-meta">No banner. Set one in <a href="/admin/banner" class="link">Home & banner</a>.</p>}
+          </div>
+        </section>
+      )}
+
+      {requests && requests.rows.length > 0 && (
+        <section aria-labelledby="requests">
+          <div class="flex items-baseline justify-between gap-3 border-b border-line pb-2"><h2 id="requests" class="t-h2">Home page requests</h2></div>
+          <p class="t-meta pt-2">District admins asked for these on the home page. Answer them in <a href="/admin/banner#requests" class="link">Home & banner</a>.</p>
+          <PostList rows={requests.rows} meta={(r) => districtName(r.district)} />
+        </section>
+      )}
+
+      {inbox && (
+        <section aria-labelledby="messages">
+          <div class="flex items-baseline justify-between gap-3 border-b border-line pb-2"><h2 id="messages" class="t-h2">Messages</h2><a href="/admin/inbox" class="link">Inbox</a></div>
+          <p class="t-meta pt-2">{msgCounts.open ? `${msgCounts.open} new` : 'No new messages'}{msgCounts.mine ? ` · ${msgCounts.mine} assigned to you` : ''}</p>
+          <ul class="divide-y divide-line text-sm">
+            {messages.slice(0, 4).map((m) => (
+              <li class="py-2.5"><a href={`/admin/inbox?m=${m.id}`} class="block hover:underline"><span class="font-semibold">{m.name}</span> <span class="t-meta">· {districtName(m.district)} · {ago(m.createdAt)}</span><span class="clamp-2 block text-ink-2" lang={/[ഀ-ൿ]/.test(m.preview) ? 'ml' : 'en'}>{m.preview}</span></a></li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section aria-labelledby="today">
+        <div class="flex items-baseline justify-between gap-3 border-b border-line pb-2"><h2 id="today" class="t-h2">Today</h2><a href="/admin/analytics?days=7" class="link">Analytics</a></div>
+        <dl class="mt-3 grid grid-cols-2 gap-3">
+          <div class="card flex flex-col p-3"><dt class="text-sm text-ink-2">Visitors</dt><dd class="order-first text-2xl font-bold tabular">{today.now.visitors.toLocaleString('en-IN')}</dd></div>
+          <div class="card flex flex-col p-3"><dt class="text-sm text-ink-2">Pages read</dt><dd class="order-first text-2xl font-bold tabular">{today.now.pageviews.toLocaleString('en-IN')}</dd></div>
+        </dl>
+        {today.topPosts.length > 0
+          ? <ol class="mt-3 divide-y divide-line text-sm">{today.topPosts.slice(0, 3).map((p) => <li class="flex items-baseline justify-between gap-3 py-2"><a href={`/admin/news/${p.id}`} lang="ml" class="clamp-2 min-w-0 hover:underline">{p.title}</a><span class="tabular text-ink-3">{p.views}</span></li>)}</ol>
+          : <p class="t-meta mt-2">{editor ? 'None of your posts read yet today.' : 'Counted every hour; nothing read yet today.'}</p>}
+      </section>
+
+      {activity.length > 0 && (
+        <section aria-labelledby="activity">
+          <div class="flex items-baseline justify-between gap-3 border-b border-line pb-2"><h2 id="activity" class="t-h2">Recent activity</h2></div>
+          <ul class="divide-y divide-line text-sm">
+            {activity.map((a) => (
+              <li class="py-2.5">
+                <p><span class="font-semibold">{a.by ?? 'Someone'}</span> {actionLabels[a.action] ?? a.action}{' '}
+                  {a.entity === 'post' && a.entityId && a.action !== 'login'
+                    ? <a href={`/admin/news/${a.entityId}`} lang="ml" class="hover:underline">{a.summary || `post ${a.entityId}`}</a>
+                    : a.action !== 'login' && <span lang="ml">{a.summary}</span>}
+                </p>
+                <p class="t-meta">{ago(a.at)}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  </div>
+</AdminLayout>

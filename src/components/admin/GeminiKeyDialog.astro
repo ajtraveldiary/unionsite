@@ -1,0 +1,19 @@
+---
+/** Asks for the admin's own Gemini key (plan, section 6), for this browser tab only. Opened by
+ * askKey() in src/lib/admin/translate.ts; the key never goes to the union's server. */
+---
+<dialog class="admin-dialog" data-key-dialog aria-labelledby="key-title">
+  <form method="dialog" class="p-5">
+    <h2 id="key-title" class="t-h3">Your Gemini key</h2>
+    <p class="mt-2 text-sm text-ink-2">English drafts are made by Google Gemini with your own key. It stays in this browser tab, is forgotten after 30 minutes without use, and is never sent to the union’s server.</p>
+    <label class="mt-4 block"><span class="t-label">API key</span>
+      <input type="password" class="field mt-1" autocomplete="off" spellcheck="false" required data-key-input placeholder="Paste your key" />
+    </label>
+    <p class="t-meta mt-2">Make the key under a union-owned Google account in <a href="https://aistudio.google.com/apikey" class="underline" target="_blank" rel="noopener">Google AI Studio</a>, limit it to the Gemini API, and set a budget alert.</p>
+    <div class="mt-5 flex flex-wrap justify-end gap-2">
+      <button type="button" class="btn btn-ghost" data-key-forget>Forget key</button>
+      <button value="cancel" formnovalidate class="btn btn-secondary">Cancel</button>
+      <button value="ok" class="btn btn-primary">Use this key</button>
+    </div>
+  </form>
+</dialog>

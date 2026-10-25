@@ -1,0 +1,10 @@
+---
+import PageEditorView from '~/views/admin/PageEditorView.astro';
+import { loadPage } from '~/lib/admin/pages';
+
+export const prerender = false;
+const id = Number(Astro.params.id);
+const page = Number.isInteger(id) && id > 0 ? await loadPage(Astro.locals.user!, id) : null;
+if (!page) return new Response(null, { status: 404 });
+---
+<PageEditorView page={page} />

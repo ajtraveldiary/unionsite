@@ -10,10 +10,12 @@ import SectionHead from '~/components/ds/SectionHead.astro';
 import VideoCard from '~/components/ds/VideoCard.astro';
 import EmptyState from '~/components/ds/EmptyState.astro';
 import type { Lang } from '~/lib/types';
-import { site, videos } from '~/data/site';
+import { latestVideos, siteInfo } from '~/lib/content';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
+const info = await siteInfo();
+const videos = await latestVideos(24);
 ---
 <AppLayout lang={lang} title="Media" description="Videos and photos from Kerala NGO Union programmes and campaigns.">
   <div class="wrap pt-5 lg:pt-8">
@@ -23,7 +25,7 @@ const { lang } = Astro.props;
 
     <section class="mt-8" aria-labelledby="videos">
       <SectionHead title="Latest videos" id="videos" size="h2">
-        <a href={site.social.youtube} target="_blank" rel="noopener" lang="en" class="btn btn-secondary btn-sm"><Brand name="youtube" size={16} /> YouTube channel</a>
+        <a href={info.social.youtube} target="_blank" rel="noopener" lang="en" class="btn btn-secondary btn-sm"><Brand name="youtube" size={16} /> YouTube channel</a>
       </SectionHead>
       <ul class="grid gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
         {videos.map((v) => <li><VideoCard video={v} lang={lang} /></li>)}

@@ -1,0 +1,28 @@
+---
+/** Pages & documents in the admin. Each form posts an action here (src/lib/admin/pages.ts checks every rule). */
+import PagesAdminView from '~/views/admin/PagesAdminView.astro';
+import { createPage, saveConference, saveDocument } from '~/lib/admin/pages';
+import { AdminError } from '~/lib/admin/publish';
+
+export const prerender = false;
+const user = Astro.locals.user!;
+let error: string | undefined;
+if (Astro.request.method === 'POST') {
+  const f = Object.fromEntries([...(await Astro.request.formData()).entries()].map(([k, v]) => [k, String(v)]));
+  const id = Number(f.id) || null;
+  try {
+    switch (f.action) {
+      case 'create_page': return Astro.redirect(`/admin/pages/${await createPage(user, f)}`);
+      case 'doc_save': await saveDocument(user, id, f, 'draft'); return Astro.redirect('/admin/pages?tab=documents&done=doc');
+      case 'doc_publish': await saveDocument(user, id, f, 'published'); return Astro.redirect('/admin/pages?tab=documents&done=doc_publish');
+      case 'doc_archive': await saveDocument(user, id, f, 'archived'); return Astro.redirect('/admin/pages?tab=documents&done=doc_archive');
+      case 'conf_save': await saveConference(user, id, f); return Astro.redirect('/admin/pages?tab=conferences&done=conf');
+      default: throw new AdminError('Unknown action.');
+    }
+  } catch (err) {
+    if (!(err instanceof AdminError)) throw err;
+    error = err.message;
+  }
+}
+---
+<PagesAdminView error={error} done={Astro.url.searchParams.get('done') ?? undefined} />

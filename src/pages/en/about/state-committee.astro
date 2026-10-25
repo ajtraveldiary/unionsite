@@ -1,4 +1,8 @@
 ---
 import StateCommitteeView from '~/views/StateCommitteeView.astro';
+import { cachePage, tags } from '~/lib/cache';
+
+export const prerender = false;
+cachePage(Astro, 'list', [tags.people]);
 ---
 <StateCommitteeView lang="en" />

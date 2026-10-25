@@ -1,0 +1,109 @@
+---
+/**
+ * Admin: one Kerala Service issue. Year, month, contents lines and the PDF; replacing the PDF
+ * makes a new cover from its page 1 and keeps the issue's address. Publish a draft, or take a
+ * published issue back to draft. A plain form; the route saves it.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import MagazineCover from '~/components/ui/MagazineCover.astro';
+import { MONTH_NAMES, type IssueRow } from '~/lib/admin/issues';
+import { issuePath } from '~/lib/content';
+import { formatDate, formatKb } from '~/lib/i18n';
+
+interface Props { issue: IssueRow; error?: string; done?: string }
+const { issue: i, error, done } = Astro.props;
+const thisYear = new Date().getFullYear();
+const years = Array.from({ length: thisYear + 2 - 2014 }, (_, n) => thisYear + 1 - n);
+const toc = [...i.toc, { title: '', author: '', page: undefined }, { title: '', author: '', page: undefined }];
+const doneText: Record<string, string> = { save: 'Saved.', publish: 'Published. It is in the Kerala Service archive now.', draft: 'Saved as a draft. It isn’t on the site yet.', unpublish: 'Taken off the site; it is a draft now.' };
+---
+<AdminLayout title={`${MONTH_NAMES[i.month - 1]} ${i.year}`} section="magazine">
+  <a href="/admin/kerala-service" class="btn btn-ghost btn-sm -ml-2"><Icon name="ArrowLeft" size={18} /> Kerala Service</a>
+  <div class="mt-2 flex flex-wrap items-center gap-3">
+    <h1 class="t-h1">{MONTH_NAMES[i.month - 1]} {i.year}</h1>
+    <span class:list={['badge', i.status === 'published' ? 'badge-success' : 'badge-neutral']}>{i.status === 'published' ? 'Published' : 'Draft'}</span>
+  </div>
+  {error && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent-ink" role="alert"><Icon name="CircleAlert" size={17} class="mt-0.5" /> {error}</p>}
+  {done && doneText[done] && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm" role="status"><Icon name="CircleCheck" size={17} class="mt-0.5" /> {doneText[done]}</p>}
+
+  <form method="post" class="mt-6 grid max-w-4xl gap-6 md:grid-cols-[200px_minmax(0,1fr)]" data-issue-form>
+    <div>
+      <div data-cover-old><MagazineCover issue={{ year: i.year, month: i.month, ...(i.coverUrl && { coverUrl: i.coverUrl }) }} /></div>
+      <img alt="New cover" class="hidden aspect-[210/297] w-full rounded-[8px] border border-line object-cover" data-cover-new />
+      <p class="t-meta mt-2">{i.pdfUrl ? <Fragment><a href={i.pdfUrl} class="link" target="_blank" rel="noopener">Open the PDF</a> · {[i.pageCount && `${i.pageCount} pages`, i.pdfBytes && formatKb(Math.round(i.pdfBytes / 1024))].filter(Boolean).join(' · ')}</Fragment> : 'No PDF yet'}</p>
+      <label class="btn btn-secondary btn-sm mt-2"><Icon name="Upload" size={17} /> {i.pdfUrl ? 'Replace the PDF' : 'Upload the PDF'}<input type="file" accept="application/pdf,.pdf" class="sr-only" data-replace /></label>
+      <p class="t-meta mt-1" data-replace-state aria-live="polite"></p>
+      <input type="hidden" name="pdfMediaId" value={i.pdfMediaId ?? ''} data-pdf-id />
+      <input type="hidden" name="coverMediaId" value={i.coverMediaId ?? ''} data-cover-id />
+      <input type="hidden" name="pageCount" value={i.pageCount ?? ''} data-pages />
+    </div>
+    <div class="space-y-4">
+      <div class="grid grid-cols-2 gap-3 sm:max-w-sm">
+        <label class="block"><span class="t-label">Year</span><select name="year" class="field mt-1">{years.map((y) => <option value={y} selected={y === i.year}>{y}</option>)}</select></label>
+        <label class="block"><span class="t-label">Month</span><select name="month" class="field mt-1">{MONTH_NAMES.map((m, n) => <option value={n + 1} selected={n + 1 === i.month}>{m}</option>)}</select></label>
+      </div>
+      <div>
+        <span class="t-label">Contents · optional</span>
+        <ul class="mt-2 space-y-2">
+          {toc.map((l, n) => (
+            <li class="grid grid-cols-[minmax(0,1fr)_minmax(0,0.7fr)_4.5rem] gap-2">
+              <input name="tocTitle" lang="ml" class="field" value={l.title} placeholder="Article title" aria-label={`Article ${n + 1} title`} />
+              <input name="tocAuthor" lang="ml" class="field" value={l.author ?? ''} placeholder="Author" aria-label={`Article ${n + 1} author`} />
+              <input name="tocPage" class="field" value={l.page ?? ''} placeholder="Page" inputmode="numeric" aria-label={`Article ${n + 1} page`} />
+            </li>
+          ))}
+        </ul>
+        <p class="t-meta mt-1">Empty lines are left out. Save to get two more empty lines.</p>
+      </div>
+      <div class="flex flex-wrap gap-2 border-t border-line pt-4">
+        {i.status === 'draft'
+          ? <Fragment><button name="action" value="publish" class="btn btn-primary"><Icon name="Check" size={18} /> Publish issue</button><button name="action" value="save" class="btn btn-secondary">Save draft</button></Fragment>
+          : <Fragment><button name="action" value="save" class="btn btn-primary"><Icon name="Check" size={18} /> Save</button><button name="action" value="unpublish" class="btn btn-ghost" data-confirm="Take this issue off the site? It becomes a draft.">Unpublish</button></Fragment>}
+      </div>
+      <p class="t-meta">
+        {i.status === 'published' && <Fragment><a href={issuePath(i.year, i.month)} class="link" target="_blank" rel="noopener">View on site</a> · </Fragment>}
+        Changed {formatDate(`${i.updatedAt.replace(' ', 'T')}Z`, 'en', 'short')}{i.updatedBy ? ` by ${i.updatedBy}` : ''}
+      </p>
+    </div>
+  </form>
+</AdminLayout>
+
+<script>
+  import { toast } from '~/lib/admin/client';
+  import { uploadIssue } from '~/lib/admin/issue-client';
+
+  function initIssueForm() {
+    const form = document.querySelector<HTMLFormElement>('[data-issue-form]');
+    if (!form || form.dataset.ready) return;
+    form.dataset.ready = '1';
+    const $ = <T extends Element = HTMLElement>(s: string) => form.querySelector<T>(s)!;
+    form.addEventListener('submit', (e) => {
+      const msg = (e.submitter as HTMLElement | null)?.dataset.confirm;
+      if (msg && !window.confirm(msg)) e.preventDefault();
+    });
+    $<HTMLInputElement>('[data-replace]').addEventListener('change', async (e) => {
+      const input = e.currentTarget as HTMLInputElement;
+      const file = input.files?.[0];
+      input.value = '';
+      if (!file) return;
+      const state = $('[data-replace-state]');
+      try {
+        const up = await uploadIssue(file, (t) => (state.textContent = t));
+        $<HTMLInputElement>('[data-pdf-id]').value = String(up.pdfMediaId);
+        $<HTMLInputElement>('[data-pages]').value = String(up.pages);
+        if (up.coverMediaId && up.coverUrl) {
+          $<HTMLInputElement>('[data-cover-id]').value = String(up.coverMediaId);
+          $<HTMLImageElement>('[data-cover-new]').src = up.coverUrl;
+          $('[data-cover-new]').classList.remove('hidden');
+          $('[data-cover-old]').classList.add('hidden');
+        }
+        state.textContent = `New PDF ready (${up.pages} ${up.pages === 1 ? 'page' : 'pages'}). Press Save to use it.`;
+      } catch (err) {
+        state.textContent = '';
+        toast(err instanceof Error ? err.message : 'The PDF could not be used.', 'error');
+      }
+    });
+  }
+  initIssueForm();
+</script>

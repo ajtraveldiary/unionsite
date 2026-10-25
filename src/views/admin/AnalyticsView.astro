@@ -1,0 +1,149 @@
+---
+/**
+ * Admin: Analytics (plan, section 14; approved wireframe "Analytics"). Counted without cookies, so
+ * there is no consent banner: a visitor is an anonymous code that changes every day. A period with
+ * the change from the period before, a daily chart, who is reading right now, the most read posts
+ * and opened orders, searches (and those that found nothing), where visitors come from, devices,
+ * languages, places, pages not found, and the districts compared. Any table downloads as CSV.
+ * State roles see everything; a district admin their district; a district editor their own posts.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import LineChart from '~/components/admin/LineChart.astro';
+import { dashboard, PERIODS, type Period } from '~/lib/admin/analytics';
+import { liveNow } from '~/lib/analytics';
+import { isState } from '~/lib/admin/roles';
+import { districtBySlug } from '~/data/districts';
+import { EN_MONTHS_SHORT } from '~/lib/i18n';
+
+interface Props { done?: string }
+const { done } = Astro.props;
+const user = Astro.locals.user!;
+const state = isState(user);
+const p = Astro.url.searchParams;
+const days = (Number(p.get('days')) in PERIODS ? Number(p.get('days')) : 30) as Period;
+const [d, live] = await Promise.all([dashboard(user, days), user.role === 'district_editor' ? null : liveNow()]);
+const change = (a: number, b: number) => (b === 0 ? (a ? 'new' : '—') : `${a >= b ? '+' : ''}${Math.round(((a - b) / b) * 100)} %`);
+const cards = [
+  ['Visitors', d.now.visitors, d.before.visitors], ['Pages read', d.now.pageviews, d.before.pageviews], ['Read to the end', d.now.reads, d.before.reads],
+  ['PDFs opened', d.now.opens, d.before.opens], ['Searches', d.now.searches, d.before.searches],
+] as const;
+const label = (date: string) => (date.length === 7 ? `${EN_MONTHS_SHORT[Number(date.slice(5, 7)) - 1]} ${date.slice(2, 4)}` : `${Number(date.slice(8))} ${EN_MONTHS_SHORT[Number(date.slice(5, 7)) - 1]}`);
+const n = (v: number) => v.toLocaleString('en-IN');
+const csv = (table: string) => `/admin/analytics-csv?table=${table}&days=${days}`;
+const ranked = [
+  { head: 'Where visitors come from', rows: d.sources, show: state },
+  { head: 'Devices', rows: d.devices, show: state },
+  { head: 'Language read', rows: d.langs.map(([k, v]) => [k === 'en' ? 'English' : 'Malayalam', v] as [string, number]), show: state },
+  { head: 'Places (approximate)', rows: d.regions, show: state },
+  { head: 'Pages not found', rows: d.notFound, show: state, note: 'Old links people still follow; candidates for redirects.' },
+];
+---
+<AdminLayout title="Analytics" section="analytics">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <h1 class="t-h1">Analytics</h1>
+    {state && <form method="post"><button name="action" value="rollup" class="btn btn-secondary btn-sm"><Icon name="RefreshCw" size={16} /> Update the numbers now</button></form>}
+  </div>
+  {done === 'rollup' && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm" role="status"><Icon name="CircleCheck" size={17} class="mt-0.5" /> Today and yesterday counted again. The site does this by itself every hour.</p>}
+  <div class="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label="Period">
+    {Object.entries(PERIODS).map(([k, v]) => <a href={`?days=${k}`} class="chip" aria-current={Number(k) === days ? 'page' : undefined}>{v}</a>)}
+    <span class="t-meta">compared with the {days === 1 ? 'day' : PERIODS[days]} before</span>
+  </div>
+  <p class="t-meta mt-2">{user.role === 'district_admin' ? `${districtBySlug[user.district ?? '']?.name.en} district’s posts and hub; the totals are site-wide.` : user.role === 'district_editor' ? 'Your own posts; the totals are site-wide.' : 'Counted without cookies: a visitor is an anonymous code that changes every day; no address is kept. Robots and admin previews are left out.'}</p>
+
+  {!d.hasData && <p class="mt-4 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm">No visits counted in this period yet. Visits are counted from now on; numbers appear after the next hourly update{state ? ', or press “Update the numbers now”' : ''}.</p>}
+
+  <ul class="mt-5 grid grid-cols-2 gap-3 md:grid-cols-5">
+    {cards.map(([l, a, b]) => <li class="card p-4"><p class="text-2xl font-bold tabular">{n(a)}</p><p class="text-sm text-ink-2">{l}</p><p class="t-meta">{change(a, b)}</p></li>)}
+  </ul>
+
+  <div class="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+    <section aria-labelledby="daily">
+      <h2 id="daily" class="t-h2 border-b border-line pb-2">{days === 365 ? 'Every month' : 'Every day'}</h2>
+      <LineChart points={d.series} label={label} />
+    </section>
+    {live && (
+      <section aria-labelledby="live">
+        <h2 id="live" class="t-h2 border-b border-line pb-2">Right now</h2>
+        <p class="mt-3 text-3xl font-bold tabular">{n(live.visitors)}</p>
+        <p class="text-sm text-ink-2">reading in the last 30 minutes</p>
+        <ol class="mt-3 space-y-1 text-sm">{live.top.map(([path, c]) => <li class="flex justify-between gap-3"><span class="truncate">{path}</span><span class="tabular text-ink-3">{c}</span></li>)}</ol>
+      </section>
+    )}
+  </div>
+
+  <div class="mt-8 grid gap-8 lg:grid-cols-2">
+    <section aria-labelledby="top-posts">
+      <div class="flex items-baseline justify-between gap-2 border-b border-line pb-2"><h2 id="top-posts" class="t-h2">Most read</h2><a href={csv('posts')} class="link">CSV</a></div>
+      <ol class="divide-y divide-line">
+        {d.topPosts.map((x, i) => (
+          <li class="flex items-baseline gap-3 py-2 text-sm">
+            <span class="w-5 tabular text-ink-3">{i + 1}</span>
+            <a href={`/admin/news/${x.id}`} lang="ml" class="clamp-2 min-w-0 flex-1 font-medium hover:underline">{x.title}</a>
+            <span class="tabular whitespace-nowrap">{n(x.views)}</span>
+            <span class="t-meta w-24 text-right">{x.views ? Math.round((x.reads / x.views) * 100) : 0} % read</span>
+          </li>
+        ))}
+        {d.topPosts.length === 0 && <li class="t-meta py-3">No post read in this period.</li>}
+      </ol>
+    </section>
+    {state && (
+      <section aria-labelledby="top-orders">
+        <div class="flex items-baseline justify-between gap-2 border-b border-line pb-2"><h2 id="top-orders" class="t-h2">Most opened orders</h2><a href={csv('orders')} class="link">CSV</a></div>
+        <ol class="divide-y divide-line">
+          {d.topOrders.map((x, i) => (
+            <li class="flex items-baseline gap-3 py-2 text-sm">
+              <span class="w-5 tabular text-ink-3">{i + 1}</span>
+              <a href={`/admin/orders/${x.id}`} class="clamp-2 min-w-0 flex-1 font-medium hover:underline">{x.title}</a>
+              <span class="tabular whitespace-nowrap">{n(x.views)} views</span>
+              <span class="t-meta w-20 text-right">{n(x.opens)} PDF</span>
+            </li>
+          ))}
+          {d.topOrders.length === 0 && <li class="t-meta py-3">No order opened in this period.</li>}
+        </ol>
+      </section>
+    )}
+  </div>
+
+  {state && (
+    <div class="mt-8 grid gap-8 lg:grid-cols-2">
+      <section aria-labelledby="searches">
+        <div class="flex items-baseline justify-between gap-2 border-b border-line pb-2"><h2 id="searches" class="t-h2">Top searches</h2><a href={csv('searches')} class="link">CSV</a></div>
+        <ul class="divide-y divide-line text-sm">{d.searches.slice(0, 15).map((s) => <li class="flex justify-between gap-3 py-1.5"><span lang={/[ഀ-ൿ]/.test(s.term) ? 'ml' : 'en'}>{s.term}</span><span class="tabular">{n(s.count)}</span></li>)}</ul>
+        {d.searches.length === 0 && <p class="t-meta py-3">No searches in this period.</p>}
+      </section>
+      <section aria-labelledby="zero">
+        <div class="flex items-baseline justify-between gap-2 border-b border-line pb-2"><h2 id="zero" class="t-h2">Searches that found nothing</h2></div>
+        <p class="t-meta pt-2">What members look for and can’t find: add a spelling variant, or the order they need.</p>
+        <ul class="divide-y divide-line text-sm">{d.zeroSearches.map((s) => <li class="flex justify-between gap-3 py-1.5"><span lang={/[ഀ-ൿ]/.test(s.term) ? 'ml' : 'en'}>{s.term}</span><span class="tabular">{n(s.zero)}</span></li>)}</ul>
+        {d.zeroSearches.length === 0 && <p class="t-meta py-3">None in this period.</p>}
+      </section>
+    </div>
+  )}
+
+  {state && (
+    <div class="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+      {ranked.filter((r) => r.show).map((r) => (
+        <section aria-label={r.head}>
+          <h2 class="t-h3 border-b border-line pb-2">{r.head}</h2>
+          {r.note && <p class="t-meta pt-1">{r.note}</p>}
+          <ul class="divide-y divide-line text-sm">{r.rows.slice(0, 10).map(([k, v]) => <li class="flex justify-between gap-3 py-1.5"><span class="truncate">{k || 'Unknown'}</span><span class="tabular">{n(v as number)}</span></li>)}</ul>
+          {r.rows.length === 0 && <p class="t-meta py-2">Nothing yet.</p>}
+        </section>
+      ))}
+    </div>
+  )}
+
+  {d.districtsCompared.length > 0 && (
+    <section class="mt-8" aria-labelledby="by-district">
+      <div class="flex items-baseline justify-between gap-2 border-b border-line pb-2"><h2 id="by-district" class="t-h2">Districts compared</h2><a href={csv('districts')} class="link">CSV</a></div>
+      <div class="overflow-x-auto">
+        <table class="mt-2 w-full min-w-[480px] text-left text-sm">
+          <thead><tr class="text-xs uppercase tracking-wide text-ink-3"><th class="py-2 pr-3 font-semibold">District</th><th class="py-2 pr-3 text-right font-semibold">Hub page views</th><th class="py-2 pr-3 text-right font-semibold">Article views</th><th class="py-2 text-right font-semibold">Posts this month</th></tr></thead>
+          <tbody>{d.districtsCompared.map((x) => <tr class="border-t border-line"><td class="py-2 pr-3">{x.name}</td><td class="py-2 pr-3 text-right tabular">{n(x.hub)}</td><td class="py-2 pr-3 text-right tabular">{n(x.articles)}</td><td class="py-2 text-right tabular">{x.postsThisMonth}{x.postsThisMonth < 4 && <span class="badge badge-warning ml-2">under 4</span>}</td></tr>)}</tbody>
+        </table>
+      </div>
+      <p class="t-meta mt-2">“Posts this month” is the plan’s success measure: 4 or more per district.</p>
+    </section>
+  )}
+</AdminLayout>

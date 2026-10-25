@@ -10,13 +10,15 @@ import Brand from '~/components/ui/Brand.astro';
 import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
 import SectionHead from '~/components/ds/SectionHead.astro';
 import type { Lang } from '~/lib/types';
-import { t, langOf } from '~/lib/i18n';
-import { districtUrl, sortedDistricts } from '~/lib/content';
-import { site } from '~/data/site';
+import { t, langOf, href } from '~/lib/i18n';
+import { districtUrl, sortedDistricts, siteInfo } from '~/lib/content';
+import { TOPICS, turnstileKey } from '~/lib/contact';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
-const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Kerala NGO Union, ${site.address.en}`)}`;
+const info = await siteInfo();
+const turnstile = await turnstileKey();
+const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Kerala NGO Union, ${info.address.en}`)}`;
 ---
 <AppLayout lang={lang} title="Contact" description="Contact the Kerala NGO Union State Centre in Thiruvananthapuram or your district committee.">
   <div class="wrap pt-5 lg:pt-8">
@@ -28,14 +30,14 @@ const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURICompo
       <div>
         <section aria-labelledby="state-centre">
           <SectionHead title="State Centre" id="state-centre" size="h2" />
-          <p lang={langOf(site.address, lang)} class="text-lg">{t(site.address, lang)}</p>
+          <p lang={langOf(info.address, lang)} class="text-lg">{t(info.address, lang)}</p>
           <ul lang="en" class="mt-3 space-y-1.5 text-sm">
-            <li class="flex items-center gap-2"><Icon name="Phone" size={16} class="text-ink-3" />{site.phone ? <a href={`tel:${site.phone}`} class="font-semibold hover:text-accent-ink">{site.phone}</a> : <span class="text-ink-3">Phone number to be added</span>}</li>
-            <li class="flex items-center gap-2"><Icon name="Mail" size={16} class="text-ink-3" />{site.email ? <a href={`mailto:${site.email}`} class="font-semibold hover:text-accent-ink">{site.email}</a> : <span class="text-ink-3">Email address to be added</span>}</li>
+            <li class="flex items-center gap-2"><Icon name="Phone" size={16} class="text-ink-3" />{info.phone ? <a href={`tel:${info.phone}`} class="font-semibold hover:text-accent-ink">{info.phone}</a> : <span class="text-ink-3">Phone number to be added</span>}</li>
+            <li class="flex items-center gap-2"><Icon name="Mail" size={16} class="text-ink-3" />{info.email ? <a href={`mailto:${info.email}`} class="font-semibold hover:text-accent-ink">{info.email}</a> : <span class="text-ink-3">Email address to be added</span>}</li>
           </ul>
           <div lang="en" class="mt-4 flex flex-wrap gap-2">
             <a href={mapUrl} target="_blank" rel="noopener" class="btn btn-primary btn-sm"><Icon name="MapPin" size={16} /> Directions</a>
-            <a href={site.social.facebook} target="_blank" rel="noopener" class="btn btn-secondary btn-sm"><Brand name="facebook" size={16} /> Facebook</a>
+            <a href={info.social.facebook} target="_blank" rel="noopener" class="btn btn-secondary btn-sm"><Brand name="facebook" size={16} /> Facebook</a>
           </div>
         </section>
 
@@ -68,15 +70,19 @@ const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURICompo
             </select>
           </label>
           <label class="grid gap-1.5"><span class="text-sm font-semibold">Topic</span>
-            <select name="topic" class="field"><option>General</option><option>Membership</option><option>Government orders</option><option>Kerala Service</option><option>Website</option></select>
+            <select name="topic" class="field">{TOPICS.map((t) => <option>{t}</option>)}</select>
           </label>
-          <label class="grid gap-1.5 sm:col-span-2"><span class="text-sm font-semibold">Message *</span><textarea name="message" rows="5" class="field py-2.5" required></textarea></label>
+          <label class="grid gap-1.5 sm:col-span-2"><span class="text-sm font-semibold">Message *</span><textarea name="message" rows="5" class="field py-2.5" required maxlength="5000"></textarea></label>
+          <!-- People never see or fill this; form-filling robots do -->
+          <label class="sr-only" aria-hidden="true">Leave this empty <input name="website" tabindex="-1" autocomplete="off" /></label>
+          {turnstile && <div class="cf-turnstile sm:col-span-2" data-sitekey={turnstile} data-theme="auto"></div>}
+          {turnstile && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>}
           <div class="flex flex-wrap items-center gap-3 sm:col-span-2">
             <button type="submit" class="btn btn-primary"><Icon name="Send" size={17} /> Send message</button>
             <p class="text-sm" data-contact-status role="status" aria-live="polite"></p>
           </div>
         </form>
-        <p class="t-meta mt-5 flex items-start gap-2"><Icon name="Info" size={15} class="mt-0.5 shrink-0" /> Preview: the form checks your entry but doesn't send yet. Sending (with spam protection) is switched on with the admin panel.</p>
+        <p class="t-meta mt-5 flex items-start gap-2"><Icon name="Info" size={15} class="mt-0.5 shrink-0" /> Your message goes to the State Centre, and to your district committee if you choose one. It is kept for 12 months (see <a href={href(lang, '/privacy')} class="underline">Privacy</a>).</p>
       </section>
     </div>
   </div>
@@ -106,8 +112,23 @@ const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURICompo
         firstBad.focus();
         return;
       }
-      status.className = 'text-sm text-success';
-      status.textContent = 'Looks good. Sending will be switched on before launch.';
+      const button = form.querySelector<HTMLButtonElement>('button[type=submit]')!;
+      button.disabled = true;
+      status.className = 'text-sm text-ink-2';
+      status.textContent = 'Sending…';
+      fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.fromEntries(new FormData(form))) })
+        .then(async (r) => {
+          const out = (await r.json().catch(() => ({}))) as { error?: string };
+          if (!r.ok) throw new Error(out.error ?? 'The message could not be sent.');
+          form.reset();
+          status.className = 'text-sm text-success';
+          status.textContent = 'Thank you. Your message has reached the office; we reply by email or phone.';
+        })
+        .catch((err: Error) => {
+          status.className = 'text-sm text-accent-ink';
+          status.textContent = err.message || 'No connection. Please try again.';
+        })
+        .finally(() => { button.disabled = false; (window as { turnstile?: { reset(): void } }).turnstile?.reset(); });
     });
   }
   initContact();

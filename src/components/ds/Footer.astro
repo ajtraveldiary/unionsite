@@ -4,9 +4,12 @@ import Logo from './Logo.astro';
 import type { Lang } from '~/lib/types';
 import { href } from '~/lib/i18n';
 import { site, usefulLinks } from '~/data/site';
+import { defaultSiteDetails, siteDetails } from '~/lib/content';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
+// Pages built ahead of time can't read the database; they keep the defaults until rebuilt
+const details = Astro.isPrerendered ? defaultSiteDetails() : await siteDetails();
 const cols = [
   { head: 'News', links: [['Latest news', '/news'], ['Events', '/events'], ['Secretary’s page', '/news?topic=secretary'], ['FSETO', '/news?topic=fseto']] },
   { head: 'Orders', links: [['Search orders', '/orders'], ['Govt orders', '/orders?g=govt'], ['NPS', '/orders?g=nps'], ['Pension', '/orders?g=pension']] },
@@ -40,8 +43,8 @@ const cols = [
     <div class="mt-6 flex flex-col gap-2 border-t border-line pt-4 text-sm text-ink-3 sm:flex-row sm:justify-between">
       <p>© {new Date().getFullYear()} Kerala NGO Union</p>
       <p class="flex gap-4">
-        <a href={site.social.facebook} target="_blank" rel="noopener" class="hover:text-ink">Facebook</a>
-        <a href={site.social.youtube} target="_blank" rel="noopener" class="hover:text-ink">YouTube</a>
+        <a href={details.facebook} target="_blank" rel="noopener" class="hover:text-ink">Facebook</a>
+        <a href={details.youtube} target="_blank" rel="noopener" class="hover:text-ink">YouTube</a>
         <a href={href(lang, '/privacy')} class="hover:text-ink">Privacy</a>
         <a href={href(lang, '/accessibility')} class="hover:text-ink">Accessibility</a>
       </p>

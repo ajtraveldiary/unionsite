@@ -1,0 +1,9 @@
+---
+/** A post's status as a small label: done states green, waiting ones amber, the rest grey */
+import { statusLabels, type PostStatus } from '~/lib/admin/posts';
+
+interface Props { status: PostStatus; class?: string }
+const { status, class: cls } = Astro.props;
+const tone = status === 'published' ? 'badge-success' : status === 'in_review' || status === 'scheduled' ? 'badge-warning' : 'badge-neutral';
+---
+<span class:list={['badge', tone, cls]}>{statusLabels[status]}</span>

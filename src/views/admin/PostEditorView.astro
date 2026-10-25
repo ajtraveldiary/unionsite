@@ -1,0 +1,343 @@
+---
+/**
+ * Admin: the post editor (plan, section 10, "How a post is updated"; approved wireframe "Post
+ * editor"). Phone first: one column with the post settings below the text; on laptops they sit
+ * beside it. Malayalam is the source; the English tab shows it side by side with the English
+ * draft for review. Autosaves every 10 seconds; a published post's live page changes only on
+ * Update. The one main button follows the role: district editors send for review, everyone else
+ * publishes. The page script (src/lib/admin/editor-client.ts) does the rest.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import StatusBadge from '~/components/admin/StatusBadge.astro';
+import GeminiKeyDialog from '~/components/admin/GeminiKeyDialog.astro';
+import { can, isState } from '~/lib/admin/roles';
+import { isLive, todayIst, type EditorData, type Cover, type PostStatus } from '~/lib/admin/posts';
+import { emptyBody, enState, enStateLabel, type PostDoc } from '~/lib/admin/post-doc';
+import { topics, districtBySlug } from '~/data/districts';
+import { sortedDistricts, postPath } from '~/lib/content';
+import { formatDate } from '~/lib/i18n';
+import { eventChoices } from '~/lib/admin/events';
+
+interface Props { data: EditorData | null; cover: Cover | null }
+const { data, cover } = Astro.props;
+const user = Astro.locals.user!;
+
+const doc: PostDoc = data?.doc ?? {
+  slug: '', date: todayIst(), topic: 'organisation', district: isState(user) ? null : user.district, coverMediaId: null, eventSlug: Astro.url.searchParams.get('event'),
+  featured: false, banner: false, ml: { title: '', summary: '', body: emptyBody() }, en: null,
+};
+const status: PostStatus = data?.meta.status ?? 'draft';
+const live = isLive(status);
+const scopeItem = { district: data?.meta.district ?? doc.district };
+const editor = user.role === 'district_editor';
+const readOnly = data?.readOnly ?? null;
+const perms = {
+  publish: can.publish(user, scopeItem),
+  english: !editor,
+  approveEnglish: can.approveEnglish(user, scopeItem),
+  feature: can.feature(user),
+  requestHome: can.requestFeature(user),
+  archive: can.archive(user, scopeItem),
+};
+const liveUrl = status === 'published' && data ? postPath({ date: data.meta.publishedAt, slug: data.meta.slug }) : null;
+const boot = {
+  id: data?.meta.id ?? null,
+  doc,
+  status,
+  live,
+  hasDraft: data?.hasDraft ?? false,
+  savedAt: data?.draftSavedAt ?? data?.meta.updatedAt ?? null,
+  readOnly: !!readOnly,
+  can: perms,
+  cover,
+  editorRole: editor,
+};
+const json = JSON.stringify(boot).replace(/</g, '\\u003c');
+const year = (data?.meta.publishedAt ?? todayIst()).slice(0, 4);
+const en = enState(doc);
+const events = await eventChoices(user);
+const districtName = (slug: string | null) => (slug ? districtBySlug[slug]?.name.en : 'State level');
+const title = data ? (doc.ml.title || 'Untitled post') : 'New post';
+const mainLabel = editor ? 'Send for review' : live ? 'Update' : 'Publish';
+const toolbar = [
+  ['bold', 'Bold', 'Bold'], ['italic', 'Italic', 'Italic'], ['underline', 'Underline', 'Underline'], ['sep'],
+  ['h2', 'Heading2', 'Subheading'], ['h3', 'Heading3', 'Smaller subheading'], ['sep'],
+  ['bulletList', 'List', 'Bulleted list'], ['orderedList', 'ListOrdered', 'Numbered list'], ['blockquote', 'Quote', 'Quote'], ['sep'],
+  ['link', 'Link', 'Link'], ['image', 'ImagePlus', 'Photo in the text'], ['sep'],
+  ['undo', 'Undo2', 'Undo'], ['redo', 'Redo2', 'Redo'],
+] as const;
+---
+<AdminLayout title={data ? 'Edit post' : 'New post'} section="editor" bare>
+  <script type="application/json" id="editor-boot" set:html={json} />
+  <div data-editor style="--toolbar-top: 3.5rem">
+    <h1 class="sr-only">{title}</h1>
+
+    <!-- Top bar: back, save state, preview and the one main action -->
+    <div class="sticky top-0 z-30 -mx-4 -mt-5 flex min-h-14 flex-wrap items-center gap-2 border-b border-line bg-surface/95 px-4 py-2 backdrop-blur md:-mx-6 md:px-6 lg:-mx-10 lg:-mt-8 lg:px-10">
+      <a href="/admin/news" class="btn btn-ghost btn-sm -ml-2"><Icon name="ArrowLeft" size={18} /> <span class="hidden sm:inline">News</span></a>
+      <StatusBadge status={status} class="hidden sm:inline-flex" />
+      <span class="t-meta min-w-0 flex-1 truncate" data-save-state aria-live="polite"></span>
+      <span class="flex gap-2">
+        <button type="button" class="btn btn-secondary btn-sm" data-open-preview><Icon name="Eye" size={17} /> <span class="hidden sm:inline">Preview</span></button>
+        {!readOnly && (
+          <button type="button" class="btn btn-primary btn-sm" data-action={editor ? 'submit' : 'publish'} data-main>
+            <Icon name={editor ? 'Send' : 'Check'} size={17} /> <span data-main-label>{mainLabel}</span>
+          </button>
+        )}
+      </span>
+    </div>
+
+    <!-- What needs saying about this post right now -->
+    <div class="mt-4 space-y-2" data-notices>
+      {readOnly && (
+        <p class="flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm"><Icon name="Lock" size={17} class="mt-0.5" /> {readOnly}</p>
+      )}
+      {data?.hasDraft && !readOnly && (
+        <p class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-[var(--radius-card)] border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning" data-draft-notice>
+          <Icon name="CircleAlert" size={17} /> This post has changes that aren’t on the site yet. Press Update to put them live.
+          <button type="button" class="font-semibold underline underline-offset-2" data-action="discard">Discard changes</button>
+        </p>
+      )}
+      {status === 'in_review' && !editor && (
+        <p class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-[var(--radius-card)] border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
+          <Icon name="Send" size={17} /> A district editor sent this for review. Check it, then Publish, or send it back to them.
+          {perms.archive && <button type="button" class="font-semibold underline underline-offset-2" data-action="send_back">Send back</button>}
+        </p>
+      )}
+      {status === 'scheduled' && (
+        <p class="flex items-center gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm"><Icon name="Clock" size={17} /> Scheduled for {doc.date.replace('T', ' at ')} (India time).</p>
+      )}
+      {status === 'archived' && (
+        <p class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm">
+          <Icon name="Archive" size={17} /> Archived: not on the site.
+          {perms.archive && <button type="button" class="font-semibold underline underline-offset-2" data-action="restore">Restore as a draft</button>}
+        </p>
+      )}
+    </div>
+
+    <div class="mt-4 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div class="min-w-0">
+        <!-- Language tabs -->
+        <div class="flex gap-1 border-b border-line" role="tablist" aria-label="Language">
+          <button type="button" role="tab" id="tab-ml" aria-controls="panel-ml" aria-selected="true" class="-mb-px border-b-2 border-ink px-3 py-2.5 font-semibold" data-tab="ml">Malayalam</button>
+          {perms.english && (
+            <button type="button" role="tab" id="tab-en" aria-controls="panel-en" aria-selected="false" class="-mb-px flex items-center gap-2 border-b-2 border-transparent px-3 py-2.5 text-ink-2" data-tab="en">
+              English <span class:list={['badge', en === 'draft' || en === 'outdated' ? 'badge-warning' : 'badge-neutral']} data-en-badge>{enStateLabel[en]}</span>
+            </button>
+          )}
+        </div>
+
+        <!-- Malayalam: the source -->
+        <section id="panel-ml" role="tabpanel" aria-labelledby="tab-ml" data-panel="ml" class="space-y-5 pt-5">
+          <label class="block"><span class="t-label">Title</span>
+            <textarea rows="2" lang="ml" class="field grow-field title-field mt-1" data-field="ml.title" placeholder="തലക്കെട്ട്" maxlength="300" required></textarea>
+          </label>
+          <label class="block"><span class="t-label">Summary <span class="font-normal normal-case tracking-normal text-ink-3">· optional, shown under the headline and in lists</span></span>
+            <textarea rows="2" lang="ml" class="field grow-field mt-1" data-field="ml.summary" placeholder="One or two lines" maxlength="600"></textarea>
+          </label>
+
+          <div data-cover>
+            <span class="t-label">Cover photo</span>
+            <div class="mt-1 grid gap-3 sm:grid-cols-[220px_minmax(0,1fr)]">
+              <div class="relative">
+                <img data-cover-img alt="" class:list={['aspect-video w-full rounded-[10px] bg-bg-subtle object-cover', !cover && 'hidden']} src={cover?.url} />
+                <div data-cover-empty class:list={['grid aspect-video w-full place-items-center rounded-[10px] border border-dashed border-line-strong bg-bg-subtle text-ink-3', cover && 'hidden']}>
+                  <span class="flex flex-col items-center gap-1 text-sm"><Icon name="Images" size={24} />No photo</span>
+                </div>
+                <p data-cover-busy class="absolute inset-0 hidden place-items-center rounded-[10px] bg-surface/85 text-sm font-semibold" aria-live="polite"></p>
+              </div>
+              {!readOnly && (
+                <div class="space-y-2">
+                  <div class="flex flex-wrap gap-2">
+                    <label class="btn btn-secondary btn-sm"><Icon name="Camera" size={17} /> Take photo<input type="file" accept="image/*" capture="environment" class="sr-only" data-cover-file /></label>
+                    <label class="btn btn-secondary btn-sm"><Icon name="Upload" size={17} /> Choose<input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" class="sr-only" data-cover-file /></label>
+                    <button type="button" class="btn btn-secondary btn-sm" data-cover-library><Icon name="Images" size={17} /> Media library</button>
+                    <button type="button" class:list={['btn btn-ghost btn-sm', !cover && 'hidden']} data-cover-remove>Remove</button>
+                  </div>
+                  <label class:list={['block', !cover && 'hidden']} data-cover-alt-wrap>
+                    <span class="text-sm font-semibold">Describe the photo <span class="font-normal text-ink-3">· required, read out by screen readers</span></span>
+                    <input lang="ml" class="field mt-1" data-cover-alt value={cover?.alt ?? ''} maxlength="300" placeholder="ഫോട്ടോയിൽ എന്താണ്" />
+                  </label>
+                  <p class="t-meta">Photos are made smaller on this device before they upload, so it’s quick on mobile data.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <span class="t-label" id="ml-text-label">Text</span>
+            <div class="rich-box mt-1">
+              {!readOnly && (
+                <div class="rich-toolbar" role="toolbar" aria-label="Formatting" data-toolbar="ml">
+                  {toolbar.map(([cmd, icon, label]) => cmd === 'sep' ? <span class="sep" aria-hidden="true"></span> : <button type="button" data-cmd={cmd} aria-label={label} title={label} aria-pressed="false"><Icon name={icon!} size={18} /></button>)}
+                </div>
+              )}
+              <div data-rich="ml"></div>
+            </div>
+            <p class="t-meta mt-1">Pasting from WhatsApp or Word keeps the words and drops the formatting the site doesn’t use.</p>
+          </div>
+        </section>
+
+        <!-- English: side-by-side review of the AI draft -->
+        {perms.english && (
+          <section id="panel-en" role="tabpanel" aria-labelledby="tab-en" data-panel="en" class="hidden pt-5" hidden>
+            <div class="flex flex-wrap items-center gap-2" data-en-actions>
+              {!readOnly && <button type="button" class="btn btn-secondary btn-sm" data-draft-english><Icon name="Sparkles" size={17} /> <span data-draft-label>{doc.en ? 'Draft again with AI' : 'Draft English with AI'}</span></button>}
+              {!readOnly && perms.approveEnglish && <button type="button" class="btn btn-primary btn-sm" data-action="approve_english"><Icon name="Check" size={17} /> Approve English</button>}
+              <p class="t-meta" data-en-help>
+                {perms.approveEnglish ? 'Nothing shows in English on the site until you approve it.' : 'Your district admin approves English.'}
+              </p>
+            </div>
+            <div class="mt-4 grid gap-5 md:grid-cols-2">
+              <div class="min-w-0">
+                <p class="t-label">Malayalam</p>
+                <div class="mt-1 rounded-[var(--radius-card)] border border-line bg-bg-subtle p-4">
+                  <p lang="ml" class="t-h3" data-ref-title></p>
+                  <p lang="ml" class="mt-2 text-ink-2" data-ref-summary></p>
+                  <div lang="ml" class="prose mt-3 !text-base" data-ref-body></div>
+                </div>
+              </div>
+              <div class="min-w-0 space-y-4">
+                <label class="block"><span class="t-label">English title</span>
+                  <textarea rows="2" lang="en" class="field grow-field title-field mt-1" data-field="en.title" maxlength="300"></textarea>
+                </label>
+                <label class="block"><span class="t-label">English summary</span>
+                  <textarea rows="2" lang="en" class="field grow-field mt-1" data-field="en.summary" maxlength="600"></textarea>
+                </label>
+                <div>
+                  <span class="t-label">English text</span>
+                  <div class="rich-box mt-1">
+                    {!readOnly && (
+                      <div class="rich-toolbar" role="toolbar" aria-label="Formatting" data-toolbar="en">
+                        {toolbar.map(([cmd, icon, label]) => cmd === 'sep' ? <span class="sep" aria-hidden="true"></span> : <button type="button" data-cmd={cmd} aria-label={label} title={label} aria-pressed="false"><Icon name={icon!} size={18} /></button>)}
+                      </div>
+                    )}
+                    <div data-rich="en"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+      </div>
+
+      <!-- Post settings: beside the text on laptops, below it on phones -->
+      <aside class="space-y-5 lg:sticky lg:top-20 lg:self-start" aria-label="Post settings">
+        <p class="t-h3">Post settings</p>
+        <label class="block"><span class="t-label">Topic</span>
+          <select class="field mt-1" data-field="topic">{topics.map((tp) => <option value={tp.slug}>{tp.name.en}</option>)}</select>
+        </label>
+        <div>
+          <span class="t-label">District</span>
+          {isState(user) ? (
+            <select class="field mt-1" data-field="district" aria-label="District">
+              <option value="">State level</option>
+              {sortedDistricts().map((d) => <option value={d.slug}>{d.name.en}</option>)}
+            </select>
+          ) : (
+            <p class="field mt-1 flex items-center bg-bg-subtle text-ink-2">{districtName(user.district)} (your district)</p>
+          )}
+        </div>
+        <label class="block"><span class="t-label">Linked event · optional</span>
+          <select class="field mt-1" data-field="eventSlug">
+            <option value="">None</option>
+            {events.map((e) => <option value={e.slug} lang="ml">{e.title} · {formatDate(e.start, 'en', 'short')}</option>)}
+          </select>
+        </label>
+        <label class="block"><span class="t-label">Address</span>
+          <span class="mt-1 flex items-center rounded-[var(--radius-control)] border border-line-strong bg-surface focus-within:border-[var(--focus)]">
+            <span class="whitespace-nowrap pl-3 text-sm text-ink-3">/news/{year}/</span>
+            <input class="min-h-11 w-full min-w-0 bg-transparent px-1 pr-3 text-sm outline-none" data-field="slug" placeholder="made from the title" maxlength="80" pattern="[a-z0-9-]*" />
+          </span>
+          {live && <span class="t-meta mt-1 block">Changing it breaks links people have already shared.</span>}
+        </label>
+
+        {!readOnly && perms.publish && !live && (
+          <fieldset>
+            <legend class="t-label">Publish</legend>
+            <label class="mt-1 flex min-h-9 items-center gap-2"><input type="radio" name="when" value="now" checked data-when /> Now</label>
+            <label class="flex min-h-9 items-center gap-2"><input type="radio" name="when" value="later" data-when /> Schedule…</label>
+            <input type="datetime-local" class="field mt-1 hidden" data-schedule aria-label="Publish at (India time)" />
+          </fieldset>
+        )}
+
+        {perms.feature && (
+          <fieldset class="card space-y-2 p-3">
+            <legend class="t-label px-1">Home page</legend>
+            <label class="flex items-start gap-2 text-sm"><input type="checkbox" class="mt-1" data-field="featured" disabled={!!readOnly} /> Lead story in Top news</label>
+            {doc.banner ? (
+              <p class="flex items-start gap-2 text-sm"><Icon name="Megaphone" size={17} class="mt-0.5" /> This post is in the home banner now.</p>
+            ) : (
+              <label class="flex items-start gap-2 text-sm"><input type="checkbox" class="mt-1" data-field="banner" disabled={!!readOnly} /> <span>Show in the home banner<span class="t-meta block">Replaces the current banner when published</span></span></label>
+            )}
+          </fieldset>
+        )}
+        {perms.requestHome && data && (
+          <div class="card p-3 text-sm">
+            {data.meta.homeRequestedAt
+              ? <p class="flex items-center gap-2"><Icon name="CircleCheck" size={17} /> You asked for a place on the home page. A state editor decides.</p>
+              : <Fragment><button type="button" class="btn btn-secondary btn-sm w-full" data-action="request_home">Request a place on the home page</button><p class="t-meta mt-1">A state editor decides.</p></Fragment>}
+          </div>
+        )}
+
+        <div class="flex flex-wrap gap-x-4 gap-y-2 border-t border-line pt-3 text-sm">
+          {data && <button type="button" class="link" data-open-history>History</button>}
+          {liveUrl && <a href={liveUrl} class="link" target="_blank" rel="noopener">View on site</a>}
+          {perms.archive && live && !readOnly && <button type="button" class="link" data-action="unpublish">Unpublish</button>}
+          {perms.archive && data && status !== 'archived' && !readOnly && <button type="button" class="link !text-accent-ink" data-action="archive">Archive</button>}
+        </div>
+        {data && <p class="t-meta">Post {data.meta.id}{data.meta.legacyUrl && <Fragment> · <a href={data.meta.legacyUrl} class="underline" target="_blank" rel="noopener">on the old site</a></Fragment>}</p>}
+      </aside>
+    </div>
+
+    <!-- Preview at phone or laptop size -->
+    <dialog class="admin-dialog wide" data-preview-dialog aria-labelledby="preview-title">
+      <div class="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
+        <h2 id="preview-title" class="font-semibold">Preview</h2>
+        <span class="t-meta">Not on the site until published</span>
+        <div class="ml-auto flex flex-wrap gap-2" role="group" aria-label="Preview options">
+          <button type="button" class="chip" aria-pressed="true" data-preview-size="phone"><Icon name="Smartphone" size={16} /> Phone</button>
+          <button type="button" class="chip" aria-pressed="false" data-preview-size="laptop"><Icon name="Monitor" size={16} /> Laptop</button>
+          {perms.english && <button type="button" class="chip" aria-pressed="false" data-preview-lang>English</button>}
+          <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close-dialog aria-label="Close preview"><Icon name="X" /></button>
+        </div>
+      </div>
+      <div class="flex justify-center bg-bg-subtle p-3">
+        <iframe title="Post preview" data-preview-frame class="h-[70dvh] w-[390px] max-w-full rounded-[var(--radius-card)] border border-line bg-bg"></iframe>
+      </div>
+    </dialog>
+
+    <!-- History -->
+    <dialog class="admin-dialog" data-history-dialog aria-labelledby="history-title">
+      <div class="flex items-center justify-between border-b border-line px-4 py-3">
+        <h2 id="history-title" class="font-semibold">History</h2>
+        <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close-dialog aria-label="Close history"><Icon name="X" /></button>
+      </div>
+      <p class="t-meta px-4 pt-3">A copy is kept each time the post is published or updated. Restoring puts that version in the editor; it goes live when you press {live ? 'Update' : 'Publish'}.</p>
+      <ul class="divide-y divide-line px-4 pb-4" data-history-list><li class="t-meta py-3">Loading…</li></ul>
+    </dialog>
+
+    <!-- Media library -->
+    <dialog class="admin-dialog wide" data-media-dialog aria-labelledby="media-title">
+      <div class="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
+        <h2 id="media-title" class="font-semibold">Media library</h2>
+        <input type="search" class="field !min-h-10 max-w-xs text-sm" placeholder="Search descriptions" aria-label="Search photos" data-media-q />
+        <label class="btn btn-secondary btn-sm"><Icon name="Upload" size={17} /> Upload<input type="file" accept="image/*" class="sr-only" data-media-file /></label>
+        <button type="button" class="btn btn-ghost btn-icon btn-sm ml-auto" data-close-dialog aria-label="Close media library"><Icon name="X" /></button>
+      </div>
+      <div class="max-h-[65dvh] overflow-y-auto p-4">
+        <ul class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4" data-media-grid></ul>
+        <p class="t-meta mt-3 text-center" data-media-status></p>
+        <div class="mt-3 text-center"><button type="button" class="btn btn-secondary btn-sm hidden" data-media-more>Load more</button></div>
+      </div>
+    </dialog>
+
+    <GeminiKeyDialog />
+  </div>
+</AdminLayout>
+
+<script>
+  import { initEditor } from '~/lib/admin/editor-client';
+  initEditor();
+</script>

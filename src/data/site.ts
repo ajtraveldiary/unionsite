@@ -42,6 +42,7 @@ export const usefulLinks = [
 ];
 
 // State committee, from keralangounion.in/സംസ്ഥാന-കമ്മിറ്റി/. English spellings are drafts for review.
+// `npm run db:seed` loads it into D1 (people, positions), where the site reads it and the admin edits it.
 export const stateCommittee: Person[] = [
   { name: { ml: 'എം.എ അജിത് കുമാർ', en: 'M.A. Ajith Kumar' }, role: 'president', body: 'state' },
   { name: { ml: 'എം.വി. ശശിധരൻ', en: 'M.V. Sasidharan' }, role: 'general_secretary', body: 'state' },
@@ -80,6 +81,9 @@ export const roleLabels: Record<Person['role'], { ml: string; en: string }> = {
   secretariat_member: { ml: 'സെക്രട്ടേറിയറ്റ് അംഗം', en: 'Secretariat member' },
   convener: { ml: 'കൺവീനർ', en: 'Convener' },
   joint_convener: { ml: 'ജോയിന്റ് കൺവീനർ', en: 'Joint Convener' },
+  joint_secretary: { ml: 'ജോയിന്റ് സെക്രട്ടറി', en: 'Joint Secretary' },
+  committee_member: { ml: 'കമ്മിറ്റി അംഗം', en: 'Committee member' },
+  member: { ml: 'അംഗം', en: 'Member' },
 };
 
 // Sample events for the preview.
@@ -91,7 +95,8 @@ export const events: UnionEvent[] = [
 ];
 
 
-// Latest uploads from the union's YouTube channel feed (fetched 4 Oct 2026).
+// Latest uploads from the union's YouTube channel feed (fetched 4 Oct 2026). The seed loads them into
+// D1 (videos); Admin → Media syncs the channel from then on.
 export const videos: Video[] = [
   { id: 'JsmQ3FZgyo8', title: { ml: 'ചതികളുടെയും കൂട്ടക്കൊലകളുടെയും 250 വർഷങ്ങൾ' }, date: '2026-09-14' },
   { id: 'V4hGePMe1M4', title: { ml: 'ചരിത്രം അദ്ദേഹത്തെ കുറ്റക്കാരനല്ല എന്ന് വിധിച്ചിരിക്കുന്നു' }, date: '2026-09-14' },

@@ -1,0 +1,133 @@
+---
+/**
+ * Admin: one order (plan, section 10). Its details, the PDF (open it, or replace it; the order's
+ * address keeps its id, so links people shared keep working), Important, and status: publish a
+ * draft, archive, restore. A plain form; the route (src/pages/admin/orders/[id].astro) saves it.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import type { OrderRow } from '~/lib/admin/orders';
+import { orderSubjects, orderGroups } from '~/data/orders';
+import { orderPath } from '~/lib/content';
+import { formatDate, formatKb } from '~/lib/i18n';
+
+interface Props { order: OrderRow; values?: Record<string, string>; error?: string; done?: string }
+const { order: o, values, error, done } = Astro.props;
+const v = { ...o, ...values } as Record<string, unknown>;
+const str = (k: string) => (v[k] == null ? '' : String(v[k]));
+const doneText: Record<string, string> = {
+  save: 'Saved.', publish: 'Published. It is in the Orders library now.', archive: 'Archived: taken off the site.', restore: 'Restored as a draft.', unpublish: 'Taken off the site; it is a draft now.',
+};
+const statusLabel = { draft: 'Draft', published: 'Published', archived: 'Archived' } as const;
+---
+<AdminLayout title="Edit order" section="orders">
+  <a href="/admin/orders" class="btn btn-ghost btn-sm -ml-2"><Icon name="ArrowLeft" size={18} /> Orders</a>
+  <div class="mt-2 flex flex-wrap items-center gap-3">
+    <h1 class="t-h1">Edit order</h1>
+    <span class:list={['badge', o.status === 'published' ? 'badge-success' : 'badge-neutral']}>{statusLabel[o.status]}</span>
+    {o.important && <span class="badge badge-accent">Important</span>}
+  </div>
+  {error && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent-ink" role="alert"><Icon name="CircleAlert" size={17} class="mt-0.5" /> {error}</p>}
+  {done && doneText[done] && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm" role="status"><Icon name="CircleCheck" size={17} class="mt-0.5" /> {doneText[done]}</p>}
+
+  <form method="post" class="mt-6 grid max-w-4xl gap-x-8 gap-y-5 lg:grid-cols-[minmax(0,1fr)_280px]" data-order-form>
+    <div class="min-w-0 space-y-5">
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label class="block"><span class="t-label">GO number</span><input name="goNumber" class="field mt-1" value={str('goNumber')} maxlength="80" placeholder="G.O.(P) No.…/…/Fin" /></label>
+        <label class="block"><span class="t-label">Date</span><input name="goDate" type="date" class="field mt-1" value={str('goDate')} required /></label>
+      </div>
+      <label class="block"><span class="t-label">Title</span>
+        <textarea name="title" rows="2" class="field grow-field mt-1" required maxlength="300">{str('title')}</textarea>
+      </label>
+      <label class="block"><span class="t-label">Title in Malayalam · optional</span>
+        <textarea name="titleMl" rows="2" lang="ml" class="field grow-field mt-1" maxlength="300" placeholder="Leave empty to show the title above on both sites">{str('titleMl')}</textarea>
+      </label>
+      <label class="block"><span class="t-label">Summary · Malayalam · optional</span>
+        <textarea name="summaryMl" rows="2" lang="ml" class="field grow-field mt-1" maxlength="600" placeholder="What changes for employees, in a line">{str('summaryMl')}</textarea>
+      </label>
+      <label class="block"><span class="t-label">Summary · English · optional</span>
+        <textarea name="summaryEn" rows="2" lang="en" class="field grow-field mt-1" maxlength="600">{str('summaryEn')}</textarea>
+      </label>
+    </div>
+
+    <div class="space-y-5">
+      <label class="block"><span class="t-label">Subject</span>
+        <select name="subject" class="field mt-1" required>
+          {orderGroups.map((g) => <optgroup label={g.name.en}>{orderSubjects.filter((s) => s.group === g.slug).map((s) => <option value={s.slug} selected={str('subject') === s.slug}>{s.name.en}</option>)}</optgroup>)}
+        </select>
+      </label>
+      <label class="block"><span class="t-label">Department · optional</span><input name="department" class="field mt-1" value={str('department')} maxlength="120" /></label>
+      <input type="hidden" name="important" value="" />
+      <label class="flex items-start gap-2 text-sm"><input type="checkbox" name="important" class="mt-1" checked={v.important === true || v.important === 'on'} /> <span>Important<span class="t-meta block">Pinned at the top of its subject and shown on the home page</span></span></label>
+
+      <div class="card space-y-2 p-3" data-pdf-box>
+        <p class="t-label">PDF</p>
+        {o.pdfUrl
+          ? <p class="text-sm"><a href={o.pdfUrl} target="_blank" rel="noopener" class="link">Open the PDF</a> <span class="t-meta">{[o.pageCount && `${o.pageCount} pages`, o.pdfBytes && formatKb(Math.round(o.pdfBytes / 1024))].filter(Boolean).join(' · ')}</span></p>
+          : <p class="t-meta">No PDF yet.</p>}
+        <label class="btn btn-secondary btn-sm"><Icon name="Upload" size={17} /> {o.pdfUrl ? 'Replace the PDF' : 'Upload the PDF'}<input type="file" accept="application/pdf,.pdf" class="sr-only" data-replace-pdf /></label>
+        <p class="t-meta" data-pdf-state aria-live="polite">The address stays the same, so shared links keep working.</p>
+        <input type="hidden" name="pdfMediaId" value={o.pdfMediaId ?? ''} data-pdf-id />
+      </div>
+
+      <div class="flex flex-wrap gap-2 border-t border-line pt-4">
+        {o.status === 'draft'
+          ? <Fragment><button name="action" value="publish" class="btn btn-primary"><Icon name="Check" size={18} /> Publish</button><button name="action" value="save" class="btn btn-secondary">Save draft</button></Fragment>
+          : <button name="action" value="save" class="btn btn-primary"><Icon name="Check" size={18} /> Save</button>}
+      </div>
+      <div class="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+        {o.status === 'published' && <a href={orderPath(o)} class="link" target="_blank" rel="noopener">View on site</a>}
+        {o.status === 'published' && <button name="action" value="unpublish" class="link" formnovalidate data-confirm="Take this order off the site? It becomes a draft.">Unpublish</button>}
+        {o.status !== 'archived'
+          ? <button name="action" value="archive" class="link !text-accent-ink" formnovalidate data-confirm="Archive this order? It comes off the site, and can be restored later.">Archive</button>
+          : <button name="action" value="restore" class="link" formnovalidate>Restore as a draft</button>}
+      </div>
+      <p class="t-meta">Order {o.id} · changed {formatDate(`${o.updatedAt.replace(' ', 'T')}Z`, 'en', 'short')}{o.updatedBy ? ` by ${o.updatedBy}` : ''}{o.legacyUrl && <Fragment> · <a href={o.legacyUrl} class="underline" target="_blank" rel="noopener">on the old site</a></Fragment>}</p>
+    </div>
+  </form>
+</AdminLayout>
+
+<script>
+  import { toast } from '~/lib/admin/client';
+  import { readOrderPdf } from '~/lib/admin/pdf-read';
+
+  // Replacing the PDF: read its text and pages here, upload it, and let Save attach it
+  function initOrderForm() {
+    const form = document.querySelector<HTMLFormElement>('[data-order-form]');
+    if (!form || form.dataset.ready) return;
+    form.dataset.ready = '1';
+    form.addEventListener('submit', (e) => {
+      const msg = (e.submitter as HTMLElement | null)?.dataset.confirm;
+      if (msg && !window.confirm(msg)) e.preventDefault();
+    });
+    const state = form.querySelector<HTMLElement>('[data-pdf-state]')!;
+    form.querySelector<HTMLInputElement>('[data-replace-pdf]')?.addEventListener('change', async (e) => {
+      const input = e.currentTarget as HTMLInputElement;
+      const file = input.files?.[0];
+      input.value = '';
+      if (!file) return;
+      try {
+        state.textContent = 'Reading the PDF…';
+        const guess = await readOrderPdf(file);
+        state.textContent = 'Uploading…';
+        const data = new FormData();
+        data.set('file', file);
+        data.set('sha256', guess.sha);
+        const res = await fetch('/api/admin/media?kind=pdf', { method: 'POST', body: data, credentials: 'same-origin' });
+        const out = (await res.json().catch(() => ({}))) as { item?: { id: number }; error?: string };
+        if (!res.ok || !out.item) throw new Error(out.error ?? 'The upload failed.');
+        form.querySelector<HTMLInputElement>('[data-pdf-id]')!.value = String(out.item.id);
+        for (const [name, value] of [['pageCount', String(guess.pages)], ['pdfText', guess.text]]) {
+          let h = form.querySelector<HTMLInputElement>(`input[type=hidden][name="${name}"]`);
+          if (!h) form.append((h = Object.assign(document.createElement('input'), { type: 'hidden', name })));
+          h.value = value;
+        }
+        state.textContent = `New PDF ready (${guess.pages} pages${guess.scanned ? ', scanned: no text to search' : ''}). Press Save to use it.`;
+      } catch (err) {
+        state.textContent = '';
+        toast(err instanceof Error ? err.message : 'The PDF could not be used.', 'error');
+      }
+    });
+  }
+  initOrderForm();
+</script>

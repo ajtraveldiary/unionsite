@@ -1,0 +1,83 @@
+---
+/**
+ * Admin sign-in (plan, section 10). On the real site Cloudflare Access asks for the email and the
+ * one-time code before anyone reaches /admin, so this page only explains a refusal (an email that
+ * isn't an admin). In `astro dev` it is the stand-in for Access: pick one of the test users, one
+ * per role, to see the admin as that person.
+ */
+import '~/styles/app.css';
+import { asc } from 'drizzle-orm';
+import { getDb } from '~/db/client';
+import { users } from '~/db/schema';
+import { DEV_COOKIE, devLoginAllowed, currentUser } from '~/lib/admin/auth';
+import { roleLabels } from '~/lib/admin/roles';
+import { districtBySlug } from '~/data/districts';
+
+export const prerender = false;
+
+const dev = await devLoginAllowed();
+const next = Astro.url.searchParams.get('next');
+const safeNext = next?.startsWith('/admin') ? next : '/admin';
+
+if (dev && Astro.url.searchParams.has('logout')) {
+  Astro.cookies.delete(DEV_COOKIE, { path: '/' });
+  return Astro.redirect('/admin/login');
+}
+if (dev && Astro.request.method === 'POST') {
+  const id = Number((await Astro.request.formData()).get('user'));
+  if (id) {
+    Astro.cookies.set(DEV_COOKIE, String(id), { path: '/', httpOnly: true, sameSite: 'strict', secure: Astro.url.protocol === 'https:', maxAge: 60 * 60 * 24 });
+    return Astro.redirect(safeNext);
+  }
+}
+const signedIn = await currentUser(Astro.request, Astro.cookies);
+if (signedIn && !Astro.url.searchParams.has('switch')) return Astro.redirect(safeNext);
+const people = dev ? await (await getDb()).select().from(users).orderBy(asc(users.id)) : [];
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Sign in · Admin · Kerala NGO Union</title>
+    <script is:inline>
+      (() => {
+        let theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        try { theme = localStorage.getItem('theme') || theme; } catch {}
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+  </head>
+  <body class="grid min-h-dvh place-items-center bg-bg-subtle px-4 py-10">
+    <main class="card w-full max-w-md p-6">
+      <div class="flex items-center gap-3">
+        <img src="/brand/logo-128.webp" width="44" height="44" alt="" class="rounded-[22%]" />
+        <div><h1 class="t-h2">Admin</h1><p class="t-meta">Kerala NGO Union</p></div>
+      </div>
+      {dev ? (
+        <Fragment>
+          <p class="mt-5 rounded-[var(--radius-control)] border border-warning/30 bg-warning-soft px-3 py-2 text-sm text-warning">
+            Local stand-in for Cloudflare Access. On the real site you type your email and a one-time code instead.
+          </p>
+          <form method="post" class="mt-5 space-y-2">
+            <p class="t-label">Sign in as</p>
+            {people.map((u) => (
+              <button name="user" value={u.id} class="card card-hover flex w-full items-center justify-between gap-3 px-4 py-3 text-left" disabled={!u.active}>
+                <span><span class="block font-semibold">{u.name}</span><span class="t-meta">{u.email}</span></span>
+                <span class="badge badge-neutral">{roleLabels[u.role]}{u.district ? ` · ${districtBySlug[u.district]?.name.en}` : ''}</span>
+              </button>
+            ))}
+          </form>
+          {people.length === 0 && <p class="mt-4 text-sm text-ink-2">No users yet. Run <code>npm run db:seed</code> to add one test user per role.</p>}
+        </Fragment>
+      ) : (
+        <Fragment>
+          <p class="mt-5 text-ink-2">This email isn’t on the admin list, or its access was switched off.</p>
+          <p class="mt-2 text-sm text-ink-3">Ask the super admin to invite you in Admin → Users, then sign in again.</p>
+          <a href="/cdn-cgi/access/logout" class="btn btn-secondary mt-5">Sign in with another email</a>
+        </Fragment>
+      )}
+    </main>
+  </body>
+</html>

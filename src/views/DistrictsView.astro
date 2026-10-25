@@ -10,12 +10,12 @@ import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
 import KeralaMap from '~/components/ds/KeralaMap.astro';
 import type { Lang } from '~/lib/types';
 import { t, langOf, formatDate } from '~/lib/i18n';
-import { sortedDistricts, latestPerDistrict, districtPostCounts, eventsForDistrict, districtUrl } from '~/lib/content';
+import { sortedDistricts, latestPerDistrict, districtPostCounts, upcomingEventsByDistrict, districtUrl } from '~/lib/content';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
-const [latest, counts] = await Promise.all([latestPerDistrict(1), districtPostCounts()]);
-const list = sortedDistricts().map((d) => ({ d, latest: latest[d.slug][0], count: counts[d.slug] ?? 0, events: eventsForDistrict(d.slug) }));
+const [latest, counts, events] = await Promise.all([latestPerDistrict(1), districtPostCounts(), upcomingEventsByDistrict()]);
+const list = sortedDistricts().map((d) => ({ d, latest: latest[d.slug][0], count: counts[d.slug] ?? 0, events: events[d.slug] ?? [] }));
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 ---
 <AppLayout lang={lang} title="Districts" description="The Kerala NGO Union's 15 district committees: news, events and office-bearers from every district.">

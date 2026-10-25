@@ -1,0 +1,35 @@
+---
+/** One Kerala Service issue in the admin. A POST from its form saves it (src/lib/admin/issues.ts checks every rule). */
+import IssueEditorView from '~/views/admin/IssueEditorView.astro';
+import { loadIssue, mustBeState, saveIssue } from '~/lib/admin/issues';
+import { AdminError } from '~/lib/admin/publish';
+
+export const prerender = false;
+const user = Astro.locals.user!;
+const id = Number(Astro.params.id);
+try { mustBeState(user); } catch { return new Response(null, { status: 404 }); }
+if (!(Number.isInteger(id) && id > 0)) return new Response(null, { status: 404 });
+let issue = await loadIssue(user, id);
+if (!issue) return new Response(null, { status: 404 });
+
+let error: string | undefined;
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const titles = form.getAll('tocTitle').map(String);
+  const authors = form.getAll('tocAuthor').map(String);
+  const pages = form.getAll('tocPage').map(String);
+  const action = String(form.get('action') ?? 'save');
+  try {
+    await saveIssue(user, id, {
+      year: form.get('year'), month: form.get('month'), pdfMediaId: form.get('pdfMediaId'), coverMediaId: form.get('coverMediaId'), pageCount: form.get('pageCount'),
+      toc: titles.map((title, n) => ({ title, author: authors[n], page: pages[n] })),
+    }, action === 'publish' ? 'published' : action === 'unpublish' ? 'draft' : undefined);
+    return Astro.redirect(`/admin/kerala-service/${id}?done=${action}`);
+  } catch (err) {
+    if (!(err instanceof AdminError)) throw err;
+    error = err.message;
+    issue = await loadIssue(user, id);
+  }
+}
+---
+<IssueEditorView issue={issue!} error={error} done={Astro.url.searchParams.get('done') ?? undefined} />

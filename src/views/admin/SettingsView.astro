@@ -1,0 +1,168 @@
+---
+/**
+ * Admin: Settings (plan, sections 6 and 10; approved wireframe "Settings"). Your own Gemini key,
+ * kept in this browser only (for the session, or on this device for 7 days, encrypted), with a
+ * test and "draft English automatically when I publish"; the glossary (state roles); the site's
+ * contact details and social links, AI translation for the whole site, and how long inbox
+ * messages are kept (super admin). The key part is a page script; the rest are plain forms.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import { aiSettings, inboxSettings, listGlossary, MODELS, siteDetails } from '~/lib/admin/settings';
+import { isState } from '~/lib/admin/roles';
+
+interface Props { error?: string; done?: string }
+const { error, done } = Astro.props;
+const user = Astro.locals.user!;
+const editor = user.role === 'district_editor';
+const isSuper = user.role === 'super_admin';
+const [terms, details, ai, inbox] = await Promise.all([isState(user) ? listGlossary() : [], siteDetails(), aiSettings(), inboxSettings()]);
+const editTerm = terms.find((t) => t.id === Number(Astro.url.searchParams.get('term')));
+const doneText: Record<string, string> = { term: 'Glossary saved.', term_delete: 'Term removed.', site: 'Site details saved. Every page shows them now.', ai: 'AI translation settings saved.', inbox: 'Saved.' };
+---
+<AdminLayout title="Settings" section="settings">
+  <h1 class="t-h1">Settings</h1>
+  {editor && <p class="card mt-5 p-6 text-ink-2">Nothing to set here for district editors.</p>}
+  {error && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent-ink" role="alert"><Icon name="CircleAlert" size={17} class="mt-0.5" /> {error}</p>}
+  {done && doneText[done] && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm" role="status"><Icon name="CircleCheck" size={17} class="mt-0.5" /> {doneText[done]}</p>}
+
+  {!editor && (
+    <section class="mt-6 max-w-2xl" aria-labelledby="ai-key" data-key-settings>
+      <h2 id="ai-key" class="t-h2 border-b border-line pb-2">Your AI translation key</h2>
+      <p class="t-meta mt-2">Your own Gemini key drafts English. It never reaches the union’s server or database: your browser sends the text straight to Gemini. Without a key, saving works as normal and English is marked “Needs translation”.</p>
+      {!ai.enabled && <p class="mt-3 rounded-[var(--radius-control)] border border-warning/30 bg-warning-soft px-3 py-2 text-sm text-warning">AI drafts are switched off for the whole site. English can still be typed by hand.</p>}
+      <p class="mt-3 text-sm font-semibold" data-key-status aria-live="polite">Checking…</p>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <input type="password" class="field min-w-0 flex-1" placeholder="Paste your Gemini key" aria-label="Gemini key" autocomplete="off" spellcheck="false" data-key-input />
+        <button type="button" class="btn btn-secondary" data-key-test>Test key</button>
+      </div>
+      <fieldset class="mt-3">
+        <legend class="t-label">Keep the key</legend>
+        <label class="mt-1 flex items-start gap-2 text-sm"><input type="radio" name="keep" value="session" class="mt-1" checked data-keep /> For this session only (cleared when the tab closes or after 30 minutes without use)</label>
+        <label class="mt-1 flex items-start gap-2 text-sm"><input type="radio" name="keep" value="device" class="mt-1" data-keep /> On this device for 7 days, encrypted (only on a device nobody else uses)</label>
+      </fieldset>
+      <div class="mt-3 flex flex-wrap gap-2"><button type="button" class="btn btn-primary" data-key-save>Use this key</button><button type="button" class="btn btn-ghost" data-key-forget>Forget my key</button></div>
+      <label class="mt-4 flex items-start gap-2 text-sm"><input type="checkbox" class="mt-1" data-auto /> <span>Draft English automatically when I publish or update a post<span class="t-meta block">Only when the English is missing or out of date, and only with a key kept here. Never on the 10-second autosave.</span></span></label>
+      <p class="t-meta mt-3">Tip: create the key under a union-owned Google account in <a href="https://aistudio.google.com/apikey" class="underline" target="_blank" rel="noopener">Google AI Studio</a>, limit it to the Gemini API, set a monthly budget alert, and make a new one every 3 months or when someone leaves.</p>
+    </section>
+  )}
+
+  {isState(user) && (
+    <section class="mt-10 max-w-2xl" aria-labelledby="glossary">
+      <h2 id="glossary" class="t-h2 border-b border-line pb-2">Glossary</h2>
+      <p class="t-meta mt-2">Union terms the AI must always translate the same way.</p>
+      <table class="mt-2 w-full text-left text-sm">
+        <thead><tr class="text-xs uppercase tracking-wide text-ink-3"><th class="py-2 pr-3 font-semibold">Malayalam</th><th class="py-2 pr-3 font-semibold">English</th><th class="py-2"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody>
+          {terms.map((t) => (
+            <tr class="border-t border-line">
+              <td lang="ml" class="py-2 pr-3">{t.ml}</td>
+              <td class="py-2 pr-3">{t.en}</td>
+              <td class="py-2 text-right"><form method="post" class="inline-flex gap-1"><input type="hidden" name="id" value={t.id} /><a href={`?term=${t.id}#term-form`} class="btn btn-ghost btn-sm">Edit</a><button name="action" value="term_delete" class="btn btn-ghost btn-sm !text-accent-ink" data-confirm={`Remove “${t.ml}” from the glossary?`}>Remove</button></form></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <form method="post" id="term-form" class="mt-3 grid scroll-mt-20 gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+        {editTerm && <input type="hidden" name="id" value={editTerm.id} />}
+        <label class="block"><span class="t-label">{editTerm ? 'Malayalam' : 'Add a term · Malayalam'}</span><input name="ml" lang="ml" class="field mt-1" value={editTerm?.ml ?? ''} required maxlength="120" /></label>
+        <label class="block"><span class="t-label">English</span><input name="en" lang="en" class="field mt-1" value={editTerm?.en ?? ''} required maxlength="120" /></label>
+        <div class="flex gap-2"><button name="action" value="term" class="btn btn-secondary">{editTerm ? 'Save' : 'Add'}</button>{editTerm && <a href="/admin/settings#glossary" class="btn btn-ghost">Cancel</a>}</div>
+      </form>
+    </section>
+  )}
+
+  {isSuper && (
+    <Fragment>
+      <section class="mt-10 max-w-2xl" aria-labelledby="site">
+        <h2 id="site" class="t-h2 border-b border-line pb-2">Site details</h2>
+        <p class="t-meta mt-2">Shown on the Contact and About pages and in the footer. They appear on the site as soon as they’re saved.</p>
+        <form method="post" class="mt-3 grid gap-3 sm:grid-cols-2">
+          <label class="block sm:col-span-2"><span class="t-label">Address · Malayalam</span><input name="addressMl" lang="ml" class="field mt-1" value={details.addressMl} required maxlength="300" /></label>
+          <label class="block sm:col-span-2"><span class="t-label">Address · English</span><input name="addressEn" lang="en" class="field mt-1" value={details.addressEn} maxlength="300" /></label>
+          <label class="block"><span class="t-label">Phone</span><input name="phone" type="tel" class="field mt-1" value={details.phone} placeholder="Not set" maxlength="30" /></label>
+          <label class="block"><span class="t-label">Email</span><input name="email" type="email" class="field mt-1" value={details.email} placeholder="Not set" maxlength="120" /></label>
+          <label class="block"><span class="t-label">Facebook page</span><input name="facebook" type="url" class="field mt-1" value={details.facebook} /></label>
+          <label class="block"><span class="t-label">YouTube channel</span><input name="youtube" type="url" class="field mt-1" value={details.youtube} /><span class="t-meta mt-1 block">New videos are synced from this channel every hour.</span></label>
+          <div class="sm:col-span-2"><button name="action" value="site" class="btn btn-primary">Save</button></div>
+        </form>
+      </section>
+
+      <section class="mt-10 max-w-2xl" aria-labelledby="ai-site">
+        <h2 id="ai-site" class="t-h2 border-b border-line pb-2">AI translation for the whole site</h2>
+        <form method="post" class="mt-3 space-y-3">
+          <label class="flex items-start gap-2 text-sm"><input type="checkbox" name="enabled" class="mt-1" checked={ai.enabled} /> Allow AI drafts of English (English can always be typed by hand)</label>
+          <label class="block sm:max-w-sm"><span class="t-label">Model</span><select name="model" class="field mt-1">{MODELS.map((m) => <option value={m.id} selected={ai.model === m.id}>{m.label}</option>)}</select></label>
+          <button name="action" value="ai" class="btn btn-secondary">Save</button>
+        </form>
+      </section>
+
+      <section class="mt-10 max-w-2xl" aria-labelledby="inbox-keep">
+        <h2 id="inbox-keep" class="t-h2 border-b border-line pb-2">Inbox</h2>
+        <form method="post" class="mt-3 flex flex-wrap items-end gap-3">
+          <label class="block"><span class="t-label">Keep messages for</span><span class="mt-1 flex items-center gap-2"><input name="keepMonths" inputmode="numeric" class="field w-24" value={inbox.keepMonths} required /> months</span></label>
+          <button name="action" value="inbox" class="btn btn-secondary">Save</button>
+          <p class="t-meta w-full">Older messages are deleted automatically. The privacy page says 12 months; change it there too if this changes.</p>
+        </form>
+      </section>
+    </Fragment>
+  )}
+</AdminLayout>
+
+<script>
+  import { forgetKey, getKey, keyMode, setKey, testKey, autoTranslate, setAutoTranslate } from '~/lib/admin/translate';
+  import { toast } from '~/lib/admin/client';
+
+  async function initKeySettings() {
+    document.querySelectorAll<HTMLFormElement>('form').forEach((f) => {
+      if (f.dataset.ready) return;
+      f.dataset.ready = '1';
+      f.addEventListener('submit', (e) => {
+        const msg = (e.submitter as HTMLElement | null)?.dataset.confirm;
+        if (msg && !window.confirm(msg)) e.preventDefault();
+      });
+    });
+    const box = document.querySelector<HTMLElement>('[data-key-settings]');
+    if (!box || box.dataset.ready) return;
+    box.dataset.ready = '1';
+    const $ = <T extends Element = HTMLElement>(s: string) => box.querySelector<T>(s)!;
+    const status = $('[data-key-status]');
+    const input = $<HTMLInputElement>('[data-key-input]');
+    const mode = () => box.querySelector<HTMLInputElement>('[data-keep]:checked')!.value as 'session' | 'device';
+    const show = async () => {
+      const m = await keyMode();
+      status.textContent = m === 'device' ? 'A key is kept on this device (up to 7 days).' : m === 'session' ? 'A key is kept for this session.' : 'No key kept in this browser.';
+      if (m) box.querySelector<HTMLInputElement>(`[data-keep][value="${m}"]`)!.checked = true;
+    };
+    await show();
+    const auto = $<HTMLInputElement>('[data-auto]');
+    auto.checked = autoTranslate();
+    auto.addEventListener('change', () => { setAutoTranslate(auto.checked); toast(auto.checked ? 'English will be drafted when you publish.' : 'English will be drafted only when you ask.'); });
+    $('[data-key-test]').addEventListener('click', async () => {
+      const key = input.value.trim() || (await getKey());
+      if (!key) return toast('Paste a key first.', 'error');
+      status.textContent = 'Testing…';
+      const ok = await testKey(key);
+      status.textContent = ok ? 'Gemini accepts this key.' : 'Gemini refused this key. Check it, or make a new one.';
+    });
+    $('[data-key-save]').addEventListener('click', async () => {
+      const key = input.value.trim();
+      if (!key) return toast('Paste a key first.', 'error');
+      await setKey(key, mode());
+      input.value = '';
+      await show();
+      toast('Key saved in this browser.');
+    });
+    // Changing where it's kept moves the key already held
+    box.querySelectorAll<HTMLInputElement>('[data-keep]').forEach((r) => r.addEventListener('change', async () => {
+      const key = await getKey();
+      if (key) { await setKey(key, mode()); await show(); }
+    }));
+    $('[data-key-forget]').addEventListener('click', async () => {
+      await forgetKey();
+      await show();
+      toast('Key forgotten in this browser.');
+    });
+  }
+  initKeySettings();
+</script>

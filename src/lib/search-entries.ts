@@ -1,15 +1,15 @@
 // What search knows about each post and order: the result row it shows (a SearchDoc) and the
 // normalised text D1's full-text index holds (title, keywords, body). The seed script builds the
 // index with these, and the admin panel will call them on every save, so both stay the same.
-// Districts, events and the fixed pages are few and change with the code, so they are searched in
-// memory (staticDocs). Relative imports with .ts endings: Node runs this file too.
+// Events are written by the admin on every save, like posts and orders. Districts and the fixed
+// pages are few and change with the code, so they are searched in memory (staticDocs). Relative imports with .ts endings: Node runs this file too.
 import { formatDate } from './i18n.ts';
 import { goCore, normalise, type SearchDoc } from './search.ts';
 import { postPath, orderPath } from './paths.ts';
 import { topicBySlug, districtBySlug, districts } from '../data/districts.ts';
 import { subjectBySlug } from '../data/orders.ts';
-import { events } from '../data/site.ts';
-import type { L10n, Order, OrderGroup } from './types.ts';
+import type { L10n, Order, OrderGroup, UnionEvent } from './types.ts';
+import { bodyText, type Body } from './richtext.ts';
 
 export interface SearchEntry {
   doc: SearchDoc;
@@ -28,7 +28,7 @@ interface PostInput {
   district?: string | null;
   title: L10n;
   summary: L10n;
-  body?: { ml?: string[] | null; en?: string[] | null } | null;
+  body?: { ml?: Body | null; en?: Body | null } | null;
 }
 
 export function postEntry(p: PostInput): SearchEntry {
@@ -47,7 +47,7 @@ export function postEntry(p: PostInput): SearchEntry {
     date: p.date,
     title: normalise(`${doc.ml} ${doc.en ?? ''}`),
     kw: normalise(`${doc.kw} ${doc.sub}`),
-    body: normalise([...(p.body?.ml ?? []), ...(p.body?.en ?? [])].join(' ')),
+    body: normalise([...bodyText(p.body?.ml), ...bodyText(p.body?.en)].join(' ')),
   };
 }
 
@@ -79,7 +79,26 @@ export function orderEntry(o: OrderInput): SearchEntry {
   };
 }
 
-/** Districts, events and the main fixed pages, searched in memory alongside D1 */
+export function eventEntry(e: Pick<UnionEvent, 'slug' | 'title' | 'start' | 'venue' | 'district' | 'description'>): SearchEntry {
+  const district = e.district ? districtBySlug[e.district] : undefined;
+  const doc: SearchDoc = {
+    k: 'event',
+    ml: e.title.ml,
+    ...(e.title.en && { en: e.title.en }),
+    sub: [formatDate(e.start, 'en', 'short'), district?.name.en ?? 'State level'].join(' · '),
+    url: `/events#${e.slug}`,
+    kw: [e.venue.ml, e.venue.en, district?.name.ml].filter(Boolean).join(' '),
+  };
+  return {
+    doc,
+    date: e.start.slice(0, 10),
+    title: normalise(`${doc.ml} ${doc.en ?? ''}`),
+    kw: normalise(`${doc.kw} ${doc.sub}`),
+    body: normalise(`${e.description?.ml ?? ''} ${e.description?.en ?? ''}`),
+  };
+}
+
+/** Districts and the main fixed pages, searched in memory alongside D1 */
 export const staticDocs = (): SearchDoc[] => [
   ...[...districts].sort((a, b) => a.sortOrder - b.sortOrder).map((d): SearchDoc => ({
     k: 'district',
@@ -88,13 +107,6 @@ export const staticDocs = (): SearchDoc[] => [
     sub: 'District committee',
     url: `/districts/${d.slug}`,
     kw: `${d.hq.ml} ${d.hq.en} ${d.slug}`,
-  })),
-  ...[...events].sort((a, b) => a.start.localeCompare(b.start)).map((e): SearchDoc => ({
-    k: 'event',
-    ml: e.title.ml,
-    ...(e.title.en && { en: e.title.en }),
-    sub: formatDate(e.start, 'en', 'short'),
-    url: `/events#${e.slug}`,
   })),
   { k: 'page', ml: 'സംസ്ഥാന കമ്മിറ്റി', en: 'State committee', sub: 'Office-bearers', url: '/about/state-committee', kw: 'president general secretary treasurer leaders ഭാരവാഹികൾ' },
   { k: 'page', ml: 'സർക്കാർ ഉത്തരവുകൾ', en: 'Government orders library', sub: 'All GOs and circulars', url: '/orders', kw: 'go circular ഉത്തരവ്' },

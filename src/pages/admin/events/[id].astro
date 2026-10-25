@@ -1,0 +1,45 @@
+---
+/**
+ * One event in the admin: /admin/events/new or /admin/events/{id}. A POST from the form saves it
+ * (src/lib/admin/events.ts checks every rule) and comes back here with what happened.
+ */
+import EventEditorView from '~/views/admin/EventEditorView.astro';
+import { changeEventStatus, linkReport, loadEvent, saveEvent, type EventAction, type EventDoc } from '~/lib/admin/events';
+import { AdminError } from '~/lib/admin/publish';
+
+export const prerender = false;
+const user = Astro.locals.user!;
+const isNew = Astro.params.id === 'new';
+const id = isNew ? null : Number(Astro.params.id);
+if (!isNew && !(Number.isInteger(id) && id! > 0)) return new Response(null, { status: 404 });
+let event = id ? await loadEvent(user, id) : null;
+if (id && !event) return new Response(null, { status: 404 });
+
+let error: string | undefined;
+let values: Partial<EventDoc> | undefined;
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const input = Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
+  const action = input.action;
+  try {
+    if (action === 'archive' || action === 'restore' || action === 'send_back') {
+      await changeEventStatus(user, id!, action);
+      return Astro.redirect(`/admin/events/${id}?done=${action}`);
+    }
+    if (action === 'report') {
+      await linkReport(user, id!, Number(input.reportPostId) || null);
+      return Astro.redirect(`/admin/events/${id}?done=report`);
+    }
+    const kind: EventAction = action === 'publish' ? 'publish' : action === 'submit' ? 'submit' : 'draft';
+    const was = event?.status;
+    const saved = await saveEvent(user, id, input, kind);
+    return Astro.redirect(`/admin/events/${saved}?done=${kind === 'publish' && was === 'published' ? 'update' : kind}`);
+  } catch (err) {
+    if (!(err instanceof AdminError)) throw err;
+    error = err.message;
+    values = input as Partial<EventDoc>;
+  }
+}
+const done = Astro.url.searchParams.get('done') ?? undefined;
+---
+<EventEditorView event={event} values={values} error={error} done={done} />

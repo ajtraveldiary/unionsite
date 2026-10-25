@@ -1,0 +1,14 @@
+---
+/** Analytics in the admin. "Update the numbers now" posts here and runs the hourly roll-up at once. */
+import AnalyticsView from '~/views/admin/AnalyticsView.astro';
+import { rollup } from '~/lib/analytics';
+import { isState } from '~/lib/admin/roles';
+
+export const prerender = false;
+const user = Astro.locals.user!;
+if (Astro.request.method === 'POST' && isState(user)) {
+  await rollup();
+  return Astro.redirect(`/admin/analytics${Astro.url.search ? `${Astro.url.search}&` : '?'}done=rollup`);
+}
+---
+<AnalyticsView done={Astro.url.searchParams.get('done') ?? undefined} />

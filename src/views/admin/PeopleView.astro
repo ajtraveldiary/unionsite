@@ -1,0 +1,243 @@
+---
+/**
+ * Admin: People & committees (plan, section 10; approved wireframe "People & committees"). Pick a
+ * committee; see who is on the site now, in order, with up and down to reorder; the drafts (a
+ * district editor's additions, or the next term being prepared after "Start new term"); past
+ * terms; and a form to add someone (reusing a person already on the site) or edit them, with a
+ * photo. A phone number shows on the site only if one is typed, so nobody's appears without their
+ * consent. Plain forms; the route (src/pages/admin/people.astro) does each action.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import MemberRow from '~/components/admin/MemberRow.astro';
+import { committeeChoices, loadCommittee, pastTerm, parseKey, roleLabel, type Member } from '~/lib/admin/people';
+import { isState } from '~/lib/admin/roles';
+
+interface Props { error?: string; done?: string }
+const { error, done } = Astro.props;
+const user = Astro.locals.user!;
+const p = Astro.url.searchParams;
+const choices = await committeeChoices(user);
+const key = parseKey(p.get('c') ?? (isState(user) ? 'state' : `district:${user.district}`)) ?? parseKey(choices[0]?.key)!;
+const c = await loadCommittee(user, key);
+const editId = Number(p.get('edit')) || null;
+const editing: Member | undefined = [...c.current, ...c.drafts].find((m) => m.positionId === editId);
+const pastName = p.has('past') ? p.get('past') : null;
+const pastList = pastName !== null ? await pastTerm(user, key, pastName || null) : [];
+const doneText: Record<string, string> = {
+  add: 'Added.', proposed: 'Added as a draft. Your district admin approves it before it shows on the site.', update: 'Saved.', remove: 'Removed from the committee.', publish: 'Approved: it is on the site now.', start_term: 'New term started as a draft copy of the committee. Change it below, then publish it.',
+  publish_term: 'New term published. The previous committee is kept under Past terms.', move: '',
+};
+const proposals = c.drafts.filter((m) => !c.nextTerm || m.term !== c.nextTerm);
+const next = c.nextTerm ? c.drafts.filter((m) => m.term === c.nextTerm) : [];
+const ck = c.keyString;
+---
+<AdminLayout title="People & committees" section="people">
+  <h1 class="t-h1">People & committees</h1>
+  {error && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent-ink" role="alert"><Icon name="CircleAlert" size={17} class="mt-0.5" /> {error}</p>}
+  {done && doneText[done] && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm" role="status"><Icon name="CircleCheck" size={17} class="mt-0.5" /> {doneText[done]}</p>}
+
+  <form method="get" class="mt-5 flex flex-wrap items-center gap-3" data-filters>
+    <select name="c" class="field w-auto max-w-full sm:min-w-80" aria-label="Committee" data-autosubmit>
+      {choices.map((o) => <option value={o.key} selected={o.key === ck}>{o.label}</option>)}
+    </select>
+    <noscript><button class="btn btn-secondary btn-sm">Open</button></noscript>
+    {c.currentTerm && <span class="t-meta">Term: {c.currentTerm}</span>}
+  </form>
+
+  <!-- On the site now -->
+  <section class="mt-6" aria-labelledby="now">
+    <div class="flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-2">
+      <h2 id="now" class="t-h2">{c.key.name}</h2>
+      <a href={`?c=${ck}#person`} class="link">+ Add someone</a>
+    </div>
+    {c.current.length === 0 && <p class="t-meta py-3">Nobody on the site yet. {c.key.body === 'district' ? 'Add the office-bearers below; the district page shows them as soon as they are approved.' : ''}</p>}
+    <ul class="divide-y divide-line">
+      {c.current.map((m, i) => (
+        <MemberRow m={m} ck={ck} canApprove={c.canApprove} first={i === 0} last={i === c.current.length - 1} />
+      ))}
+    </ul>
+  </section>
+
+  {proposals.length > 0 && (
+    <section class="mt-8" aria-labelledby="proposals">
+      <h2 id="proposals" class="t-h2 border-b border-line pb-2">Waiting for approval</h2>
+      <p class="t-meta pt-2">{c.canApprove ? 'Added by a district editor. Approve each to put it on the site.' : 'Your district admin approves these before they show on the site.'}</p>
+      <ul class="divide-y divide-line">{proposals.map((m, i) => <MemberRow m={m} ck={ck} canApprove={c.canApprove} first={i === 0} last={i === proposals.length - 1} />)}</ul>
+    </section>
+  )}
+
+  {c.nextTerm && (
+    <section class="mt-8" aria-labelledby="next">
+      <div class="flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-2">
+        <h2 id="next" class="t-h2">Next term: {c.nextTerm} <span class="badge badge-warning align-middle">Draft</span></h2>
+        {c.canApprove && (
+          <form method="post"><input type="hidden" name="c" value={ck} /><button name="action" value="publish_term" class="btn btn-primary btn-sm" data-confirm={`Publish the ${c.nextTerm} committee? It replaces the one on the site, which is kept under Past terms.`}>Publish new term</button></form>
+        )}
+      </div>
+      <p class="t-meta pt-2">A copy of the committee to change for the next term: add, remove, change roles. The site keeps showing the current committee until you publish this.</p>
+      <ul class="divide-y divide-line">{next.map((m, i) => <MemberRow m={m} ck={ck} canApprove={c.canApprove} first={i === 0} last={i === next.length - 1} next />)}</ul>
+    </section>
+  )}
+
+  {c.canApprove && !c.nextTerm && c.current.length > 0 && (
+    <form method="post" class="card mt-8 flex flex-wrap items-end gap-3 p-4">
+      <input type="hidden" name="c" value={ck} />
+      <label class="block min-w-0 flex-1"><span class="t-label">Start new term</span>
+        <input name="term" class="field mt-1" placeholder={c.key.body === 'state' ? 'e.g. 64th state conference' : 'e.g. 2026–2029'} maxlength="60" required />
+        <span class="t-meta mt-1 block">Copies this committee as a draft for after the conference. Past terms stay as history.</span>
+      </label>
+      <button name="action" value="start_term" class="btn btn-secondary">Start new term</button>
+    </form>
+  )}
+
+  <!-- Past terms -->
+  {c.past.length > 0 && (
+    <section class="mt-8" aria-labelledby="past">
+      <h2 id="past" class="t-h2 border-b border-line pb-2">Past terms</h2>
+      <ul class="flex flex-wrap gap-2 pt-3">
+        {c.past.map((t) => <li><a href={`?c=${ck}&past=${encodeURIComponent(t.term ?? '')}#past`} class="chip" aria-current={pastName === (t.term ?? '') ? 'true' : undefined}>{t.term ?? 'Earlier'} · {t.n}</a></li>)}
+      </ul>
+      {pastList.length > 0 && (
+        <ul class="mt-3 grid gap-x-8 sm:grid-cols-2">
+          {pastList.map((m) => <li class="border-b border-line py-2 text-sm"><span lang="ml" class="font-medium">{m.nameMl}</span> <span class="t-meta">· {roleLabel(m.role)}</span></li>)}
+        </ul>
+      )}
+    </section>
+  )}
+
+  <!-- Add or edit -->
+  <section id="person" class="card mt-10 scroll-mt-20 p-4 md:p-6" aria-labelledby="person-form">
+    <h2 id="person-form" class="t-h2">{editing ? `Edit ${editing.nameEn || editing.nameMl}` : 'Add someone'}</h2>
+    <form method="post" class="mt-4 grid gap-6 md:grid-cols-[140px_minmax(0,1fr)]" data-person-form>
+      <input type="hidden" name="c" value={ck} />
+      {editing && <input type="hidden" name="position" value={editing.positionId} />}
+      <input type="hidden" name="personId" value="" data-person-id />
+      <div>
+        <img src={editing?.photo ?? ''} alt="" class:list={['aspect-square w-full rounded-full bg-bg-subtle object-cover', !editing?.photo && 'hidden']} data-photo />
+        <div class:list={['grid aspect-square w-full place-items-center rounded-full border border-dashed border-line-strong bg-bg-subtle text-ink-3', editing?.photo && 'hidden']} data-photo-empty><Icon name="UserRound" size={32} /></div>
+        <label class="btn btn-secondary btn-sm mt-2 w-full"><Icon name="Upload" size={16} /> Photo<input type="file" accept="image/*" class="sr-only" data-photo-file /></label>
+        <input type="hidden" name="photoMediaId" value={editing?.photoMediaId ?? ''} data-photo-id />
+        <p class="t-meta mt-1" data-photo-state aria-live="polite">Square works best.</p>
+      </div>
+      <div class="space-y-4">
+        {!editing && (
+          <div>
+            <label class="block"><span class="t-label">Already on the site?</span>
+              <input type="search" class="field mt-1" placeholder="Search people by name" data-find autocomplete="off" />
+            </label>
+            <ul class="mt-1 divide-y divide-line" data-find-results></ul>
+            <p class="t-meta mt-1" data-picked hidden></p>
+            <p class="t-meta mt-2">Not listed? Type their details:</p>
+          </div>
+        )}
+        <div class="grid gap-4 sm:grid-cols-2" data-person-fields>
+          <label class="block"><span class="t-label">Name · Malayalam</span><input name="nameMl" lang="ml" class="field mt-1" value={editing?.nameMl ?? ''} maxlength="120" required={!!editing} data-name-ml /></label>
+          <label class="block"><span class="t-label">Name · English</span><input name="nameEn" lang="en" class="field mt-1" value={editing?.nameEn ?? ''} maxlength="120" data-name-en /></label>
+          <label class="block"><span class="t-label">Role in this committee</span>
+            <select name="role" class="field mt-1" required>{c.roles.map((r) => <option value={r} selected={editing?.role === r}>{roleLabel(r)}</option>)}</select>
+          </label>
+          <label class="block"><span class="t-label">Department or office · optional</span><input name="department" class="field mt-1" value={editing?.department ?? ''} maxlength="120" /></label>
+          <label class="block sm:col-span-2"><span class="t-label">Phone · optional</span><input name="phone" type="tel" class="field mt-1 sm:max-w-xs" value={editing?.phone ?? ''} maxlength="20" />
+            <span class="t-meta mt-1 block">Shown on the district page. Type it only if they agreed.</span></label>
+          {!editing && c.nextTerm && (
+            <fieldset class="sm:col-span-2"><legend class="t-label">Add to</legend>
+              <label class="mt-1 flex items-center gap-2"><input type="radio" name="target" value="now" checked /> The committee on the site now</label>
+              <label class="flex items-center gap-2"><input type="radio" name="target" value="next" /> The next term ({c.nextTerm})</label>
+            </fieldset>
+          )}
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button name="action" value={editing ? 'update' : 'add'} class="btn btn-primary">{editing ? 'Save' : c.canApprove ? 'Add' : 'Add as a draft'}</button>
+          {editing && <a href={`?c=${ck}#person`} class="btn btn-ghost">Cancel</a>}
+        </div>
+      </div>
+    </form>
+  </section>
+</AdminLayout>
+
+<script>
+  import { api, toast } from '~/lib/admin/client';
+  import { prepareImage } from '~/lib/admin/image-prep';
+
+  function initPeople() {
+    const form = document.querySelector<HTMLFormElement>('[data-person-form]');
+    if (!form || form.dataset.ready) return;
+    form.dataset.ready = '1';
+    const $ = <T extends Element = HTMLElement>(s: string) => form.querySelector<T>(s);
+    document.querySelectorAll<HTMLFormElement>('form').forEach((f) => f.addEventListener('submit', (e) => {
+      const msg = (e.submitter as HTMLElement | null)?.dataset.confirm;
+      if (msg && !window.confirm(msg)) e.preventDefault();
+    }));
+    const filters = document.querySelector<HTMLFormElement>('[data-filters]');
+    filters?.querySelector('[data-autosubmit]')?.addEventListener('change', () => filters.requestSubmit());
+
+    // Photo: made smaller here, uploaded, then saved with the person
+    $<HTMLInputElement>('[data-photo-file]')?.addEventListener('change', async (e) => {
+      const input = e.currentTarget as HTMLInputElement;
+      const file = input.files?.[0];
+      input.value = '';
+      if (!file) return;
+      const state = $('[data-photo-state]')!;
+      try {
+        state.textContent = 'Preparing…';
+        const name = $<HTMLInputElement>('[data-name-ml]')?.value || 'Office-bearer';
+        const data = await prepareImage(file, name);
+        state.textContent = 'Uploading…';
+        const res = await fetch('/api/admin/media', { method: 'POST', body: data, credentials: 'same-origin' });
+        const out = (await res.json().catch(() => ({}))) as { item?: { id: number; thumb: string }; error?: string };
+        if (!res.ok || !out.item) throw new Error(out.error ?? 'The upload failed.');
+        $<HTMLInputElement>('[data-photo-id]')!.value = String(out.item.id);
+        const img = $<HTMLImageElement>('[data-photo]')!;
+        img.src = out.item.thumb;
+        img.classList.remove('hidden');
+        $('[data-photo-empty]')?.classList.add('hidden');
+        state.textContent = 'Photo ready. Save to use it.';
+      } catch (err) {
+        state.textContent = '';
+        toast(err instanceof Error ? err.message : 'The photo could not be used.', 'error');
+      }
+    });
+
+    // Reuse someone already on the site instead of typing them again
+    const find = $<HTMLInputElement>('[data-find]');
+    const results = $('[data-find-results]');
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    find?.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        const q = find.value.trim();
+        results!.innerHTML = '';
+        if (q.length < 2) return;
+        try {
+          const { people } = await api<{ people: { id: number; nameMl: string; nameEn: string; department: string | null }[] }>(`/api/admin/people?q=${encodeURIComponent(q)}`);
+          if (!people.length) results!.append(Object.assign(document.createElement('li'), { className: 't-meta py-2', textContent: 'Nobody by that name yet.' }));
+          for (const p of people) {
+            const li = document.createElement('li');
+            const b = Object.assign(document.createElement('button'), { type: 'button', className: 'w-full py-2 text-left hover:underline' });
+            b.append(Object.assign(document.createElement('span'), { lang: 'ml', className: 'font-semibold', textContent: p.nameMl }), ` ${p.nameEn}${p.department ? ` · ${p.department}` : ''}`);
+            b.addEventListener('click', () => {
+              $<HTMLInputElement>('[data-person-id]')!.value = String(p.id);
+              const picked = $('[data-picked]')!;
+              picked.hidden = false;
+              picked.textContent = `Adding ${p.nameMl} (${p.nameEn}). Their details stay as they are; choose the role below.`;
+              $('[data-person-fields]')!.querySelectorAll<HTMLInputElement>('input:not([type=radio])').forEach((i) => { if (i.name !== 'phone' && i.name !== 'department') i.disabled = true; });
+              results!.innerHTML = '';
+              find.value = '';
+            });
+            li.append(b);
+            results!.append(li);
+          }
+        } catch { /* typing on; try again */ }
+      }, 250);
+    });
+    form.addEventListener('submit', (e) => {
+      const action = (e.submitter as HTMLButtonElement | null)?.value;
+      if (action === 'add' && !$<HTMLInputElement>('[data-person-id]')!.value && !$<HTMLInputElement>('[data-name-ml]')!.value.trim()) {
+        e.preventDefault();
+        toast('Type the name in Malayalam, or pick someone already on the site.', 'error');
+      }
+    });
+  }
+  initPeople();
+</script>

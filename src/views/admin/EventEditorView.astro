@@ -1,0 +1,208 @@
+---
+/**
+ * Admin: one event (approved wireframe "Events", the form and "After the event"). Malayalam title,
+ * time and venue are required; English is optional and goes live only when someone who may
+ * approve it ticks "English checked" (it can be drafted with Gemini first). District editors save
+ * drafts and send them for review. After the day, the news report is linked here. A plain form:
+ * the route (src/pages/admin/events/[id].astro) saves it and comes back here.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import StatusBadge from '~/components/admin/StatusBadge.astro';
+import GeminiKeyDialog from '~/components/admin/GeminiKeyDialog.astro';
+import { can, isState } from '~/lib/admin/roles';
+import { reportChoices, type EventDoc, type EventRow } from '~/lib/admin/events';
+import { districtBySlug } from '~/data/districts';
+import { sortedDistricts, isUpcoming } from '~/lib/content';
+import { formatDate } from '~/lib/i18n';
+
+interface Props {
+  event: EventRow | null;
+  /** What was typed, when saving failed */
+  values?: Partial<EventDoc>;
+  error?: string;
+  done?: string;
+}
+const { event, values, error, done } = Astro.props;
+const user = Astro.locals.user!;
+const editor = user.role === 'district_editor';
+const v: Partial<EventDoc> = { ...event, ...values };
+const scope = { district: event?.district ?? (isState(user) ? null : user.district) };
+const readOnly = !!event && editor && event.status !== 'draft';
+const canPublish = can.publish(user, scope);
+const over = !!event && !isUpcoming({ start: `${event.start}:00+05:30`, end: event.end ? `${event.end}:00+05:30` : undefined });
+const reports = event && event.status === 'published' && canPublish ? await reportChoices(user, event) : [];
+const doneText: Record<string, string> = {
+  publish: 'Published. It shows on the calendar, the home page and the district hub.',
+  update: 'Saved. The site shows the change now.',
+  draft: 'Draft saved. It isn’t on the site yet.',
+  submit: 'Sent to your district admin for review.',
+  archive: 'Archived: taken off the site.',
+  restore: 'Restored as a draft.',
+  send_back: 'Sent back to the district editor as a draft.',
+  report: 'Report link saved.',
+};
+const enState = !v.titleEn ? 'none' : event?.enSource === 'ai_draft' || !event?.enSource ? 'draft' : 'ok';
+---
+<AdminLayout title={event ? 'Edit event' : 'New event'} section="events">
+  <a href="/admin/events" class="btn btn-ghost btn-sm -ml-2"><Icon name="ArrowLeft" size={18} /> Events</a>
+  <div class="mt-2 flex flex-wrap items-center gap-3">
+    <h1 class="t-h1">{event ? 'Edit event' : 'New event'}</h1>
+    {event && <StatusBadge status={event.status} />}
+    {event?.sample && <span class="badge badge-neutral">Sample</span>}
+  </div>
+
+  {error && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent-ink" role="alert"><Icon name="CircleAlert" size={17} class="mt-0.5" /> {error}</p>}
+  {done && doneText[done] && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm" role="status"><Icon name="CircleCheck" size={17} class="mt-0.5" /> {doneText[done]}</p>}
+  {readOnly && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm"><Icon name="Lock" size={17} class="mt-0.5" /> {event!.status === 'in_review' ? 'Sent for review: your district admin publishes it or sends it back.' : 'Only your district admin can change it now.'}</p>}
+  {event?.status === 'in_review' && !editor && (
+    <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning"><Icon name="Send" size={17} class="mt-0.5" /> A district editor sent this for review. Check it, then publish it or send it back.</p>
+  )}
+
+  <form method="post" class="mt-6 grid max-w-4xl gap-x-8 gap-y-5 lg:grid-cols-[minmax(0,1fr)_280px]" data-event-form>
+    <fieldset class="min-w-0 space-y-5" disabled={readOnly}>
+      <label class="block"><span class="t-label">Title · Malayalam</span>
+        <input name="titleMl" lang="ml" class="field mt-1" value={v.titleMl ?? ''} required maxlength="200" placeholder="ജില്ലാതല പഠന ക്യാമ്പ്" />
+      </label>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label class="block"><span class="t-label">Starts</span>
+          <input name="start" type="datetime-local" class="field mt-1" value={v.start ?? ''} required />
+        </label>
+        <label class="block"><span class="t-label">Ends · optional</span>
+          <input name="end" type="datetime-local" class="field mt-1" value={v.end ?? ''} />
+          <span class="t-meta mt-1 block">For events over more than one day</span>
+        </label>
+      </div>
+      <label class="block"><span class="t-label">Venue · Malayalam</span>
+        <input name="venueMl" lang="ml" class="field mt-1" value={v.venueMl ?? ''} required maxlength="200" placeholder="ടൗൺ ഹാൾ, കോഴിക്കോട്" />
+      </label>
+      <label class="block"><span class="t-label">About it · Malayalam · optional</span>
+        <textarea name="descriptionMl" lang="ml" rows="4" class="field grow-field mt-1" maxlength="4000">{v.descriptionMl ?? ''}</textarea>
+      </label>
+
+      <details class="card p-4" open={!!v.titleEn}>
+        <summary class="flex cursor-pointer flex-wrap items-center gap-2 font-semibold">
+          English · optional
+          <span class:list={['badge', enState === 'draft' ? 'badge-warning' : 'badge-neutral']}>{enState === 'none' ? 'No English' : enState === 'draft' ? 'English to approve' : 'English live'}</span>
+        </summary>
+        <p class="t-meta mt-2">The English site shows the Malayalam until the English here is checked and approved.</p>
+        <div class="mt-3 space-y-4">
+          {!readOnly && <button type="button" class="btn btn-secondary btn-sm" data-draft-english><Icon name="Sparkles" size={17} /> <span data-draft-label>Draft English with AI</span></button>}
+          <label class="block"><span class="t-label">Title · English</span><input name="titleEn" lang="en" class="field mt-1" value={v.titleEn ?? ''} maxlength="200" data-en /></label>
+          <label class="block"><span class="t-label">Venue · English</span><input name="venueEn" lang="en" class="field mt-1" value={v.venueEn ?? ''} maxlength="200" data-en /></label>
+          <label class="block"><span class="t-label">About it · English</span><textarea name="descriptionEn" lang="en" rows="3" class="field grow-field mt-1" maxlength="4000" data-en>{v.descriptionEn ?? ''}</textarea></label>
+          {can.approveEnglish(user, scope) && (
+            <label class="flex items-start gap-2 text-sm"><input type="checkbox" name="approveEnglish" class="mt-1" checked={enState === 'ok'} data-approve /> <span>English checked: show it on the English site<span class="t-meta block">Changing the English later unticks this.</span></span></label>
+          )}
+        </div>
+      </details>
+    </fieldset>
+
+    <fieldset class="space-y-5" disabled={readOnly}>
+      <div>
+        <span class="t-label">District</span>
+        {isState(user) ? (
+          <select name="district" class="field mt-1" aria-label="District">
+            <option value="">State level</option>
+            {sortedDistricts().map((d) => <option value={d.slug} selected={v.district === d.slug}>{d.name.en}</option>)}
+          </select>
+        ) : (
+          <p class="field mt-1 flex items-center bg-bg-subtle text-ink-2">{districtBySlug[user.district ?? '']?.name.en} (your district)</p>
+        )}
+      </div>
+      <label class="block"><span class="t-label">Map link · optional</span>
+        <input name="mapUrl" type="url" class="field mt-1" value={v.mapUrl ?? ''} placeholder="Paste a Google Maps link" />
+      </label>
+      <label class="block"><span class="t-label">Registration link · optional</span>
+        <input name="registrationUrl" type="url" class="field mt-1" value={v.registrationUrl ?? ''} placeholder="If members must register" />
+      </label>
+
+      {!readOnly && (
+        <div class="flex flex-wrap gap-2 border-t border-line pt-4">
+          {canPublish
+            ? <button name="action" value="publish" class="btn btn-primary"><Icon name="Check" size={18} /> {event?.status === 'published' ? 'Save' : 'Publish event'}</button>
+            : <button name="action" value="submit" class="btn btn-primary"><Icon name="Send" size={18} /> Send for review</button>}
+          {event?.status !== 'published' && <button name="action" value="draft" class="btn btn-secondary" formnovalidate>Save draft</button>}
+        </div>
+      )}
+      {event && !readOnly && can.archive(user, scope) && (
+        <div class="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+          {event.status === 'in_review' && <button name="action" value="send_back" class="link" formnovalidate>Send back</button>}
+          {event.status !== 'archived'
+            ? <button name="action" value="archive" class="link !text-accent-ink" formnovalidate data-confirm="Archive this event? It comes off the site, and can be restored later.">Archive</button>
+            : <button name="action" value="restore" class="link" formnovalidate>Restore as a draft</button>}
+          {event.status === 'published' && <a href={`/events#${event.slug}`} class="link" target="_blank" rel="noopener">View on site</a>}
+        </div>
+      )}
+      {event && <p class="t-meta">Changed {formatDate(`${event.updatedAt.replace(' ', 'T')}Z`, 'en', 'short')}{event.updatedBy ? ` by ${event.updatedBy}` : ''}</p>}
+    </fieldset>
+  </form>
+
+  {event && event.status === 'published' && canPublish && (
+    <section class="mt-10 max-w-4xl" aria-labelledby="after">
+      <h2 id="after" class="t-h2 border-b border-line pb-2">After the event: link the report</h2>
+      <p class="t-meta mt-2">{over ? 'Pick the news post about it, so the Events page shows “Report” beside it.' : 'Once the event is over, pick the news post about it here.'}</p>
+      <form method="post" class="mt-3 flex flex-wrap items-center gap-2">
+        <select name="reportPostId" class="field min-w-0 flex-1 sm:max-w-xl" aria-label="Report post" lang="ml">
+          <option value="">No report yet</option>
+          {reports.map((r) => <option value={r.id} selected={r.id === event.reportPostId}>{r.title} · {formatDate(r.date, 'en', 'short')}{r.linked ? ' · linked to this event' : ''}</option>)}
+        </select>
+        <button name="action" value="report" class="btn btn-secondary">Save link</button>
+        <a href={`/admin/news/new?event=${event.slug}`} class="btn btn-ghost">Write the report</a>
+      </form>
+    </section>
+  )}
+  <GeminiKeyDialog />
+</AdminLayout>
+
+<script>
+  import { askKey, draftEnglish, forgetKey, TranslateError } from '~/lib/admin/translate';
+  import { toast } from '~/lib/admin/client';
+  import type { RichDoc } from '~/lib/richtext';
+
+  function initEventForm() {
+    const form = document.querySelector<HTMLFormElement>('[data-event-form]');
+    if (!form || form.dataset.ready) return;
+    form.dataset.ready = '1';
+    const field = (name: string) => form.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement;
+    // Any change to the English means it needs checking again
+    form.querySelectorAll('[data-en]').forEach((el) => el.addEventListener('input', () => {
+      const box = form.querySelector<HTMLInputElement>('[data-approve]');
+      if (box) box.checked = false;
+    }));
+    form.addEventListener('submit', (e) => {
+      const msg = (e.submitter as HTMLElement | null)?.dataset.confirm;
+      if (msg && !window.confirm(msg)) e.preventDefault();
+    });
+    form.querySelector('[data-draft-english]')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      if (!field('titleMl').value.trim()) return toast('Write the Malayalam title first.', 'error');
+      const key = await askKey();
+      if (!key) return;
+      const label = btn.querySelector('[data-draft-label]')!;
+      btn.disabled = true;
+      label.textContent = 'Drafting…';
+      try {
+        // The venue goes as the "summary" and the description as the text, so one call does all three
+        const paras = field('descriptionMl').value.split(/\n+/).filter((s) => s.trim());
+        const body: RichDoc = { type: 'doc', content: paras.map((p) => ({ type: 'paragraph', content: [{ type: 'text', text: p }] })) };
+        const out = await draftEnglish({ title: field('titleMl').value, summary: field('venueMl').value, body }, key);
+        field('titleEn').value = out.title;
+        field('venueEn').value = out.summary;
+        const html = new DOMParser().parseFromString(out.html, 'text/html');
+        field('descriptionEn').value = [...html.body.querySelectorAll('p, li, h2, h3')].map((n) => n.textContent?.trim()).filter(Boolean).join('\n\n');
+        const box = form.querySelector<HTMLInputElement>('[data-approve]');
+        if (box) box.checked = false;
+        (form.querySelector('details') as HTMLDetailsElement).open = true;
+        toast('English draft ready. Check it, tick “English checked”, then save.');
+      } catch (err) {
+        if (err instanceof TranslateError && err.badKey) forgetKey();
+        toast(err instanceof Error ? err.message : 'The English draft failed.', 'error');
+      } finally {
+        btn.disabled = false;
+        label.textContent = 'Draft English with AI';
+      }
+    });
+  }
+  initEventForm();
+</script>

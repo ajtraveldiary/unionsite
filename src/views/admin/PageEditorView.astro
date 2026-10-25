@@ -1,0 +1,89 @@
+---
+/**
+ * Admin: a page (About pages and district histories; approved wireframe "Pages & documents": "a
+ * page opens in the same editor as a news post"). Malayalam title, summary and text, then the
+ * English beside it for review, drafted with Gemini if wanted. Save, Publish, Approve English.
+ * The script is src/lib/admin/page-editor-client.ts.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import GeminiKeyDialog from '~/components/admin/GeminiKeyDialog.astro';
+import type { PageRow } from '~/lib/admin/pages';
+import { isState } from '~/lib/admin/roles';
+import { districtBySlug } from '~/data/districts';
+import { formatDate } from '~/lib/i18n';
+
+interface Props { page: PageRow }
+const { page: p } = Astro.props;
+const user = Astro.locals.user!;
+const editor = user.role === 'district_editor';
+const readOnly = editor && p.status === 'published';
+const boot = JSON.stringify({ id: p.id, bodyMl: p.bodyMl, bodyEn: p.bodyEn, enBasedOn: p.enBasedOn, readOnly }).replace(/</g, '\\u003c');
+const en = !p.titleEn ? 'none' : p.enSource === 'ai_draft' ? 'draft' : 'ok';
+const where = p.template === 'district_history' ? `${districtBySlug[p.district ?? '']?.name.en} district page` : p.path;
+const toolbar = [
+  ['bold', 'Bold', 'Bold'], ['italic', 'Italic', 'Italic'], ['sep'], ['h2', 'Heading2', 'Subheading'], ['h3', 'Heading3', 'Smaller subheading'], ['sep'],
+  ['bulletList', 'List', 'Bulleted list'], ['orderedList', 'ListOrdered', 'Numbered list'], ['blockquote', 'Quote', 'Quote'], ['sep'],
+  ['link', 'Link', 'Link'], ['image', 'ImagePlus', 'Photo'], ['sep'], ['undo', 'Undo2', 'Undo'], ['redo', 'Redo2', 'Redo'],
+] as const;
+---
+<AdminLayout title="Edit page" section={isState(user) ? 'pages' : 'districts'}>
+  <script type="application/json" id="page-boot" set:html={boot} />
+  <div data-page-editor>
+    <a href={isState(user) ? '/admin/pages' : `/admin/districts/${p.district}`} class="btn btn-ghost btn-sm -ml-2"><Icon name="ArrowLeft" size={18} /> {isState(user) ? 'Pages' : 'District'}</a>
+    <div class="mt-2 flex flex-wrap items-center gap-3">
+      <h1 class="t-h1">Edit page</h1>
+      <span class:list={['badge', p.status === 'published' ? 'badge-success' : 'badge-neutral']}>{p.status === 'published' ? 'Published' : 'Draft'}</span>
+      <span class="t-meta">{where} · changed {formatDate(`${p.updatedAt.replace(' ', 'T')}Z`, 'en', 'short')}{p.updatedBy ? ` by ${p.updatedBy}` : ''}</span>
+    </div>
+    {readOnly && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm"><Icon name="Lock" size={17} class="mt-0.5" /> Only your district admin changes it now it is on the site.</p>}
+    {p.template !== 'district_history' && <p class="t-meta mt-2">The public page for this address comes with the About pages (Phase 3); until then it is kept here.</p>}
+
+    <div class="mt-6 grid gap-8 xl:grid-cols-2">
+      <section aria-labelledby="ml-head" class="min-w-0 space-y-4">
+        <h2 id="ml-head" class="t-h2">Malayalam</h2>
+        <label class="block"><span class="t-label">Title</span><input name="titleMl" lang="ml" class="field mt-1" value={p.titleMl} maxlength="200" disabled={readOnly} /></label>
+        <label class="block"><span class="t-label">Summary · optional</span><textarea name="summaryMl" lang="ml" rows="2" class="field grow-field mt-1" maxlength="600" disabled={readOnly}>{p.summaryMl}</textarea></label>
+        <div>
+          <span class="t-label">Text</span>
+          <div class="rich-box mt-1">
+            {!readOnly && <div class="rich-toolbar" role="toolbar" aria-label="Formatting" data-toolbar="ml">{toolbar.map(([cmd, icon, label]) => cmd === 'sep' ? <span class="sep" aria-hidden="true"></span> : <button type="button" data-cmd={cmd} aria-label={label} title={label} aria-pressed="false"><Icon name={icon!} size={18} /></button>)}</div>}
+            <div data-rich="ml"></div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="en-head" class="min-w-0 space-y-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <h2 id="en-head" class="t-h2">English</h2>
+          <span class:list={['badge', en === 'draft' ? 'badge-warning' : 'badge-neutral']}>{en === 'none' ? 'No English' : en === 'draft' ? 'English to approve' : 'English live'}</span>
+          {!readOnly && <button type="button" class="btn btn-secondary btn-sm ml-auto" data-draft-english><Icon name="Sparkles" size={17} /> Draft English with AI</button>}
+        </div>
+        <label class="block"><span class="t-label">Title</span><input name="titleEn" lang="en" class="field mt-1" value={p.titleEn} maxlength="200" disabled={readOnly} /></label>
+        <label class="block"><span class="t-label">Summary · optional</span><textarea name="summaryEn" lang="en" rows="2" class="field grow-field mt-1" maxlength="600" disabled={readOnly}>{p.summaryEn}</textarea></label>
+        <div>
+          <span class="t-label">Text</span>
+          <div class="rich-box mt-1">
+            {!readOnly && <div class="rich-toolbar" role="toolbar" aria-label="Formatting" data-toolbar="en">{toolbar.map(([cmd, icon, label]) => cmd === 'sep' ? <span class="sep" aria-hidden="true"></span> : <button type="button" data-cmd={cmd} aria-label={label} title={label} aria-pressed="false"><Icon name={icon!} size={18} /></button>)}</div>}
+            <div data-rich="en"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    {!readOnly && (
+      <div class="sticky bottom-20 z-10 mt-6 flex flex-wrap gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-3 shadow-float lg:bottom-4">
+        {!editor && <button type="button" class="btn btn-primary" data-action="publish"><Icon name="Check" size={18} /> {p.status === 'published' ? 'Update' : 'Publish'}</button>}
+        {(p.status !== 'published' || editor) && <button type="button" class="btn btn-secondary" data-action="save">Save draft</button>}
+        {!editor && <button type="button" class="btn btn-secondary" data-action="approve_english">Approve English</button>}
+        {!editor && p.status === 'published' && <button type="button" class="btn btn-ghost ml-auto" data-action="unpublish">Unpublish</button>}
+      </div>
+    )}
+  </div>
+  <GeminiKeyDialog />
+</AdminLayout>
+
+<script>
+  import { initPageEditor } from '~/lib/admin/page-editor-client';
+  initPageEditor();
+</script>

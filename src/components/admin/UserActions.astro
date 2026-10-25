@@ -1,0 +1,12 @@
+---
+/** A user's buttons on the Users screen: Change (role and district), and Switch off or on */
+interface Props { id: number; active: boolean }
+const { id, active } = Astro.props;
+---
+<form method="post" class="inline-flex gap-2">
+  <input type="hidden" name="id" value={id} />
+  <a href={`/admin/users?edit=${id}#invite`} class="btn btn-secondary btn-sm">Change</a>
+  {active
+    ? <button name="action" value="off" class="btn btn-ghost btn-sm !text-accent-ink" data-confirm="Switch this person off? Their access ends at once; their past work stays.">Switch off</button>
+    : <button name="action" value="on" class="btn btn-secondary btn-sm">Switch on</button>}
+</form>

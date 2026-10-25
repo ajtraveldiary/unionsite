@@ -1,0 +1,229 @@
+---
+/**
+ * Admin: Media (approved wireframe "Media"), three tabs. Library: every upload once, newest first,
+ * with where it's used; pick one to describe it, replace its file everywhere it appears, or (state
+ * roles, when nothing uses it) delete it. "Missing description" lists photos screen readers can't
+ * describe yet. Albums: photo albums, by district for district roles. Videos: from the union's
+ * YouTube channel (synced every hour, or now) or added by link; hidden ones stay off the site.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import { listLibrary, mediaUsage } from '~/lib/admin/media';
+import { listAlbums, listVideos } from '~/lib/admin/albums';
+import { isState } from '~/lib/admin/roles';
+import { districtBySlug } from '~/data/districts';
+import { sortedDistricts } from '~/lib/content';
+import { formatDate, formatKb } from '~/lib/i18n';
+import { getDb } from '~/db/client';
+import { media } from '~/db/schema';
+import { eq } from 'drizzle-orm';
+
+interface Props { error?: string; done?: string }
+const { error, done } = Astro.props;
+const user = Astro.locals.user!;
+const state = isState(user);
+const p = Astro.url.searchParams;
+const tab = p.get('tab') === 'albums' || p.get('tab') === 'videos' ? p.get('tab')! : 'library';
+const kind = p.get('kind') === 'image' || p.get('kind') === 'pdf' ? (p.get('kind') as 'image' | 'pdf') : undefined;
+const missing = p.get('missing') === '1';
+const q = p.get('q')?.slice(0, 100) ?? '';
+const before = Number(p.get('before')) || undefined;
+const items = tab === 'library' ? await listLibrary({ q, kind, missing, before }) : [];
+const selectedId = Number(p.get('item')) || null;
+const selected = selectedId ? (items.find((i) => i.id === selectedId) ?? (await listLibrary({ before: selectedId + 1 }))[0]) : null;
+const sel = selected && selected.id === selectedId ? selected : null;
+const usedIn = sel ? await mediaUsage(sel.id) : [];
+const uploader = sel ? (await (await getDb()).select({ by: media.uploadedBy }).from(media).where(eq(media.id, sel.id)).get())?.by : null;
+const albums = tab === 'albums' ? await listAlbums(user) : [];
+const vids = tab === 'videos' ? await listVideos(user) : [];
+const link = (change: Record<string, string | undefined>) => {
+  const u = new URLSearchParams(Astro.url.search);
+  u.delete('done');
+  u.delete('before');
+  for (const [k, v] of Object.entries(change)) v ? u.set(k, v) : u.delete(k);
+  return `/admin/media?${u}`;
+};
+const doneText: Record<string, string> = {
+  alt: 'Description saved.', replaced: 'File replaced everywhere it is used.', deleted: 'File deleted.', video: 'Video added.', hidden: 'Video hidden from the site.',
+  shown: 'Video shown on the site.', sync: 'Channel synced.', title: 'Title saved.',
+};
+const synced = p.get('n');
+const tabs = [['library', 'Library'], ['albums', 'Albums'], ['videos', 'Videos']] as const;
+---
+<AdminLayout title="Media" section="media">
+  <h1 class="t-h1">Media</h1>
+  {error && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent-ink" role="alert"><Icon name="CircleAlert" size={17} class="mt-0.5" /> {error}</p>}
+  {done && doneText[done] && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm" role="status"><Icon name="CircleCheck" size={17} class="mt-0.5" /> {doneText[done]}{done === 'sync' && synced !== null ? ` ${synced} new ${synced === '1' ? 'video' : 'videos'}.` : ''}</p>}
+
+  <nav class="mt-5 flex gap-1 border-b border-line" aria-label="Media sections">
+    {tabs.map(([id, label]) => <a href={`/admin/media?tab=${id}`} aria-current={tab === id ? 'page' : undefined} class:list={['-mb-px border-b-2 px-3 py-2.5', tab === id ? 'border-ink font-semibold' : 'border-transparent text-ink-2']}>{label}</a>)}
+  </nav>
+
+  {tab === 'library' && (
+    <section class="mt-5" aria-label="Library">
+      <form method="get" class="flex flex-wrap items-center gap-2">
+        <input type="hidden" name="tab" value="library" />
+        {kind && <input type="hidden" name="kind" value={kind} />}
+        {missing && <input type="hidden" name="missing" value="1" />}
+        <div class="relative min-w-0 flex-1 sm:max-w-sm">
+          <Icon name="Search" size={18} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
+          <input type="search" name="q" value={q} class="field pl-10" placeholder="Search descriptions" aria-label="Search media by description" />
+        </div>
+        <div class="flex flex-wrap gap-2" role="group" aria-label="Kind">
+          <a href={link({ kind: undefined, missing: undefined, item: undefined })} class="chip" aria-current={!kind && !missing ? 'true' : undefined}>All</a>
+          <a href={link({ kind: 'image', missing: undefined, item: undefined })} class="chip" aria-current={kind === 'image' && !missing ? 'true' : undefined}>Photos</a>
+          <a href={link({ kind: 'pdf', missing: undefined, item: undefined })} class="chip" aria-current={kind === 'pdf' ? 'true' : undefined}>PDFs</a>
+          <a href={link({ kind: undefined, missing: '1', item: undefined })} class="chip" aria-current={missing ? 'true' : undefined}>Missing description</a>
+        </div>
+      </form>
+
+      <div class="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div>
+          <ul class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+            {items.map((m) => (
+              <li>
+                <a href={link({ item: String(m.id) }) + '#selected'} class:list={['card card-hover block overflow-hidden', m.id === sel?.id && '!border-ink']}>
+                  {m.kind === 'image'
+                    ? <img src={m.thumb} alt="" loading="lazy" class="aspect-[4/3] w-full bg-bg-subtle object-cover" />
+                    : <span class="grid aspect-[4/3] w-full place-items-center bg-bg-subtle text-sm font-bold text-ink-3">PDF</span>}
+                  <span class="block px-2 py-1.5 text-xs text-ink-2">
+                    <span class="block truncate" lang="ml">{m.alt || (m.kind === 'pdf' ? `File ${m.id}${m.bytes ? ` · ${formatKb(Math.round(m.bytes / 1024))}` : ''}` : 'No description')}</span>
+                    <span class="text-ink-3">{m.uses ? `Used in ${m.uses}` : 'Not used'}{m.kind === 'image' && !m.alt ? ' · no description' : ''}</span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          {items.length === 0 && <p class="t-meta py-6 text-center">Nothing here.</p>}
+          {items.length === 40 && <div class="mt-4 text-center"><a href={`${link({ item: undefined })}&before=${items[items.length - 1].id}`} class="btn btn-secondary btn-sm">Older</a></div>}
+        </div>
+
+        <aside id="selected" class="scroll-mt-20" aria-label="Selected file">
+          {sel ? (
+            <div class="card space-y-3 p-4 lg:sticky lg:top-6">
+              {sel.kind === 'image' ? <img src={sel.thumb} alt="" class="aspect-[4/3] w-full rounded-[8px] bg-bg-subtle object-cover" /> : <a href={sel.url} target="_blank" rel="noopener" class="grid aspect-[4/3] w-full place-items-center rounded-[8px] bg-bg-subtle font-bold text-ink-3">Open the PDF</a>}
+              <p class="t-meta">{sel.kind === 'image' ? `${sel.width ?? '?'} × ${sel.height ?? '?'} px` : 'PDF'}{sel.bytes ? ` · ${formatKb(Math.round(sel.bytes / 1024))}` : ''} · added {formatDate(`${sel.createdAt.replace(' ', 'T')}Z`, 'en', 'short')}{sel.uploaded ? '' : ' · still on the old site'}</p>
+              {sel.kind === 'image' && (
+                <form method="post" class="space-y-2">
+                  <input type="hidden" name="id" value={sel.id} />
+                  <label class="block"><span class="t-label">Description · for screen readers</span><input name="alt" lang="ml" class="field mt-1" value={sel.alt} maxlength="300" placeholder="What the photo shows" /></label>
+                  <button name="action" value="alt" class="btn btn-secondary btn-sm">Save description</button>
+                </form>
+              )}
+              <div>
+                <p class="t-label">Used in</p>
+                {usedIn.length ? <ul class="mt-1 space-y-1 text-sm">{usedIn.map((u) => <li><a href={u.href} class="link" lang="ml">{u.label}</a></li>)}</ul> : <p class="t-meta">Nothing on the site uses it{sel.kind === 'image' ? ' (photos inside article text are not counted)' : ''}.</p>}
+              </div>
+              <div class="flex flex-wrap gap-2 border-t border-line pt-3" data-file-actions data-id={sel.id} data-kind={sel.kind}>
+                {(state || uploader === user.id) && sel.kind !== 'other' && <label class="btn btn-secondary btn-sm"><Icon name="RefreshCw" size={16} /> Replace file<input type="file" accept={sel.kind === 'pdf' ? 'application/pdf,.pdf' : 'image/*'} class="sr-only" data-replace /></label>}
+                {state && <button type="button" class="btn btn-ghost btn-sm !text-accent-ink" data-delete disabled={sel.uses > 0} title={sel.uses ? 'Still used: replace it instead' : undefined}>Delete</button>}
+                <p class="t-meta w-full" data-file-state aria-live="polite">{sel.uses > 0 && state ? 'A file in use can’t be deleted; replacing it updates every page that uses it.' : ''}</p>
+              </div>
+            </div>
+          ) : <p class="t-meta">Pick a file to describe it, see where it is used, or replace it.</p>}
+        </aside>
+      </div>
+    </section>
+  )}
+
+  {tab === 'albums' && (
+    <section class="mt-5" aria-label="Albums">
+      <ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        {albums.map((a) => (
+          <li class="relative">
+            {a.cover ? <img src={a.cover} alt="" loading="lazy" class="aspect-[4/3] w-full rounded-[10px] bg-bg-subtle object-cover" /> : <span class="grid aspect-[4/3] w-full place-items-center rounded-[10px] bg-bg-subtle text-ink-3"><Icon name="Images" size={28} /></span>}
+            <a href={`/admin/media/albums/${a.id}`} lang="ml" class="stretched clamp-2 mt-2 block font-semibold leading-snug">{a.titleMl}</a>
+            <p class="t-meta">{a.photos} photos · {a.district ? districtBySlug[a.district]?.name.en : 'State'} · {a.status === 'published' ? 'Published' : 'Draft'}</p>
+          </li>
+        ))}
+      </ul>
+      {albums.length === 0 && <p class="t-meta">No albums yet.</p>}
+      <form method="post" class="card mt-6 grid gap-3 p-4 sm:grid-cols-2">
+        <p class="font-semibold sm:col-span-2">New album</p>
+        <label class="block"><span class="t-label">Title · Malayalam</span><input name="titleMl" lang="ml" class="field mt-1" required maxlength="200" /></label>
+        <label class="block"><span class="t-label">Title · English · optional</span><input name="titleEn" lang="en" class="field mt-1" maxlength="200" /></label>
+        {state ? (
+          <label class="block"><span class="t-label">District</span><select name="district" class="field mt-1"><option value="">State level</option>{sortedDistricts().map((d) => <option value={d.slug}>{d.name.en}</option>)}</select></label>
+        ) : <p class="field mt-6 flex items-center bg-bg-subtle text-ink-2">{districtBySlug[user.district ?? '']?.name.en} (your district)</p>}
+        <label class="block"><span class="t-label">Date</span><input name="eventDate" type="date" class="field mt-1" /></label>
+        <div class="sm:col-span-2"><button name="action" value="album_create" class="btn btn-primary"><Icon name="Plus" size={17} /> Create, then add photos</button></div>
+      </form>
+    </section>
+  )}
+
+  {tab === 'videos' && (
+    <section class="mt-5" aria-label="Videos">
+      <div class="flex flex-wrap items-center gap-3">
+        {state && <form method="post"><button name="action" value="sync" class="btn btn-secondary btn-sm"><Icon name="RefreshCw" size={16} /> Sync the channel now</button></form>}
+        <p class="t-meta">New videos on the union’s YouTube channel appear here by themselves, every hour.</p>
+      </div>
+      <form method="post" class="card mt-4 grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+        <label class="block"><span class="t-label">YouTube link</span><input name="link" class="field mt-1" placeholder="Paste a YouTube link" required /></label>
+        <label class="block"><span class="t-label">Title · optional</span><input name="titleMl" lang="ml" class="field mt-1" placeholder="Taken from YouTube if empty" maxlength="300" /></label>
+        {state && <input type="hidden" name="district" value="" />}
+        <button name="action" value="video_add" class="btn btn-primary">Add</button>
+      </form>
+      <ul class="mt-4 divide-y divide-line border-y border-line">
+        {vids.map((v) => (
+          <li class="flex flex-wrap items-center gap-3 py-3">
+            <img src={`https://i.ytimg.com/vi/${v.youtubeId}/mqdefault.jpg`} alt="" loading="lazy" class:list={['aspect-video w-32 shrink-0 rounded-[8px] bg-bg-subtle object-cover', v.hidden && 'opacity-50']} />
+            <div class="min-w-0 flex-1">
+              <p lang="ml" class="clamp-2 font-semibold leading-snug">{v.titleMl}</p>
+              <p class="t-meta">{formatDate(v.publishedAt, 'en', 'short')} · {v.source === 'channel' ? 'from the channel' : `added by link${v.by ? ` by ${v.by}` : ''}`}{v.district ? ` · ${districtBySlug[v.district]?.name.en}` : ''} · {v.hidden ? 'hidden' : 'shown on the site'}</p>
+            </div>
+            <form method="post" class="flex gap-2">
+              <input type="hidden" name="id" value={v.id} />
+              <a href={`https://www.youtube.com/watch?v=${v.youtubeId}`} target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Watch</a>
+              {v.hidden ? <button name="action" value="video_show" class="btn btn-secondary btn-sm">Show</button> : <button name="action" value="video_hide" class="btn btn-secondary btn-sm"><Icon name="EyeOff" size={16} /> Hide</button>}
+            </form>
+          </li>
+        ))}
+      </ul>
+      {vids.length === 0 && <p class="t-meta py-3">No videos yet.</p>}
+    </section>
+  )}
+</AdminLayout>
+
+<script>
+  import { toast } from '~/lib/admin/client';
+  import { prepareImage } from '~/lib/admin/image-prep';
+  import { sha256 } from '~/lib/admin/pdf-read';
+
+  function initMedia() {
+    const box = document.querySelector<HTMLElement>('[data-file-actions]');
+    if (!box || box.dataset.ready) return;
+    box.dataset.ready = '1';
+    const id = box.dataset.id!;
+    const state = box.querySelector<HTMLElement>('[data-file-state]')!;
+    box.querySelector<HTMLInputElement>('[data-replace]')?.addEventListener('change', async (e) => {
+      const input = e.currentTarget as HTMLInputElement;
+      const file = input.files?.[0];
+      input.value = '';
+      if (!file || !window.confirm('Replace this file everywhere it is used?')) return;
+      try {
+        state.textContent = 'Preparing and uploading…';
+        let form: FormData;
+        if (box.dataset.kind === 'pdf') {
+          form = new FormData();
+          form.set('file', file);
+          form.set('sha256', await sha256(file));
+        } else form = await prepareImage(file, '');
+        const res = await fetch(`/api/admin/media?replace=${id}`, { method: 'POST', body: form, credentials: 'same-origin' });
+        const out = (await res.json().catch(() => ({}))) as { error?: string };
+        if (!res.ok) throw new Error(out.error ?? 'The upload failed.');
+        location.assign(`${location.pathname}${location.search.replace(/&?done=[^&]*/, '')}&done=replaced`);
+      } catch (err) {
+        state.textContent = '';
+        toast(err instanceof Error ? err.message : 'The file could not be replaced.', 'error');
+      }
+    });
+    box.querySelector<HTMLButtonElement>('[data-delete]')?.addEventListener('click', async () => {
+      if (!window.confirm('Delete this file for good?')) return;
+      const res = await fetch(`/api/admin/media?id=${id}`, { method: 'DELETE', credentials: 'same-origin' });
+      const out = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) return toast(out.error ?? 'Not deleted.', 'error');
+      location.assign('/admin/media?tab=library&done=deleted');
+    });
+  }
+  initMedia();
+</script>

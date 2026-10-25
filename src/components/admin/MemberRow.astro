@@ -1,0 +1,31 @@
+---
+/** One person in a committee list (People & committees): photo, names, role, and its buttons */
+import Icon from '~/components/ui/Icon.astro';
+import { roleLabel, type Member } from '~/lib/admin/people';
+
+interface Props { m: Member; ck: string; canApprove: boolean; first: boolean; last: boolean; next?: boolean }
+const { m, ck, canApprove, first, last, next = false } = Astro.props;
+const editor = Astro.locals.user!.role === 'district_editor';
+// District editors change only drafts; what's on the site is their district admin's
+const locked = editor && m.status !== 'draft';
+---
+<li class="flex flex-wrap items-center gap-3 py-3">
+  {m.photo
+    ? <img src={m.photo} alt="" class="size-11 shrink-0 rounded-full bg-bg-subtle object-cover" loading="lazy" />
+    : <span class="grid size-11 shrink-0 place-items-center rounded-full bg-bg-subtle text-ink-3" aria-hidden="true"><Icon name="UserRound" size={20} /></span>}
+  <div class="min-w-0 flex-1">
+    <p lang="ml" class="font-semibold leading-snug">{m.nameMl}</p>
+    <p class="t-meta">{m.nameEn || 'No English name yet'} · {roleLabel(m.role)}{m.phone ? ' · phone shown' : ''}</p>
+  </div>
+  {!locked && (
+    <form method="post" class="flex flex-wrap items-center gap-1">
+      <input type="hidden" name="c" value={ck} />
+      <input type="hidden" name="position" value={m.positionId} />
+      <button name="action" value="move_up" class="btn btn-ghost btn-icon btn-sm" aria-label={`Move ${m.nameEn || m.nameMl} up`} disabled={first}><Icon name="ArrowUp" size={17} /></button>
+      <button name="action" value="move_down" class="btn btn-ghost btn-icon btn-sm" aria-label={`Move ${m.nameEn || m.nameMl} down`} disabled={last}><Icon name="ArrowDown" size={17} /></button>
+      <a href={`?c=${ck}&edit=${m.positionId}#person`} class="btn btn-secondary btn-sm">Edit</a>
+      {m.status === 'draft' && !next && canApprove && <button name="action" value="publish" class="btn btn-secondary btn-sm">Approve</button>}
+      <button name="action" value="remove" class="btn btn-ghost btn-sm !text-accent-ink" data-confirm={m.status === 'draft' ? `Remove ${m.nameMl} from this draft?` : `Take ${m.nameMl} off the committee? They stay in its history.`}>Remove</button>
+    </form>
+  )}
+</li>

@@ -1,0 +1,40 @@
+---
+/**
+ * The Home & banner screen's preview: the banner exactly as the home page draws it (the site's own
+ * Banner component), for a chosen post or event and headline, before it is published. Shown in a
+ * frame at phone or laptop width. ?kind=post&post=ID or ?kind=event&event=SLUG, &ml=&en=&lang=
+ */
+import '~/styles/app.css';
+import Banner from '~/components/ds/Banner.astro';
+import { eventBySlug, postById, type ActiveBanner } from '~/lib/content';
+
+export const prerender = false;
+const p = Astro.url.searchParams;
+const lang = p.get('lang') === 'en' ? 'en' : 'ml';
+const ml = p.get('ml')?.trim().slice(0, 80);
+const en = p.get('en')?.trim().slice(0, 80);
+const headline = ml ? { ml, ...(en && { en }) } : undefined;
+let banner: ActiveBanner | null = null;
+if (p.get('kind') === 'event') {
+  const event = await eventBySlug(p.get('event') ?? '');
+  if (event) banner = { kind: 'event', event, headline };
+} else {
+  const post = await postById(Number(p.get('post')));
+  if (post) banner = { kind: 'post', post, headline };
+}
+---
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Banner preview</title>
+    <script is:inline>
+      try { document.documentElement.dataset.theme = localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); } catch {}
+    </script>
+  </head>
+  <body class="bg-bg p-4">
+    {banner ? <Banner banner={banner} lang={lang} /> : <p lang="en" class="text-ink-2">Pick a published post or event to preview it.</p>}
+  </body>
+</html>

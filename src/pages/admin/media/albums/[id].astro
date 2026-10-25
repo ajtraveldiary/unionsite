@@ -1,0 +1,30 @@
+---
+/** One album in the admin. Each form posts an action here (src/lib/admin/albums.ts checks every rule). */
+import AlbumEditorView from '~/views/admin/AlbumEditorView.astro';
+import { loadAlbum, saveAlbum, updatePhoto } from '~/lib/admin/albums';
+import { AdminError } from '~/lib/admin/publish';
+
+export const prerender = false;
+const user = Astro.locals.user!;
+const id = Number(Astro.params.id);
+let a = Number.isInteger(id) && id > 0 ? await loadAlbum(user, id) : null;
+if (!a) return new Response(null, { status: 404 });
+let error: string | undefined;
+if (Astro.request.method === 'POST') {
+  const f = Object.fromEntries([...(await Astro.request.formData()).entries()].map(([k, v]) => [k, String(v)]));
+  try {
+    if (f.action?.startsWith('photo_')) {
+      await updatePhoto(user, id, Number(f.mediaId), { captionMl: f.captionMl, action: f.action.slice(6) === 'caption' ? undefined : f.action.slice(6) });
+      return Astro.redirect(`/admin/media/albums/${id}?done=photo`);
+    }
+    const status = f.action === 'publish' ? 'published' : f.action === 'unpublish' ? 'draft' : f.action === 'archive' ? 'archived' : undefined;
+    await saveAlbum(user, id, f, status);
+    return Astro.redirect(`/admin/media/albums/${id}?done=${f.action}`);
+  } catch (err) {
+    if (!(err instanceof AdminError)) throw err;
+    error = err.message;
+    a = await loadAlbum(user, id);
+  }
+}
+---
+<AlbumEditorView a={a!} error={error} done={Astro.url.searchParams.get('done') ?? undefined} />

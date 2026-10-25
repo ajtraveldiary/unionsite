@@ -1,0 +1,98 @@
+---
+/**
+ * Admin: the Inbox (plan, section 10; approved wireframe "Inbox"): messages from the Contact page.
+ * State roles see every message, a district admin the ones whose sender chose their district.
+ * Pick one to read it, assign it with a note for the team, reply from your own mail app (the site
+ * sends nothing itself) and mark it done. Messages are deleted after the months set in Settings.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import { assignees, inboxCounts, listMessages, loadMessage, mayRead, type InboxView } from '~/lib/admin/inbox';
+import { inboxSettings } from '~/lib/admin/settings';
+import { districtBySlug } from '~/data/districts';
+import { ago } from '~/lib/admin/client';
+
+interface Props { error?: string; done?: string }
+const { error, done } = Astro.props;
+const user = Astro.locals.user!;
+const allowed = mayRead(user);
+const p = Astro.url.searchParams;
+const view: InboxView = (['new', 'mine', 'done', 'all'] as const).find((v) => v === p.get('view')) ?? 'new';
+const [list, counts, keep] = allowed ? await Promise.all([listMessages(user, view), inboxCounts(user), inboxSettings()]) : [[], { open: 0, mine: 0 }, { keepMonths: 12 }];
+const m = allowed && p.get('m') ? await loadMessage(user, Number(p.get('m'))) : null;
+const people = m ? await assignees(m.district) : [];
+const district = (slug: string | null) => (slug ? districtBySlug[slug]?.name.en : 'State office');
+const reply = m ? `mailto:${encodeURIComponent(m.email)}?subject=${encodeURIComponent(`Re: ${m.topic} (Kerala NGO Union)`)}&body=${encodeURIComponent(`\n\n—\n${m.name} wrote on ${m.createdAt.slice(0, 10)}:\n${m.message.split('\n').map((l) => `> ${l}`).join('\n')}`)}` : '';
+const doneText: Record<string, string> = { assign: 'Saved.', done: 'Marked done.', reopen: 'Opened again.' };
+const link = (change: Record<string, string | undefined>) => {
+  const u = new URLSearchParams(Astro.url.search);
+  u.delete('done');
+  for (const [k, v] of Object.entries(change)) v ? u.set(k, v) : u.delete(k);
+  return `/admin/inbox${u.size ? `?${u}` : ''}`;
+};
+---
+<AdminLayout title="Inbox" section="inbox">
+  {!allowed ? (
+    <p class="card p-6 text-ink-2">Messages go to the district admin and the state office.</p>
+  ) : (
+    <Fragment>
+      <h1 class="t-h1">Inbox</h1>
+      <p class="t-meta mt-1">Messages from the Contact page{user.district ? ` for ${district(user.district)}` : ''}. Kept for {keep.keepMonths} months, then deleted.</p>
+      {error && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent-ink" role="alert"><Icon name="CircleAlert" size={17} class="mt-0.5" /> {error}</p>}
+      {done && doneText[done] && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm" role="status"><Icon name="CircleCheck" size={17} class="mt-0.5" /> {doneText[done]}</p>}
+
+      <div class="mt-5 flex flex-wrap gap-2" role="group" aria-label="Show">
+        <a href={link({ view: undefined, m: undefined })} class="chip" aria-current={view === 'new' ? 'page' : undefined}>Open <span class="tabular text-xs opacity-75">{counts.open}</span></a>
+        <a href={link({ view: 'mine', m: undefined })} class="chip" aria-current={view === 'mine' ? 'page' : undefined}>Assigned to me <span class="tabular text-xs opacity-75">{counts.mine}</span></a>
+        <a href={link({ view: 'done', m: undefined })} class="chip" aria-current={view === 'done' ? 'page' : undefined}>Done</a>
+        <a href={link({ view: 'all', m: undefined })} class="chip" aria-current={view === 'all' ? 'page' : undefined}>All</a>
+      </div>
+
+      <div class="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+        <ul class="divide-y divide-line border-y border-line self-start">
+          {list.map((x) => (
+            <li class:list={['relative py-3', x.id === m?.id && 'bg-surface']}>
+              <p class="flex flex-wrap items-center gap-2">
+                <a href={link({ m: String(x.id) }) + '#message'} class="stretched font-semibold">{x.topic}</a>
+                {x.status === 'new' && <span class="badge badge-warning">New</span>}
+                {x.status === 'assigned' && <span class="badge badge-neutral">{x.assignee ?? 'Assigned'}</span>}
+                <span class="t-meta ml-auto">{ago(x.createdAt)}</span>
+              </p>
+              <p class="t-meta">{x.name} · {district(x.district)}</p>
+              <p class="clamp-2 text-sm text-ink-2">{x.preview}</p>
+            </li>
+          ))}
+          {list.length === 0 && <li class="t-meta py-4">No messages here.</li>}
+        </ul>
+
+        <article id="message" class="scroll-mt-20" aria-label="Message">
+          {m ? (
+            <div class="card space-y-4 p-4 md:p-5">
+              <div>
+                <p class="t-label">{m.topic} · {ago(m.createdAt)}</p>
+                <p class="mt-1 font-semibold">{m.name} · {district(m.district)}</p>
+                <p class="t-meta"><a href={`mailto:${m.email}`} class="link">{m.email}</a>{m.phone && <Fragment> · <a href={`tel:${m.phone.replace(/[^\d+]/g, '')}`} class="link">{m.phone}</a></Fragment>}</p>
+              </div>
+              <p class="whitespace-pre-line" lang={/[ഀ-ൿ]/.test(m.message) ? 'ml' : 'en'}>{m.message}</p>
+              <form method="post" class="grid gap-3 border-t border-line pt-4 sm:grid-cols-2">
+                <input type="hidden" name="id" value={m.id} />
+                <label class="block"><span class="t-label">Assign to</span>
+                  <select name="assignTo" class="field mt-1"><option value="">Nobody yet</option>{people.map((u) => <option value={u.id} selected={m.assignedTo === u.id}>{u.id === user.id ? `Me (${u.name})` : u.name}</option>)}</select>
+                </label>
+                <label class="block"><span class="t-label">Note for the team · optional</span><input name="note" class="field mt-1" value={m.note ?? ''} maxlength="500" /></label>
+                <div class="flex flex-wrap gap-2 sm:col-span-2">
+                  <button name="action" value="assign" class="btn btn-secondary btn-sm">Save</button>
+                  <a href={reply} class="btn btn-secondary btn-sm"><Icon name="Mail" size={16} /> Reply by email</a>
+                  {m.status === 'done'
+                    ? <button name="action" value="reopen" class="btn btn-ghost btn-sm">Open again</button>
+                    : <button name="action" value="done" class="btn btn-primary btn-sm"><Icon name="Check" size={16} /> Mark done</button>}
+                </div>
+                <p class="t-meta sm:col-span-2">“Reply by email” opens your own mail app with their message quoted; the site sends nothing itself.</p>
+              </form>
+            </div>
+          ) : <p class="t-meta">Pick a message to read it.</p>}
+        </article>
+      </div>
+    </Fragment>
+  )}
+</AdminLayout>

@@ -1,0 +1,25 @@
+---
+/** Users in the admin. Each form posts an action here (src/lib/admin/users.ts checks every rule). */
+import UsersView from '~/views/admin/UsersView.astro';
+import { inviteUser, setActive, updateUser } from '~/lib/admin/users';
+import { AdminError } from '~/lib/admin/publish';
+
+export const prerender = false;
+const user = Astro.locals.user!;
+let error: string | undefined;
+if (Astro.request.method === 'POST') {
+  const f = Object.fromEntries([...(await Astro.request.formData()).entries()].map(([k, v]) => [k, String(v)]));
+  const id = Number(f.id);
+  try {
+    if (f.action === 'invite') await inviteUser(user, f);
+    else if (f.action === 'update') await updateUser(user, id, f);
+    else if (f.action === 'off' || f.action === 'on') await setActive(user, id, f.action === 'on');
+    else throw new AdminError('Unknown action.');
+    return Astro.redirect(`/admin/users?done=${f.action}`);
+  } catch (err) {
+    if (!(err instanceof AdminError)) throw err;
+    error = err.message;
+  }
+}
+---
+<UsersView error={error} done={Astro.url.searchParams.get('done') ?? undefined} />

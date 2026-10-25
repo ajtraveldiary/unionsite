@@ -6,7 +6,7 @@ phone-first site on Cloudflare, in Malayalam with English versions of articles.
 
 > **Status: preview, not live.** The public site is designed and built, and it runs on real
 > content read from the current site, served from a local Cloudflare D1 database. The admin panel
-> is wireframed but not built, and nothing is deployed to keralangounion.in yet.
+> is built and works locally. Nothing is deployed to keralangounion.in yet.
 
 ## What's in it
 
@@ -14,6 +14,11 @@ phone-first site on Cloudflare, in Malayalam with English versions of articles.
   government orders library (about 380 GOs), the 15 district committees with a Kerala map,
   events, the Kerala Service magazine archive (138 issues), the state committee, contact and
   site-wide search. Every page exists in Malayalam (`/…`) and English (`/en/…`).
+- **Admin panel** at `/admin`: dashboard, news, the post editor, orders, Kerala Service,
+  events, the home banner, people and committees, districts, pages and documents, media, the contact
+  inbox, users, settings, the audit log, cookie-less analytics, the WordPress import and help, with four roles
+  (super admin, state editor, district admin, district editor), English drafted with Gemini and
+  approved by a person, version history, and photos stored in R2.
 - **Design system**: a living style guide at `/design-system`.
 - **Wireframes**: greyscale wireframes of the public pages at `/wireframes` and of all 18 admin
   screens at `/wireframes/admin` (with a "View as" switch for the four admin roles).
@@ -72,6 +77,25 @@ one page at a time).
 **Internal, hidden from search engines:**
 
 ```
+/admin                               Admin dashboard (sign-in required; locally /admin/login)
+├── /admin/news                      All posts: status tabs, district, topic and English filters
+├── /admin/news/new                  Post editor, new post
+├── /admin/news/{id}                 Post editor: autosave, history, preview, English review
+├── /admin/orders                    Orders library; /upload adds PDFs, /{id} edits one
+├── /admin/kerala-service            Add an issue, recent issues; /{id} edits one
+├── /admin/events                    Upcoming and past events; /new, /{id}
+├── /admin/banner                    Home banner, lead story, district requests
+├── /admin/people                    Committees: who holds which post, terms (?c=state|women|district:{d}|area:{id})
+├── /admin/districts                 What each district page lacks; /{slug}: cover, areas, offices
+├── /admin/pages                     Pages, documents, conferences (?tab=); /{id} edits a page
+├── /admin/media                     Library, albums (/albums/{id}), videos (?tab=)
+├── /admin/inbox                     Contact messages: open, assigned to me, done (?m= opens one)
+├── /admin/analytics                 Visitors, most read, searches, sources, districts (?days=1|7|30|365)
+├── /admin/users                     Invite, change role or district, switch off
+├── /admin/audit                     Every change, with filters and before/after (?e=)
+├── /admin/import                    WordPress export wizard and earlier runs (super admin)
+├── /admin/settings                  Gemini key, glossary, site details, AI, inbox
+└── /admin/help                      How-to guide by role (?t=)
 /design-system                       Living style guide
 /wireframes                          Public-site wireframes: news, article, orders, district, about,
                                      history, conferences, conference, struggles, documents,
@@ -84,7 +108,8 @@ one page at a time).
 
 **Planned, not built yet** (from the rebuild plan): `/about/history`, `/about/conferences`,
 `/about/struggles`, `/about/documents`, one page per event (`/events/{slug}`), photo albums
-(`/gallery/{album}`), the admin panel (`/admin`), and the Tools & guides calculators.
+(`/gallery/{album}`), the rest of the admin panel (inbox, users, settings, audit log, analytics, import,
+help), and the Tools & guides calculators.
 
 ## Tech
 
@@ -94,11 +119,13 @@ one page at a time).
   are built ahead of time
 - [Tailwind CSS](https://tailwindcss.com) 4 with the project's own design tokens (`src/styles/app.css`)
 - Noto Sans Malayalam and Anek Malayalam (self-hosted via Fontsource), Lucide icons
-- No client-side framework: small page scripts only
+- No client-side framework: small page scripts only. The admin's post editor uses
+  [TipTap](https://tiptap.dev) (without React), and its Orders and Kerala Service screens
+  [pdf.js](https://mozilla.github.io/pdf.js/) to read PDFs in the browser
+- Cloudflare R2 for uploaded photos (locally through wrangler), Cloudflare Access for admin sign-in
 
-Planned for later phases: the union's Cloudflare account (the D1 database so far runs only
-locally), FTS5 trigram search in D1, Cloudflare R2 for PDFs and photos, Cloudflare Access for
-admin login, and the admin panel itself.
+Planned for later phases: the union's Cloudflare account (D1 and R2 so far run only locally) and
+the rest of the admin panel.
 
 ## Getting started
 
@@ -112,8 +139,9 @@ npm run dev
 ```
 
 `db:migrate` creates the tables in a local D1 database (wrangler keeps it in `.wrangler/`), and
-`db:seed` loads the crawled content into it. The dev server runs at http://localhost:4321 and
-logs the D1 queries of each request.
+`db:seed` loads the crawled content into it, with one test admin user per role. The dev server
+runs at http://localhost:4321 and logs the D1 queries of each request. To try the admin, open
+http://localhost:4321/admin/login and pick a test user.
 
 | Command | What it does |
 | --- | --- |
@@ -151,16 +179,17 @@ the JSON, then run `npm run db:seed` to load it into D1. Pages read content only
 ```
 src/
   pages/        thin route files; English twins under pages/en/
-  views/        one view per page type (HomeView, NewsView, OrderView …)
-  layouts/      AppLayout: header, footer, phone bottom bar
+  views/        one view per page type (HomeView, NewsView, OrderView …); admin/ for the admin
+  layouts/      AppLayout: header, footer, phone bottom bar; AdminLayout: the admin frame
   components/
     ds/         design-system components (Banner, StoryLead, OrderRow …)
     ui/         Icon, Brand, MagazineCover
     wire/       wireframe kit (public and admin)
+    admin/      admin parts (status badges, post lists)
   db/           D1 tables (schema.ts) and the database client
-  lib/          content queries, cache rules, search, i18n, types
+  lib/          content queries, cache rules, search, i18n, types, rich text; admin/ for the admin's rules
   data/         site data; live/ holds the crawled content
-  styles/       app.css (design system), wire.css (wireframes)
+  styles/       app.css (design system), admin.css (editor), wire.css (wireframes)
 migrations/     SQL migrations generated from src/db/schema.ts
 scripts/        crawl, import, D1 seed and map scripts
 docs/           plan.md, the rebuild plan

@@ -11,13 +11,15 @@ import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
 import SectionHead from '~/components/ds/SectionHead.astro';
 import type { Lang } from '~/lib/types';
 import { href, t, langOf } from '~/lib/i18n';
-import { site, stateCommittee, roleLabels } from '~/data/site';
+import { site, roleLabels } from '~/data/site';
+import { committee, siteInfo } from '~/lib/content';
+import PersonAvatar from '~/components/ds/PersonAvatar.astro';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
+const info = await siteInfo();
 const L = (p: string) => href(lang, p);
-const leaders = stateCommittee.filter((p) => p.body === 'state' && ['president', 'general_secretary', 'treasurer'].includes(p.role));
-const initials = (en: string) => en.replace(/[^A-Za-z ]/g, ' ').trim().split(/\s+/).slice(-2).map((w) => w[0]).join('');
+const leaders = (await committee('state')).filter((p) => ['president', 'general_secretary', 'treasurer'].includes(p.role));
 const sections = [
   { title: 'State committee', text: 'Office-bearers and secretariat', icon: 'Users', path: '/about/state-committee' },
   { title: 'Media', text: 'Videos and photo albums', icon: 'Images', path: '/gallery' },
@@ -27,7 +29,7 @@ const sections = [
   { title: 'Struggles', text: 'Major strikes and campaigns', icon: 'Megaphone' },
   { title: 'Documents', text: 'Bye-law and policy resolutions', icon: 'FileText' },
 ] as const;
-const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Kerala NGO Union, ${site.address.en}`)}`;
+const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Kerala NGO Union, ${info.address.en}`)}`;
 ---
 <AppLayout lang={lang} title="About" description="About the Kerala NGO Union: the organisation of Kerala State Government employees since 1962.">
   <div class="wrap pt-5 lg:pt-8">
@@ -59,7 +61,7 @@ const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURICompo
       <ul class="grid gap-4 sm:grid-cols-3">
         {leaders.map((p) => (
           <li class="flex items-center gap-4">
-            <span lang="en" class="grid size-16 shrink-0 place-items-center rounded-full bg-accent-soft text-xl font-bold text-accent-ink" aria-hidden="true">{initials(p.name.en)}</span>
+            <PersonAvatar person={p} size={64} tone="accent" />
             <div class="min-w-0">
               <p lang="en" class="t-label">{roleLabels[p.role].en}</p>
               <p lang={lang === 'en' ? 'en' : 'ml'} class="t-h2 mt-0.5">{lang === 'en' ? p.name.en : p.name.ml}</p>
@@ -72,7 +74,7 @@ const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURICompo
     <section class="section" aria-labelledby="visit">
       <SectionHead title="State Centre" id="visit" href={L('/contact')} linkLabel="Contact" />
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p class="flex items-start gap-2 text-lg"><Icon name="MapPin" size={20} class="mt-1 shrink-0 text-accent-ink" /><span lang={langOf(site.address, lang)}>{t(site.address, lang)}</span></p>
+        <p class="flex items-start gap-2 text-lg"><Icon name="MapPin" size={20} class="mt-1 shrink-0 text-accent-ink" /><span lang={langOf(info.address, lang)}>{t(info.address, lang)}</span></p>
         <a href={mapUrl} target="_blank" rel="noopener" lang="en" class="btn btn-secondary btn-sm self-start sm:self-auto">Directions <Icon name="ArrowUpRight" size={16} /></a>
       </div>
     </section>

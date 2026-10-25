@@ -1,0 +1,105 @@
+---
+/**
+ * Admin: Users (plan, section 10; approved wireframe "Users"). Invite someone by email with a role
+ * and district; change a role; switch someone off or on. The super admin manages everyone; a
+ * district admin invites editors for their own district only, so role and district are fixed for
+ * them. Switched-off people stay listed, so their past work still shows who did it.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import UserActions from '~/components/admin/UserActions.astro';
+import { listUsers, mayManage } from '~/lib/admin/users';
+import { roleLabels } from '~/lib/admin/roles';
+import { ROLES } from '~/db/schema';
+import { districtBySlug } from '~/data/districts';
+import { sortedDistricts } from '~/lib/content';
+import { ago } from '~/lib/admin/client';
+
+interface Props { error?: string; done?: string }
+const { error, done } = Astro.props;
+const user = Astro.locals.user!;
+const allowed = mayManage(user);
+const people = allowed ? await listUsers(user) : [];
+const editId = Number(Astro.url.searchParams.get('edit')) || null;
+const editing = people.find((u) => u.id === editId && u.canChange);
+const isSuper = user.role === 'super_admin';
+const doneText: Record<string, string> = {
+  invite: 'Invited. Send them the admin address; they sign in with their email and a one-time code.', update: 'Saved.', off: 'Switched off: their access has ended.', on: 'Switched on.',
+};
+const districtName = (slug: string | null) => (slug ? districtBySlug[slug]?.name.en : '—');
+const adminUrl = new URL('/admin', Astro.url).toString();
+---
+<AdminLayout title="Users" section="users">
+  {!allowed ? (
+    <div class="card p-6 text-ink-2"><p>Users are managed by the super admin.</p><p class="t-meta mt-1">District admins can add editors to their own district.</p></div>
+  ) : (
+    <Fragment>
+      <h1 class="t-h1">Users</h1>
+      {error && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent-ink" role="alert"><Icon name="CircleAlert" size={17} class="mt-0.5" /> {error}</p>}
+      {done && doneText[done] && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm" role="status"><Icon name="CircleCheck" size={17} class="mt-0.5" /> {doneText[done]}{done === 'invite' && <span class="t-meta ml-1">({adminUrl})</span>}</p>}
+
+      <section class="mt-6" aria-labelledby="invite">
+        <h2 id="invite" class="t-h2 border-b border-line pb-2">{editing ? `Change ${editing.name}` : 'Invite someone'}</h2>
+        <p class="t-meta mt-2">Only invited emails can sign in. Cloudflare Access sends them a one-time code, so there are no passwords; switching someone off ends their access at once.</p>
+        <form method="post" class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
+          {editing && <input type="hidden" name="id" value={editing.id} />}
+          <label class="block"><span class="t-label">Email</span><input name="email" type="email" class="field mt-1" value={editing?.email ?? ''} required={!editing} disabled={!!editing} placeholder="name@example.com" /></label>
+          <label class="block"><span class="t-label">Name</span><input name="name" class="field mt-1" value={editing?.name ?? ''} maxlength="120" /></label>
+          {isSuper ? (
+            <Fragment>
+              <label class="block"><span class="t-label">Role</span><select name="role" class="field mt-1">{[...ROLES].reverse().map((r) => <option value={r} selected={(editing?.role ?? 'district_editor') === r}>{roleLabels[r]}</option>)}</select></label>
+              <label class="block"><span class="t-label">District · for district roles</span><select name="district" class="field mt-1"><option value="">—</option>{sortedDistricts().map((d) => <option value={d.slug} selected={editing?.district === d.slug}>{d.name.en}</option>)}</select></label>
+            </Fragment>
+          ) : (
+            <p class="field mt-6 flex items-center bg-bg-subtle text-ink-2 lg:col-span-2">District editor · {districtName(user.district)}</p>
+          )}
+          <div class="flex gap-2 sm:col-span-2 lg:col-span-4">
+            <button name="action" value={editing ? 'update' : 'invite'} class="btn btn-primary">{editing ? 'Save' : 'Invite'}</button>
+            {editing && <a href="/admin/users" class="btn btn-ghost">Cancel</a>}
+          </div>
+        </form>
+      </section>
+
+      <section class="mt-8" aria-labelledby="people">
+        <div class="flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-2"><h2 id="people" class="t-h2">People</h2>{!isSuper && <span class="badge badge-neutral">{districtName(user.district)} only</span>}</div>
+        <table class="mt-2 hidden w-full border-collapse text-left text-sm md:table">
+          <thead><tr class="border-b-2 border-ink text-xs uppercase tracking-wide text-ink-3"><th class="py-2 pr-4 font-semibold">Name</th><th class="py-2 pr-4 font-semibold">Role</th><th class="py-2 pr-4 font-semibold">District</th><th class="py-2 pr-4 font-semibold">Last sign-in</th><th class="py-2"><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody>
+            {people.map((u) => (
+              <tr class:list={['border-b border-line', !u.active && 'text-ink-3']}>
+                <td class="py-3 pr-4"><p class="font-semibold">{u.name}{u.id === user.id && ' (you)'}</p><p class="t-meta">{u.email}</p></td>
+                <td class="py-3 pr-4">{roleLabels[u.role]}</td>
+                <td class="py-3 pr-4">{districtName(u.district)}</td>
+                <td class="py-3 pr-4">{u.active ? (u.lastLoginAt ? ago(u.lastLoginAt) : 'Not yet') : <span class="badge badge-neutral">Switched off</span>}</td>
+                <td class="py-3 text-right">{u.canChange && <UserActions id={u.id} active={u.active} />}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <ul class="mt-2 divide-y divide-line md:hidden">
+          {people.map((u) => (
+            <li class="flex flex-wrap items-center gap-3 py-3">
+              <div class="min-w-0 flex-1"><p class="font-semibold">{u.name}{u.id === user.id && ' (you)'}</p><p class="t-meta">{roleLabels[u.role]}{u.district ? ` · ${districtName(u.district)}` : ''} · {u.active ? (u.lastLoginAt ? `signed in ${ago(u.lastLoginAt)}` : 'not signed in yet') : 'switched off'}</p></div>
+              {u.canChange && <UserActions id={u.id} active={u.active} />}
+            </li>
+          ))}
+        </ul>
+        <p class="t-meta mt-3">Switched-off people stay listed, so their past work still shows who did it. Every sign-in and change is in the Audit log.</p>
+      </section>
+    </Fragment>
+  )}
+</AdminLayout>
+
+<script>
+  function initUsers() {
+    document.querySelectorAll<HTMLFormElement>('form').forEach((f) => {
+      if (f.dataset.ready) return;
+      f.dataset.ready = '1';
+      f.addEventListener('submit', (e) => {
+        const msg = (e.submitter as HTMLElement | null)?.dataset.confirm;
+        if (msg && !window.confirm(msg)) e.preventDefault();
+      });
+    });
+  }
+  initUsers();
+</script>

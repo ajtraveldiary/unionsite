@@ -1,0 +1,31 @@
+---
+/**
+ * The editor's Preview (plan, section 10): the post as it will look, in the site's own article
+ * template, from the working copy rather than the live post. Opened inside the editor at phone or
+ * laptop width. Never cached (admin middleware); shows unapproved English too, so it can be checked.
+ */
+import ArticleView from '~/views/ArticleView.astro';
+import { coverInfo, loadForEditor } from '~/lib/admin/posts';
+import type { Post } from '~/lib/types';
+
+export const prerender = false;
+const id = Number(Astro.params.id);
+const lang = Astro.url.searchParams.get('lang') === 'en' ? 'en' : 'ml';
+const data = Number.isInteger(id) && id > 0 ? await loadForEditor(Astro.locals.user!, id) : null;
+if (!data) return new Response(null, { status: 404 });
+const { doc, meta } = data;
+const cover = await coverInfo(doc.coverMediaId);
+const en = doc.en?.title.trim() ? doc.en : null;
+const post: Post = {
+  id: meta.id,
+  slug: doc.slug || 'preview',
+  date: doc.date,
+  topic: doc.topic,
+  ...(doc.district && { district: doc.district }),
+  title: { ml: doc.ml.title || 'Untitled post', ...(en && { en: en.title }) },
+  summary: { ml: doc.ml.summary, ...(en && { en: en.summary }) },
+  body: { ml: doc.ml.body, ...(en && { en: en.body }) },
+  cover: cover ? { kind: 'photo', src: cover.url, alt: { ml: cover.alt } } : { kind: 'none' },
+};
+---
+<ArticleView lang={lang} post={post} />

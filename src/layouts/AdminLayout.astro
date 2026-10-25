@@ -1,0 +1,167 @@
+---
+/**
+ * Frame for every admin screen (plan, section 10; the approved admin wireframes): a sidebar on
+ * laptops, a top bar and a bottom bar on phones, with "New post" in the middle because posting from
+ * a phone after an event is the most common job. The menu shows only the sections this person's
+ * role may open; sections not built yet say "Soon" and don't link. Same tokens as the public site.
+ */
+import '~/styles/app.css';
+import '~/styles/admin.css';
+import Icon from '~/components/ui/Icon.astro';
+import { sectionsFor, roleLabels, type SectionId } from '~/lib/admin/roles';
+import { logoutUrl } from '~/lib/admin/auth';
+import { districtBySlug } from '~/data/districts';
+import notoMl from '@fontsource-variable/noto-sans-malayalam/files/noto-sans-malayalam-malayalam-wght-normal.woff2?url';
+import notoLatin from '@fontsource-variable/noto-sans-malayalam/files/noto-sans-malayalam-latin-wght-normal.woff2?url';
+
+interface Props {
+  title: string;
+  section: SectionId;
+  /** Screens with their own sticky bar (the editor) hide the phone title bar */
+  bare?: boolean;
+}
+const { title, section, bare = false } = Astro.props;
+const user = Astro.locals.user!;
+const menu = sectionsFor(user);
+const where = user.district ? districtBySlug[user.district]?.name.en.replace('Thiruvananthapuram', 'TVM') : 'Whole site';
+const logout = await logoutUrl();
+const tabs = [
+  { label: 'Home', id: 'dashboard', path: '/admin', icon: 'LayoutDashboard' },
+  { label: 'News', id: 'news', path: '/admin/news', icon: 'Newspaper' },
+  { label: 'New post', id: 'editor', path: '/admin/news/new', icon: 'Plus' },
+  { label: 'Site', id: '', path: '/', icon: 'ExternalLink' },
+] as const;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title} · Admin · Kerala NGO Union</title>
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="preload" href={notoMl} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={notoLatin} as="font" type="font/woff2" crossorigin />
+    <script is:inline>
+      (() => {
+        let theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        try { theme = localStorage.getItem('theme') || theme; } catch {}
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+  </head>
+  <body class="min-h-dvh bg-bg-subtle">
+    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-bg">Skip to content</a>
+    <div class="lg:flex">
+      <!-- Laptop: sidebar with every section this role may open -->
+      <aside class="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-line bg-surface lg:flex" aria-label="Admin sections">
+        <a href="/admin" class="flex items-center gap-2.5 border-b border-line px-4 py-3">
+          <img src="/brand/logo-128.webp" width="36" height="36" alt="" class="rounded-[22%]" />
+          <span class="leading-tight"><span class="block text-sm font-bold">Admin</span><span class="t-meta">Kerala NGO Union</span></span>
+        </a>
+        <nav class="flex-1 overflow-y-auto p-3">
+          <a href="/admin/news/new" class="btn btn-primary mb-3 w-full"><Icon name="Plus" size={18} /> New post</a>
+          <ul class="space-y-0.5 text-[0.9375rem]">
+            {menu.map((m) => (
+              <li>
+                {m.built ? (
+                  <a href={m.path} aria-current={m.id === section ? 'page' : undefined} class:list={['flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-2', m.id === section ? 'bg-bg-subtle font-semibold text-ink' : 'text-ink-2 hover:bg-surface-hover hover:text-ink']}>
+                    <Icon name={m.icon} size={18} /> {m.label}
+                  </a>
+                ) : (
+                  <span class="flex items-center gap-3 px-3 py-2 text-ink-3" aria-disabled="true">
+                    <Icon name={m.icon} size={18} /> {m.label} <span class="badge badge-neutral ml-auto">Soon</span>
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <div class="border-t border-line p-4 text-sm">
+          <p class="font-semibold">{user.name}</p>
+          <p class="t-meta">{roleLabels[user.role]} · {where}</p>
+          <p class="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+            <a href="/" class="link" target="_blank" rel="noopener">View site</a>
+            <a href="/admin/help" class="link" aria-current={section === 'help' ? 'page' : undefined}>Help</a>
+            <a href={logout} class="link">Log out</a>
+            <button type="button" class="link" data-theme-toggle>Theme</button>
+          </p>
+        </div>
+      </aside>
+
+      <div class="min-w-0 flex-1">
+        {!bare && (
+          <header class="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-line bg-surface px-4 lg:hidden">
+            <a href="/admin" aria-label="Admin home"><img src="/brand/logo-128.webp" width="32" height="32" alt="" class="rounded-[22%]" /></a>
+            <p class="min-w-0 flex-1 truncate font-semibold">{title}</p>
+            <span class="badge badge-neutral">{user.district ? where : roleLabels[user.role]}</span>
+          </header>
+        )}
+        <main id="main" class="px-4 pb-28 pt-5 md:px-6 lg:px-10 lg:pb-12 lg:pt-8">
+          <slot />
+        </main>
+      </div>
+    </div>
+
+    <!-- Phone bottom bar -->
+    <nav aria-label="Admin" class="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface lg:hidden">
+      <ul class="grid grid-cols-5 items-end pb-[env(safe-area-inset-bottom)]">
+        {tabs.slice(0, 2).map((t) => (
+          <li><a href={t.path} aria-current={t.id === section ? 'page' : undefined} class:list={['flex min-h-14 flex-col items-center justify-center gap-0.5 text-[0.6875rem]', t.id === section ? 'font-bold text-ink' : 'text-ink-3']}><Icon name={t.icon} size={22} />{t.label}</a></li>
+        ))}
+        <li>
+          <a href="/admin/news/new" class="flex flex-col items-center gap-0.5 pb-1.5 text-[0.6875rem] font-semibold text-ink">
+            <span class="-mt-5 grid size-12 place-items-center rounded-full bg-accent text-on-accent shadow-float"><Icon name="Plus" size={24} /></span>New post
+          </a>
+        </li>
+        <li><a href="/" target="_blank" rel="noopener" class="flex min-h-14 flex-col items-center justify-center gap-0.5 text-[0.6875rem] text-ink-3"><Icon name="ExternalLink" size={22} />Site</a></li>
+        <li><button type="button" data-open-menu class="flex min-h-14 w-full flex-col items-center justify-center gap-0.5 text-[0.6875rem] text-ink-3"><Icon name="Menu" size={22} />Menu</button></li>
+      </ul>
+    </nav>
+
+    <!-- Phone menu: every section this role may open -->
+    <dialog id="admin-menu" class="m-0 mt-auto max-h-[85dvh] w-full max-w-none rounded-t-[16px] bg-surface p-0 text-ink backdrop:bg-black/40 lg:hidden" aria-label="Admin menu">
+      <div class="flex items-center justify-between border-b border-line px-4 py-3">
+        <p class="font-semibold">{user.name}<span class="t-meta block font-normal">{roleLabels[user.role]} · {where}</span></p>
+        <button type="button" class="btn btn-ghost btn-icon" data-close-dialog aria-label="Close menu"><Icon name="X" /></button>
+      </div>
+      <ul class="grid grid-cols-2 gap-1 p-3">
+        {menu.map((m) => (
+          <li>
+            {m.built ? (
+              <a href={m.path} aria-current={m.id === section ? 'page' : undefined} class:list={['flex min-h-12 items-center gap-2.5 rounded-[var(--radius-control)] px-3', m.id === section ? 'bg-bg-subtle font-semibold' : 'text-ink-2']}><Icon name={m.icon} size={18} />{m.label}</a>
+            ) : (
+              <span class="flex min-h-12 items-center gap-2.5 px-3 text-ink-3" aria-disabled="true"><Icon name={m.icon} size={18} /><span>{m.label}<span class="block text-xs">Coming soon</span></span></span>
+            )}
+          </li>
+        ))}
+      </ul>
+      <p class="flex gap-4 border-t border-line px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-sm">
+        <a href="/admin/help" class="link">Help</a>
+        <a href={logout} class="link">Log out</a>
+        <button type="button" class="link" data-theme-toggle>Theme</button>
+      </p>
+    </dialog>
+
+    <!-- Messages from page scripts ("Saved", errors) -->
+    <div data-toast role="status" aria-live="polite" class="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4 lg:bottom-6"></div>
+  </body>
+</html>
+
+<script>
+  const root = document.documentElement;
+  document.addEventListener('click', (e) => {
+    const el = e.target as HTMLElement;
+    if (el.closest('[data-theme-toggle]')) {
+      const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      root.dataset.theme = next;
+      try { localStorage.setItem('theme', next); } catch {}
+    } else if (el.closest('[data-open-menu]')) {
+      document.querySelector<HTMLDialogElement>('#admin-menu')?.showModal();
+    } else if (el.closest('[data-close-dialog]')) {
+      el.closest('dialog')?.close();
+    } else if (el instanceof HTMLDialogElement && el.open) {
+      el.close(); // click on the backdrop
+    }
+  });
+</script>

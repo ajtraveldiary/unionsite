@@ -3,6 +3,6 @@ import HomeView from '~/views/HomeView.astro';
 import { cachePage, tags } from '~/lib/cache';
 
 export const prerender = false;
-cachePage(Astro, 'list', [tags.posts, tags.orders, tags.issues, tags.banner]);
+cachePage(Astro, 'list', [tags.posts, tags.orders, tags.issues, tags.banner, tags.events, tags.videos]);
 ---
 <HomeView lang="en" />

@@ -1,0 +1,31 @@
+---
+/** Media in the admin. Each form posts an action here (src/lib/admin/media.ts and albums.ts check every rule). */
+import MediaView from '~/views/admin/MediaView.astro';
+import { setAlt } from '~/lib/admin/media';
+import { addVideo, saveAlbum, setVideo, syncChannel } from '~/lib/admin/albums';
+import { AdminError } from '~/lib/admin/publish';
+
+export const prerender = false;
+const user = Astro.locals.user!;
+let error: string | undefined;
+if (Astro.request.method === 'POST') {
+  const f = Object.fromEntries([...(await Astro.request.formData()).entries()].map(([k, v]) => [k, String(v)]));
+  const id = Number(f.id);
+  const back = (tab: string, done: string, extra = '') => Astro.redirect(`/admin/media?tab=${tab}&done=${done}${extra}`);
+  try {
+    switch (f.action) {
+      case 'alt': await setAlt(user, id, f.alt); return Astro.redirect(`/admin/media?tab=library&item=${id}&done=alt#selected`);
+      case 'album_create': return Astro.redirect(`/admin/media/albums/${await saveAlbum(user, null, f)}`);
+      case 'sync': return back('videos', 'sync', `&n=${await syncChannel(user)}`);
+      case 'video_add': await addVideo(user, f.link, f); return back('videos', 'video');
+      case 'video_hide': await setVideo(user, id, { hidden: true }); return back('videos', 'hidden');
+      case 'video_show': await setVideo(user, id, { hidden: false }); return back('videos', 'shown');
+      default: throw new AdminError('Unknown action.');
+    }
+  } catch (err) {
+    if (!(err instanceof AdminError)) throw err;
+    error = err.message;
+  }
+}
+---
+<MediaView error={error} done={Astro.url.searchParams.get('done') ?? undefined} />

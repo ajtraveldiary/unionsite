@@ -1,0 +1,32 @@
+---
+/** One order in the admin. A POST from its form saves it (src/lib/admin/orders.ts checks every rule). */
+import OrderEditorView from '~/views/admin/OrderEditorView.astro';
+import { loadOrder, setOrderStatus, updateOrder, mustBeState } from '~/lib/admin/orders';
+import { AdminError } from '~/lib/admin/publish';
+
+export const prerender = false;
+const user = Astro.locals.user!;
+const id = Number(Astro.params.id);
+try { mustBeState(user); } catch { return new Response(null, { status: 404 }); }
+if (!(Number.isInteger(id) && id > 0)) return new Response(null, { status: 404 });
+const order = await loadOrder(user, id);
+if (!order) return new Response(null, { status: 404 });
+
+let error: string | undefined;
+let values: Record<string, string> | undefined;
+if (Astro.request.method === 'POST') {
+  const input = Object.fromEntries([...(await Astro.request.formData()).entries()].map(([k, v]) => [k, String(v)]));
+  try {
+    const a = input.action;
+    if (a === 'archive') await setOrderStatus(user, id, 'archived');
+    else if (a === 'restore' || a === 'unpublish') await setOrderStatus(user, id, 'draft');
+    else await updateOrder(user, id, input, a === 'publish' ? 'published' : undefined);
+    return Astro.redirect(`/admin/orders/${id}?done=${['archive', 'restore', 'unpublish', 'publish'].includes(a) ? a : 'save'}`);
+  } catch (err) {
+    if (!(err instanceof AdminError)) throw err;
+    error = err.message;
+    values = input;
+  }
+}
+---
+<OrderEditorView order={order} values={values} error={error} done={Astro.url.searchParams.get('done') ?? undefined} />

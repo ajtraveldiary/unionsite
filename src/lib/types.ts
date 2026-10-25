@@ -1,3 +1,5 @@
+import type { Body } from './richtext';
+
 // Content types. They mirror the tables in the rebuild plan (section 5) so Phase 2 can
 // swap these seed files for D1 queries without touching the templates.
 
@@ -44,7 +46,8 @@ export interface Post {
   district?: string; // district slug, undefined = state level
   title: L10n;
   summary: L10n;
-  body?: { ml: string[]; en?: string[] };
+  /** Paragraphs (crawled) or the editor's rich text (src/lib/richtext.ts) */
+  body?: { ml: Body; en?: Body };
   cover: Cover;
   featured?: boolean;
   views?: number;
@@ -88,15 +91,22 @@ export type PositionRole =
   | 'treasurer'
   | 'vice_president'
   | 'secretary'
+  | 'joint_secretary'
   | 'secretariat_member'
+  | 'committee_member'
   | 'convener'
-  | 'joint_convener';
+  | 'joint_convener'
+  | 'member';
 
 export interface Person {
   name: L10n & { en: string };
   role: PositionRole;
-  body: 'state' | 'district' | 'women_subcommittee';
+  body: 'state' | 'district' | 'women_subcommittee' | 'area';
   district?: string;
+  /** A square photo, when one was uploaded; initials stand in otherwise */
+  photo?: string;
+  /** Shown on district pages only when the person gave one */
+  phone?: string;
 }
 
 export interface UnionEvent {
@@ -106,6 +116,11 @@ export interface UnionEvent {
   end?: string;
   venue: L10n;
   district?: string;
+  description?: L10n;
+  mapUrl?: string;
+  registrationUrl?: string;
+  /** The news post about it, once the event is over */
+  report?: { title: L10n; path: string };
   sample?: boolean;
 }
 

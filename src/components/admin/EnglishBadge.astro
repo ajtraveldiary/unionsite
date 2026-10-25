@@ -1,0 +1,11 @@
+---
+/** Where a post's English stands (plan, section 6). Nothing is shown for posts with no English yet,
+ * which is most of the crawled archive, so the list only flags what needs someone. */
+import type { EnState } from '~/lib/admin/post-doc';
+
+interface Props { state: EnState; showNone?: boolean }
+const { state, showNone = false } = Astro.props;
+const label = { none: 'No English', draft: 'English to approve', outdated: 'English out of date', ok: 'English live' }[state];
+const tone = state === 'draft' || state === 'outdated' ? 'badge-warning' : 'badge-neutral';
+---
+{(state !== 'none' || showNone) && <span class:list={['badge', tone]}>{label}</span>}

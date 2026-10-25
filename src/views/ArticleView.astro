@@ -15,6 +15,7 @@ import StoryRow from '~/components/ds/StoryRow.astro';
 import type { Lang, Post } from '~/lib/types';
 import { t, langOf, href, formatDate, readingMinutes, formatViews, hasEn, ui } from '~/lib/i18n';
 import { postPath, relatedPosts, districtUrl } from '~/lib/content';
+import { bodyText, renderBody } from '~/lib/richtext';
 import { topicBySlug, districtBySlug } from '~/data/districts';
 import { site } from '~/data/site';
 
@@ -31,7 +32,8 @@ const bodyLang = useEnBody ? 'en' : 'ml';
 const title = t(p.title, lang);
 // The summary under the headline, unless it's just the article's opening cut short (crawled posts)
 const summary = t(p.summary, lang);
-const standfirst = summary && !(body ?? []).join(' ').startsWith(summary.replace(/…$/, '')) ? summary : '';
+const text = bodyText(body);
+const standfirst = summary && !text.join(' ').startsWith(summary.replace(/…$/, '')) ? summary : '';
 const pageUrl = new URL(L(postPath(p)), Astro.site).toString();
 const related = await relatedPosts(p, 3);
 const sameTopic = related.every((r) => r.topic === p.topic);
@@ -63,7 +65,7 @@ const jsonLd = JSON.stringify({
       {standfirst && <p lang={langOf(p.summary, lang)} class="mt-3 text-lg text-ink-2">{standfirst}</p>}
       <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-y border-line py-3">
         <p lang="en" class="t-meta">
-          <time datetime={p.date}>{formatDate(p.date, 'en')}</time> · {readingMinutes(body)} min read{(p.views ?? 0) >= 50 ? ` · ${formatViews(p.views)} views` : ''}
+          <time datetime={p.date}>{formatDate(p.date, 'en')}</time> · {readingMinutes(text)} min read{(p.views ?? 0) >= 50 ? ` · ${formatViews(p.views)} views` : ''}
         </p>
         <ShareBar url={pageUrl} title={title} />
       </div>
@@ -81,9 +83,7 @@ const jsonLd = JSON.stringify({
       </figure>
     )}
 
-    <div lang={bodyLang} class="prose mt-8">
-      {body?.map((para) => <p>{para}</p>)}
-    </div>
+    <div lang={bodyLang} class="prose mt-8" set:html={renderBody(body)} />
     {p.sample && (
       <p lang="en" class="mt-6 max-w-[68ch] rounded-[var(--radius-card)] border border-dashed border-line-strong p-4 text-sm text-ink-3">
         Placeholder: the full article, photos and gallery come across with the import from the current site.

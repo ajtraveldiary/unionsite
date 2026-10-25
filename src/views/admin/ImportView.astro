@@ -1,0 +1,125 @@
+---
+/**
+ * Admin: Import (plan, sections 3 and 10; approved wireframe "Import"), for the super admin. A
+ * wizard for a WordPress export (WXR .xml): choose the file, see what's in it, map each category
+ * to a district and topic, check 20 posts in a dry run, import with a progress bar, read the
+ * report. The file is read in the browser; posts go to the server 25 at a time. Earlier runs are
+ * listed underneath, each with its report as CSV. Other kinds of export wait for the real files.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import { listJobs, mayImport } from '~/lib/admin/import';
+import { sortedDistricts } from '~/lib/content';
+import { topics } from '~/data/districts';
+import { ago } from '~/lib/admin/client';
+
+const user = Astro.locals.user!;
+const allowed = mayImport(user);
+const history = allowed ? await listJobs(user) : null;
+const districts = JSON.stringify(sortedDistricts().map((d) => [d.slug, d.name.en]));
+const topicList = JSON.stringify(topics.map((t) => [t.slug, t.name.en]));
+const later = [
+  ['Uploads folder (.zip)', 'Photos and PDFs into the media library'],
+  ['Database dump (.sql)', 'Everything the export leaves out'],
+  ['Download Manager files', 'GO orders with their PDFs'],
+  ['3D FlipBook issues', 'Kerala Service issues'],
+];
+const statusLabel = { running: 'Running', done: 'Done', failed: 'Stopped' } as const;
+---
+<AdminLayout title="Import" section="import">
+  {!allowed ? (
+    <div class="card p-6 text-ink-2"><p>Imports are run by the super admin.</p></div>
+  ) : (
+    <Fragment>
+      <h1 class="t-h1">Import</h1>
+      <p class="t-meta mt-1">Bring posts over from the old WordPress site. Running the same export again updates posts instead of copying them; posts changed in the admin are never overwritten.</p>
+
+      <div class="mt-6 max-w-4xl" data-import data-districts={districts} data-topics={topicList}>
+        <section data-step="file" aria-labelledby="s-file">
+          <h2 id="s-file" class="t-h2">1. Choose the export</h2>
+          <p class="mt-1 text-sm text-ink-2">In WordPress: Tools → Export → All content. The file is read on this computer; nothing is sent until you press Import.</p>
+          <label class="btn btn-primary mt-4 cursor-pointer"><Icon name="FileUp" size={18} /> Choose a WordPress export (.xml)<input type="file" accept=".xml,text/xml,application/xml" class="sr-only" data-file /></label>
+          <p class="mt-2 text-sm" role="status" data-file-status></p>
+          <h3 class="t-h3 mt-8">Other kinds of export</h3>
+          <ul class="mt-2 grid gap-2 sm:grid-cols-2">
+            {later.map(([name, what]) => <li class="card flex items-center justify-between gap-3 p-3 text-sm"><span><span class="font-medium">{name}</span><span class="t-meta block">{what}</span></span><span class="badge">Coming soon</span></li>)}
+          </ul>
+          <p class="t-meta mt-2">These wait for the real files from the old site’s host.</p>
+        </section>
+
+        <section data-step="scan" hidden aria-labelledby="s-scan">
+          <h2 id="s-scan" class="t-h2">2. What’s in <span data-scan-file></span></h2>
+          <div class="overflow-x-auto"><table class="mt-3 w-full text-left text-sm" data-scan-table></table></div>
+          <p class="mt-3 text-sm" data-scan-already></p>
+          <h3 class="t-h3 mt-6">Categories</h3>
+          <p class="t-meta">Each post gets the district and topic of its first category that has one; posts without a topic get one from words in their title. Prefilled the way the old site’s posts were mapped.</p>
+          <div class="overflow-x-auto">
+            <table class="mt-2 w-full min-w-[640px] text-left text-sm">
+              <thead><tr class="text-xs uppercase tracking-wide text-ink-3"><th class="py-1 pr-3 font-semibold">Category</th><th class="py-1 pr-3 text-right font-semibold">Posts</th><th class="py-1 pr-3 font-semibold">District</th><th class="py-1 pr-3 font-semibold">Topic</th><th class="py-1 font-semibold">Not news</th></tr></thead>
+              <tbody data-map-rows></tbody>
+            </table>
+          </div>
+          <label class="mt-4 flex items-center gap-2 text-sm"><input type="checkbox" data-drafts /> Also import drafts and posts waiting for review (as drafts)</label>
+          <div class="mt-4 flex flex-wrap items-center gap-3">
+            <button type="button" class="btn btn-primary" data-to-check>Check 20 posts</button>
+            <span class="text-sm text-ink-2" data-map-count></span>
+          </div>
+        </section>
+
+        <section data-step="check" hidden aria-labelledby="s-check">
+          <h2 id="s-check" class="t-h2">3. Check before importing</h2>
+          <p class="t-meta">Up to 20 posts from across the export, as they would come over. Nothing has been written yet.</p>
+          <div class="overflow-x-auto">
+            <table class="mt-2 w-full min-w-[640px] text-left text-sm">
+              <thead><tr class="text-xs uppercase tracking-wide text-ink-3"><th class="py-1 pr-3 font-semibold">Post</th><th class="py-1 pr-3 font-semibold">District</th><th class="py-1 pr-3 font-semibold">Topic</th><th class="py-1 pr-3 font-semibold">What happens</th><th class="py-1 font-semibold">To look at</th></tr></thead>
+              <tbody data-check-rows></tbody>
+            </table>
+          </div>
+          <div class="mt-4 flex flex-wrap gap-3">
+            <button type="button" class="btn btn-primary" data-run data-check-total>Import</button>
+            <button type="button" class="btn btn-secondary" data-back-map>Change the mapping</button>
+          </div>
+        </section>
+
+        <section data-step="run" hidden aria-labelledby="s-run">
+          <h2 id="s-run" class="t-h2">4. Importing</h2>
+          <p class="t-meta">Keep this tab open until it finishes.</p>
+          <div class="mt-4 h-2 overflow-hidden rounded-full bg-line" role="presentation"><div class="h-full w-0 bg-link transition-[width]" data-bar></div></div>
+          <p class="mt-2 text-sm tabular" role="status" data-run-label>Starting…</p>
+          <button type="button" class="btn btn-secondary btn-sm mt-4" data-stop>Stop</button>
+        </section>
+
+        <section data-step="report" hidden aria-labelledby="s-report">
+          <h2 id="s-report" class="t-h2" data-report-head>Import finished</h2>
+          <ul class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5" data-report-counts></ul>
+          <h3 class="t-h3 mt-6">Posts to look at</h3>
+          <ul class="divide-y divide-line" data-report-rows></ul>
+          <div class="mt-4 flex flex-wrap gap-3"><a class="btn btn-secondary" href="#" data-report-csv><Icon name="Download" size={18} /> Report (CSV)</a><a class="btn btn-secondary" href="/admin/import">Done</a></div>
+        </section>
+      </div>
+
+      <section class="mt-10 max-w-4xl" aria-labelledby="runs">
+        <h2 id="runs" class="t-h2 border-b border-line pb-2">Earlier runs</h2>
+        <ul class="divide-y divide-line">
+          {history!.jobs.map((j) => (
+            <li class="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2.5 text-sm">
+              <span class="t-meta w-28 shrink-0">{ago(j.createdAt)}</span>
+              <span class="min-w-0 flex-1"><span class="font-medium">{j.fileName ?? 'WordPress export'}</span> <span class="badge">{statusLabel[j.status]}</span>
+                <span class="t-meta block">{j.counts?.created ?? 0} new · {j.counts?.updated ?? 0} updated · {j.counts?.kept ?? 0} kept · {j.counts?.failed ?? 0} failed</span></span>
+              <a href={`/admin/import-csv?job=${j.id}`} class="link">Report (CSV)</a>
+            </li>
+          ))}
+          <li class="flex flex-wrap items-baseline gap-x-3 py-2.5 text-sm">
+            <span class="t-meta w-28 shrink-0">21 Oct 2026</span>
+            <span class="min-w-0 flex-1"><span class="font-medium">Crawl of the old site</span> <span class="badge">Done</span><span class="t-meta block">{history!.crawled.toLocaleString('en-IN')} posts on the site came from it (scripts/crawl.mjs)</span></span>
+          </li>
+        </ul>
+      </section>
+    </Fragment>
+  )}
+</AdminLayout>
+
+<script>
+  import { initImport } from '~/lib/admin/import-client';
+  initImport();
+</script>

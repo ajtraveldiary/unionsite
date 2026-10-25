@@ -23,11 +23,11 @@ import EmptyState from '~/components/ds/EmptyState.astro';
 import VideoCard from '~/components/ds/VideoCard.astro';
 import type { Lang, Post } from '~/lib/types';
 import { href, monthName } from '~/lib/i18n';
-import { latestPosts, featuredPost, latestPerDistrict, districtPostCounts, latestOrders, upcomingEvents, sortedDistricts, allIssues, issuePath, activeBanner } from '~/lib/content';
-import { videos, site } from '~/data/site';
+import { latestPosts, featuredPost, latestPerDistrict, districtPostCounts, latestOrders, upcomingEvents, sortedDistricts, allIssues, issuePath, activeBanner, latestVideos, siteInfo } from '~/lib/content';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
+const info = await siteInfo();
 const L = (p: string) => href(lang, p);
 // The banner's post or event shows only in the banner, never again further down
 const banner = await activeBanner();
@@ -85,7 +85,8 @@ const tools = [
 ];
 
 // Events: every upcoming event in the slider; district ones again in the Districts section
-const events = upcomingEvents(50).filter((e) => !(banner?.kind === 'event' && e.slug === banner.event.slug));
+const videos = await latestVideos(3);
+const events = (await upcomingEvents(50)).filter((e) => !(banner?.kind === 'event' && e.slug === banner.event.slug));
 const districtEvents = events.filter((e) => e.district);
 // District news: stories already shown higher up appear only when their district is picked.
 // The page carries a few per district (enough to fill the list when one is picked), not all.
@@ -246,7 +247,7 @@ const oldest = issues.at(-1)!;
       </div>
     </div>
     <div class="col">
-      <SectionHead title="Videos" href={site.social.youtube} linkLabel="YouTube channel" />
+      <SectionHead title="Videos" href={info.social.youtube} linkLabel="YouTube channel" />
       <!-- Phones: a swipe row with the next video peeking in; from tablets up, three side by side -->
       <ul class="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
         {videos.slice(0, 3).map((v) => <li class="w-[78%] shrink-0 snap-start sm:w-auto"><VideoCard video={v} lang={lang} /></li>)}

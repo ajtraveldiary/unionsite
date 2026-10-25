@@ -1,0 +1,24 @@
+---
+/** The Inbox in the admin. Its form posts an action here (src/lib/admin/inbox.ts checks every rule). */
+import InboxView from '~/views/admin/InboxView.astro';
+import { updateMessage } from '~/lib/admin/inbox';
+import { AdminError } from '~/lib/admin/publish';
+
+export const prerender = false;
+const user = Astro.locals.user!;
+let error: string | undefined;
+if (Astro.request.method === 'POST') {
+  const f = Object.fromEntries([...(await Astro.request.formData()).entries()].map(([k, v]) => [k, String(v)]));
+  const id = Number(f.id);
+  try {
+    if (f.action === 'assign') await updateMessage(user, id, { assignTo: Number(f.assignTo) || null, note: f.note });
+    else if (f.action === 'done' || f.action === 'reopen') await updateMessage(user, id, { assignTo: Number(f.assignTo) || null, note: f.note, done: f.action === 'done' });
+    else throw new AdminError('Unknown action.');
+    return Astro.redirect(`/admin/inbox?m=${id}&done=${f.action}#message`);
+  } catch (err) {
+    if (!(err instanceof AdminError)) throw err;
+    error = err.message;
+  }
+}
+---
+<InboxView error={error} done={Astro.url.searchParams.get('done') ?? undefined} />

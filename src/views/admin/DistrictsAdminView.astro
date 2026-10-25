@@ -1,0 +1,53 @@
+---
+/**
+ * Admin: districts, for the state office (approved wireframe "Districts", the table): every
+ * district with what its page still lacks (posts, office-bearers, offices, history), so the office
+ * can chase it. Each opens that district's page, edited as its admin would. District roles go
+ * straight to their own district (the route redirects them).
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import { districtOverview } from '~/lib/admin/districts';
+import { formatDate } from '~/lib/i18n';
+
+const rows = await districtOverview();
+const missing = (r: (typeof rows)[number]) => [!r.bearers && 'office-bearers', !r.offices && 'offices', r.history !== 'published' && 'history'].filter(Boolean) as string[];
+---
+<AdminLayout title="Districts" section="districts">
+  <h1 class="t-h1">Districts</h1>
+  <p class="t-meta mt-1">What each district page still lacks. Open a district to edit it as its admin would.</p>
+
+  <table class="mt-5 hidden w-full border-collapse text-left text-sm md:table">
+    <thead>
+      <tr class="border-b-2 border-ink text-xs uppercase tracking-wide text-ink-3">
+        <th class="py-2 pr-4 font-semibold">District</th><th class="py-2 pr-4 font-semibold">Posts</th><th class="py-2 pr-4 font-semibold">Latest post</th>
+        <th class="py-2 pr-4 font-semibold">Office-bearers</th><th class="py-2 pr-4 font-semibold">Offices</th><th class="py-2 font-semibold">History</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((r) => (
+        <tr class="relative border-b border-line hover:bg-surface">
+          <td class="py-3 pr-4"><a href={`/admin/districts/${r.slug}`} class="stretched font-semibold">{r.name}</a></td>
+          <td class="py-3 pr-4 tabular">{r.posts}</td>
+          <td class="py-3 pr-4 tabular text-ink-2">{r.latest ? formatDate(r.latest, 'en', 'short') : '—'}</td>
+          <td class="py-3 pr-4">{r.bearers ? `${r.bearers} on the site` : <span class="badge badge-warning">None yet</span>}</td>
+          <td class="py-3 pr-4">{r.offices ? `${r.offices} ${r.offices === 1 ? 'address' : 'addresses'}` : <span class="badge badge-warning">None yet</span>}</td>
+          <td class="py-3">{r.history === 'published' ? 'Published' : r.history ? <span class="badge badge-neutral">Draft</span> : <span class="badge badge-warning">Not written</span>}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  <ul class="mt-4 divide-y divide-line border-y border-line md:hidden">
+    {rows.map((r) => (
+      <li class="relative flex items-center gap-3 py-3">
+        <div class="min-w-0 flex-1">
+          <a href={`/admin/districts/${r.slug}`} class="stretched font-semibold">{r.name}</a>
+          <p class="t-meta">{r.posts} posts{r.latest ? ` · latest ${formatDate(r.latest, 'en', 'short')}` : ''}</p>
+          {missing(r).length > 0 && <p class="mt-1 text-sm text-warning">Lacks {missing(r).join(', ')}</p>}
+        </div>
+        <Icon name="ChevronRight" size={18} class="text-ink-3" />
+      </li>
+    ))}
+  </ul>
+</AdminLayout>

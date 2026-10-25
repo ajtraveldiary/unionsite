@@ -8,7 +8,12 @@ import { events, firstBanner } from '~/data/site';
 import type { MagazineIssue, Order, Post } from './types';
 import type { ActiveBanner } from './content';
 
-export { districtUrl, sortedDistricts, subjectName, allEvents, upcomingEvents, eventsForDistrict, issuePath } from './content';
+export { districtUrl, sortedDistricts, subjectName, issuePath } from './content';
+
+export const allEvents = () => [...events].sort((a, b) => a.start.localeCompare(b.start));
+const upcoming = (e: { start: string; end?: string }) => new Date(e.end ?? e.start) >= new Date();
+export const upcomingEvents = (n = 3) => allEvents().filter(upcoming).slice(0, n);
+export const eventsForDistrict = (slug: string) => allEvents().filter((e) => e.district === slug && upcoming(e));
 
 const posts = livePosts as Post[];
 const orders = liveOrders as Order[];

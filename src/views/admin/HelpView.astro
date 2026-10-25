@@ -1,0 +1,79 @@
+---
+/**
+ * Admin: Help (plan, section 8 "Admin help"; approved wireframe "Help"). A short Malayalam how-to
+ * for every common task (src/data/help.ts), listed only when the reader's role can do it, with a
+ * search over names and steps. One task opens beside the list (?t=); on a phone it follows it.
+ * "Still stuck?" gives the state office's phone from Settings. The same pages are the hand-out for
+ * the training session before launch (plan, section 15).
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import { helpFor } from '~/data/help';
+import { siteDetails } from '~/lib/content';
+
+const user = Astro.locals.user!;
+const tasks = helpFor(user.role);
+const open = tasks.find((t) => t.id === Astro.url.searchParams.get('t')) ?? tasks[0];
+const details = await siteDetails();
+const tel = details.phone.replace(/[^\d+]/g, '');
+/** **Name** → a bold button name, kept in English */
+const parts = (s: string) => s.split(/\*\*(.+?)\*\*/g).map((p, i) => ({ text: p, bold: i % 2 === 1 }));
+---
+<AdminLayout title="Help" section="help">
+  <h1 class="t-h1">Help</h1>
+  <p class="t-meta mt-1">How to do the common tasks, step by step. First drafts, being checked by the state office.</p>
+  <input type="search" class="field mt-4 max-w-xl" placeholder="Search the guide" aria-label="Search the guide" data-help-search />
+
+  <div class="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+    <section aria-labelledby="tasks">
+      <h2 id="tasks" class="t-h2 mb-2">How do I…</h2>
+      <ul class="divide-y divide-line border-y border-line" data-help-list>
+        {tasks.map((t) => (
+          <li data-help-text={`${t.name} ${t.steps.join(' ')}`.toLowerCase()}>
+            <a href={`?t=${t.id}#task`} aria-current={t.id === open.id ? 'page' : undefined} class:list={['flex items-center justify-between gap-3 py-3', t.id === open.id ? 'font-semibold text-ink' : 'text-ink-2 hover:text-ink']}>
+              {t.name}<Icon name="ChevronRight" size={18} class="shrink-0 text-ink-3" />
+            </a>
+          </li>
+        ))}
+      </ul>
+      <p class="t-meta mt-3" hidden data-help-none>Nothing in the guide matches. Try another word, or call the state office.</p>
+    </section>
+
+    <section id="task" class="scroll-mt-20" aria-labelledby="task-title">
+      <p class="t-label">Guide · {open.minutes} {open.minutes === 1 ? 'minute' : 'minutes'}</p>
+      <h2 id="task-title" class="t-h2 mt-1">{open.name}</h2>
+      <ol class="mt-4 space-y-4">
+        {open.steps.map((s, i) => (
+          <li class="grid grid-cols-[2rem_minmax(0,1fr)] gap-3">
+            <span class="grid size-8 place-items-center rounded-full bg-ink text-sm font-bold text-bg" aria-hidden="true">{i + 1}</span>
+            <p lang="ml" class="pt-1">{parts(s).map((p) => (p.bold ? <strong lang="en">{p.text}</strong> : p.text))}</p>
+          </li>
+        ))}
+      </ol>
+      <a href={open.path} class="btn btn-secondary mt-5">Go there <Icon name="ArrowRight" size={18} /></a>
+      <div class="card mt-6 p-4">
+        <p class="font-semibold">Still stuck?</p>
+        {details.phone
+          ? <p class="mt-1 text-sm text-ink-2">Call or WhatsApp the state office: <a href={`tel:${tel}`} class="link tabular">{details.phone}</a></p>
+          : <p class="mt-1 text-sm text-ink-2">Call or WhatsApp the state office. {user.role === 'super_admin' ? <Fragment>Its number isn’t set yet: add it in <a href="/admin/settings#site" class="link">Settings</a>.</Fragment> : 'Its number will be shown here once the super admin adds it.'}</p>}
+      </div>
+    </section>
+  </div>
+</AdminLayout>
+
+<script>
+  function initHelp() {
+    const input = document.querySelector<HTMLInputElement>('[data-help-search]');
+    if (!input || input.dataset.ready) return;
+    input.dataset.ready = '1';
+    const items = [...document.querySelectorAll<HTMLElement>('[data-help-text]')];
+    const none = document.querySelector<HTMLElement>('[data-help-none]')!;
+    input.addEventListener('input', () => {
+      const words = input.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
+      let shown = 0;
+      for (const li of items) { const hit = words.every((w) => li.dataset.helpText!.includes(w)); li.hidden = !hit; if (hit) shown++; }
+      none.hidden = shown > 0;
+    });
+  }
+  initHelp();
+</script>

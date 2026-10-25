@@ -1,0 +1,203 @@
+---
+/**
+ * Admin: Pages & documents (approved wireframe "Pages & documents"), three tabs. Pages: the About
+ * pages and district histories, each opening the page editor. Documents: the organisation's PDFs
+ * (Bye-Law, resolutions, jubilee volumes); a new version replaces the file and keeps the address.
+ * Conferences: the state conferences behind the timeline, newest first. State roles manage all
+ * three; district roles see their district's history only. Plain forms; the route does each action.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import { ABOUT_PAGES, DOC_KINDS, conferenceChoices, listConferences, listDocuments, listPages, ord } from '~/lib/admin/pages';
+import { isState } from '~/lib/admin/roles';
+import { districtBySlug } from '~/data/districts';
+import { ago } from '~/lib/admin/client';
+import { formatDate } from '~/lib/i18n';
+
+interface Props { error?: string; done?: string }
+const { error, done } = Astro.props;
+const user = Astro.locals.user!;
+const state = isState(user);
+const p = Astro.url.searchParams;
+const tab = state && (p.get('tab') === 'documents' || p.get('tab') === 'conferences') ? p.get('tab')! : 'pages';
+const pageRows = tab === 'pages' ? await listPages(user) : [];
+const docs = tab === 'documents' ? await listDocuments(user) : [];
+const confs = tab === 'conferences' ? await listConferences(user) : [];
+const choices = tab === 'conferences' ? await conferenceChoices() : { albums: [], events: [] };
+const doc = docs.find((d) => d.id === Number(p.get('doc')));
+const conf = confs.find((c) => c.id === Number(p.get('conf')));
+const nextNumber = (confs[0]?.number ?? 63) + 1;
+const missingAbout = ABOUT_PAGES.filter((a) => !pageRows.some((r) => r.path === `/about/${a.slug}`));
+const doneText: Record<string, string> = { doc: 'Document saved.', doc_publish: 'Document published.', doc_archive: 'Document archived.', conf: 'Conference saved.' };
+const tabs = [['pages', 'Pages'], ['documents', 'Documents'], ['conferences', 'Conferences']] as const;
+---
+<AdminLayout title="Pages & documents" section="pages">
+  <h1 class="t-h1">Pages & documents</h1>
+  {!state && <p class="t-meta mt-1">The About pages and documents are managed by the state office. Your district’s history is below.</p>}
+  {error && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent-ink" role="alert"><Icon name="CircleAlert" size={17} class="mt-0.5" /> {error}</p>}
+  {done && doneText[done] && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm" role="status"><Icon name="CircleCheck" size={17} class="mt-0.5" /> {doneText[done]}</p>}
+
+  {state && (
+    <nav class="mt-5 flex gap-1 border-b border-line" aria-label="Sections">
+      {tabs.map(([id, label]) => <a href={`/admin/pages?tab=${id}`} aria-current={tab === id ? 'page' : undefined} class:list={['-mb-px border-b-2 px-3 py-2.5', tab === id ? 'border-ink font-semibold' : 'border-transparent text-ink-2']}>{label}</a>)}
+    </nav>
+  )}
+
+  {tab === 'pages' && (
+    <section class="mt-5" aria-label="Pages">
+      <ul class="divide-y divide-line border-y border-line">
+        {pageRows.map((r) => (
+          <li class="relative flex flex-wrap items-center gap-3 py-3">
+            <div class="min-w-0 flex-1">
+              <a href={`/admin/pages/${r.id}`} lang="ml" class="stretched font-semibold">{r.titleMl}</a>
+              <p class="t-meta">{r.template === 'district_history' ? `${districtBySlug[r.district ?? '']?.name.en} district history` : r.path} · {r.status === 'published' ? 'Published' : 'Draft'}{r.enSource === 'ai_draft' ? ' · English to approve' : ''}</p>
+            </div>
+            <span class="t-meta">Updated {ago(r.updatedAt)}</span>
+          </li>
+        ))}
+        {pageRows.length === 0 && <li class="t-meta py-3">No pages yet.</li>}
+      </ul>
+      {state && (
+        <form method="post" class="card mt-5 grid gap-3 p-4 sm:grid-cols-[1fr_auto] sm:items-end">
+          <label class="block"><span class="t-label">New page</span>
+            <select name="slug" class="field mt-1">
+              {missingAbout.map((a) => <option value={a.slug}>{a.titleEn} (/about/{a.slug})</option>)}
+              <option value="">Another About page…</option>
+            </select>
+          </label>
+          <label class="block sm:col-span-2"><span class="t-label">Its name · only for “Another About page”</span><input name="title" lang="ml" class="field mt-1" maxlength="120" /></label>
+          <input type="hidden" name="kind" value="about" />
+          <button name="action" value="create_page" class="btn btn-secondary sm:col-start-2 sm:row-start-1"><Icon name="Plus" size={17} /> Create</button>
+        </form>
+      )}
+      {!state && !pageRows.length && (
+        <form method="post" class="mt-4"><input type="hidden" name="kind" value="district_history" /><input type="hidden" name="district" value={user.district} /><button name="action" value="create_page" class="btn btn-secondary">Write your district’s history</button></form>
+      )}
+    </section>
+  )}
+
+  {tab === 'documents' && (
+    <section class="mt-5" aria-label="Documents">
+      <ul class="divide-y divide-line border-y border-line">
+        {docs.map((d) => (
+          <li class="flex flex-wrap items-center gap-3 py-3">
+            <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-bg-subtle text-xs font-bold text-ink-2">PDF</span>
+            <div class="min-w-0 flex-1">
+              <p lang="ml" class="font-semibold">{d.titleMl}</p>
+              <p class="t-meta">{DOC_KINDS[d.kind]}{d.year ? ` · ${d.year}` : ''} · {d.status === 'published' ? 'Published' : 'Draft'}{d.pdfUrl ? '' : ' · no PDF yet'}</p>
+            </div>
+            {d.pdfUrl && <a href={d.pdfUrl} target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Open</a>}
+            <a href={`/admin/pages?tab=documents&doc=${d.id}#doc-form`} class="btn btn-secondary btn-sm">Edit</a>
+          </li>
+        ))}
+        {docs.length === 0 && <li class="t-meta py-3">No documents yet.</li>}
+      </ul>
+      <form method="post" id="doc-form" class="card mt-5 scroll-mt-20 space-y-3 p-4" data-doc-form>
+        <p class="font-semibold">{doc ? 'Edit document' : 'Add a document'}</p>
+        {doc && <input type="hidden" name="id" value={doc.id} />}
+        <input type="hidden" name="pdfMediaId" value={doc?.pdfMediaId ?? ''} data-pdf-id />
+        <input type="hidden" name="pageCount" value={doc?.pageCount ?? ''} data-pages />
+        <label class="flex cursor-pointer flex-wrap items-center gap-2 rounded-[var(--radius-control)] border-2 border-dashed border-line-strong p-3 text-sm">
+          <Icon name="FileText" size={20} class="text-ink-3" /> <span data-pdf-state>{doc?.pdfUrl ? 'A PDF is attached. Choose another to replace it (the address stays the same).' : 'Choose the PDF'}</span>
+          <input type="file" accept="application/pdf,.pdf" class="sr-only" data-pdf-file />
+        </label>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label class="block"><span class="t-label">Title · Malayalam</span><input name="titleMl" lang="ml" class="field mt-1" value={doc?.titleMl ?? ''} required maxlength="200" /></label>
+          <label class="block"><span class="t-label">Title · English</span><input name="titleEn" lang="en" class="field mt-1" value={doc?.titleEn ?? ''} maxlength="200" /></label>
+          <label class="block"><span class="t-label">Kind</span><select name="kind" class="field mt-1">{Object.entries(DOC_KINDS).map(([k, v]) => <option value={k} selected={doc?.kind === k}>{v}</option>)}</select></label>
+          <label class="block"><span class="t-label">Year</span><input name="year" inputmode="numeric" class="field mt-1" value={doc?.year ?? ''} maxlength="4" /></label>
+        </div>
+        <label class="block"><span class="t-label">Short description · optional</span><textarea name="summaryMl" lang="ml" rows="2" class="field grow-field mt-1" maxlength="1000">{doc?.summaryMl ?? ''}</textarea></label>
+        <div class="flex flex-wrap gap-2">
+          <button name="action" value="doc_publish" class="btn btn-primary">{doc?.status === 'published' ? 'Save' : 'Publish'}</button>
+          {doc?.status !== 'published' && <button name="action" value="doc_save" class="btn btn-secondary">Save draft</button>}
+          {doc && <button name="action" value="doc_archive" class="btn btn-ghost !text-accent-ink" data-confirm="Archive this document? It comes off the site.">Archive</button>}
+          {doc && <a href="/admin/pages?tab=documents#doc-form" class="btn btn-ghost">Cancel</a>}
+        </div>
+      </form>
+    </section>
+  )}
+
+  {tab === 'conferences' && (
+    <section class="mt-5" aria-label="Conferences">
+      <ul class="divide-y divide-line border-y border-line">
+        {confs.map((c) => (
+          <li class="flex flex-wrap items-center gap-3 py-3">
+            <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-accent-soft font-bold text-accent-ink tabular">{c.number}</span>
+            <div class="min-w-0 flex-1">
+              <p class="font-semibold">{c.number}{ord(c.number)} state conference</p>
+              <p class="t-meta">{[c.startDate ? formatDate(c.startDate, 'en', 'short') : c.year, c.placeMl].filter(Boolean).join(' · ') || 'Year and place to add'}{c.reportMl ? ' · report' : ''}{c.albumId ? ' · album' : ''}</p>
+            </div>
+            <a href={`/admin/pages?tab=conferences&conf=${c.id}#conf-form`} class="btn btn-secondary btn-sm">Edit</a>
+          </li>
+        ))}
+        {confs.length === 0 && <li class="t-meta py-3">None yet. The 63 past conferences come over with the import from the old site; add the next one here after it happens.</li>}
+      </ul>
+      <form method="post" id="conf-form" class="card mt-5 scroll-mt-20 space-y-3 p-4">
+        <p class="font-semibold">{conf ? `${conf.number}${ord(conf.number)} state conference` : 'Add a conference'}</p>
+        {conf && <input type="hidden" name="id" value={conf.id} />}
+        <div class="grid gap-3 sm:grid-cols-4">
+          <label class="block"><span class="t-label">Number</span><input name="number" inputmode="numeric" class="field mt-1" value={conf?.number ?? nextNumber} required /></label>
+          <label class="block"><span class="t-label">Starts</span><input name="startDate" type="date" class="field mt-1" value={conf?.startDate ?? ''} /></label>
+          <label class="block"><span class="t-label">Ends</span><input name="endDate" type="date" class="field mt-1" value={conf?.endDate ?? ''} /></label>
+          <label class="block"><span class="t-label">Year · if no dates</span><input name="year" inputmode="numeric" class="field mt-1" value={conf?.year ?? ''} /></label>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label class="block"><span class="t-label">Place · Malayalam</span><input name="placeMl" lang="ml" class="field mt-1" value={conf?.placeMl ?? ''} maxlength="200" /></label>
+          <label class="block"><span class="t-label">Place · English</span><input name="placeEn" lang="en" class="field mt-1" value={conf?.placeEn ?? ''} maxlength="200" /></label>
+        </div>
+        <label class="block"><span class="t-label">Report · optional</span><textarea name="reportMl" lang="ml" rows="4" class="field grow-field mt-1" placeholder="Decisions, office-bearers elected, resolutions" maxlength="8000">{conf?.reportMl ?? ''}</textarea></label>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label class="block"><span class="t-label">Photo album</span><select name="albumId" class="field mt-1" lang="ml"><option value="">None</option>{choices.albums.map((a) => <option value={a.id} selected={conf?.albumId === a.id}>{a.title}</option>)}</select></label>
+          <label class="block"><span class="t-label">Event</span><select name="eventSlug" class="field mt-1" lang="ml"><option value="">None</option>{choices.events.map((e) => <option value={e.slug} selected={conf?.eventSlug === e.slug}>{e.title} · {formatDate(e.start, 'en', 'short')}</option>)}</select></label>
+        </div>
+        <div class="flex flex-wrap gap-2"><button name="action" value="conf_save" class="btn btn-primary">Save</button>{conf && <a href="/admin/pages?tab=conferences#conf-form" class="btn btn-ghost">Cancel</a>}</div>
+        <p class="t-meta">After each conference, add it here and start the new committee term in People & committees.</p>
+      </form>
+    </section>
+  )}
+</AdminLayout>
+
+<script>
+  import { toast } from '~/lib/admin/client';
+  import { openPdf } from '~/lib/admin/pdf-read';
+
+  function initPagesScreen() {
+    document.querySelectorAll<HTMLFormElement>('form').forEach((f) => {
+      if (f.dataset.ready) return;
+      f.dataset.ready = '1';
+      f.addEventListener('submit', (e) => {
+        const msg = (e.submitter as HTMLElement | null)?.dataset.confirm;
+        if (msg && !window.confirm(msg)) e.preventDefault();
+      });
+    });
+    const form = document.querySelector<HTMLFormElement>('[data-doc-form]');
+    form?.querySelector<HTMLInputElement>('[data-pdf-file]')?.addEventListener('change', async (e) => {
+      const input = e.currentTarget as HTMLInputElement;
+      const file = input.files?.[0];
+      input.value = '';
+      if (!file) return;
+      const state = form.querySelector<HTMLElement>('[data-pdf-state]')!;
+      try {
+        state.textContent = 'Reading…';
+        const { pdf, sha } = await openPdf(file);
+        const pages = pdf.numPages;
+        await pdf.destroy();
+        state.textContent = 'Uploading…';
+        const data = new FormData();
+        data.set('file', file);
+        data.set('sha256', sha);
+        const res = await fetch('/api/admin/media?kind=pdf', { method: 'POST', body: data, credentials: 'same-origin' });
+        const out = (await res.json().catch(() => ({}))) as { item?: { id: number }; error?: string };
+        if (!res.ok || !out.item) throw new Error(out.error ?? 'The upload failed.');
+        form.querySelector<HTMLInputElement>('[data-pdf-id]')!.value = String(out.item.id);
+        form.querySelector<HTMLInputElement>('[data-pages]')!.value = String(pages);
+        state.textContent = `${file.name} · ${pages} ${pages === 1 ? 'page' : 'pages'} · ready. Save to use it.`;
+      } catch (err) {
+        state.textContent = 'Choose the PDF';
+        toast(err instanceof Error ? err.message : 'The PDF could not be used.', 'error');
+      }
+    });
+  }
+  initPagesScreen();
+</script>

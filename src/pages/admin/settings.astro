@@ -1,0 +1,28 @@
+---
+/** Settings in the admin. Each form posts an action here (src/lib/admin/settings.ts checks every rule). */
+import SettingsView from '~/views/admin/SettingsView.astro';
+import { deleteTerm, saveAi, saveInbox, saveSiteDetails, saveTerm } from '~/lib/admin/settings';
+import { AdminError } from '~/lib/admin/publish';
+
+export const prerender = false;
+const user = Astro.locals.user!;
+let error: string | undefined;
+if (Astro.request.method === 'POST') {
+  const f = Object.fromEntries([...(await Astro.request.formData()).entries()].map(([k, v]) => [k, String(v)]));
+  try {
+    switch (f.action) {
+      case 'term': await saveTerm(user, Number(f.id) || null, f); return Astro.redirect('/admin/settings?done=term#glossary');
+      case 'term_delete': await deleteTerm(user, Number(f.id)); return Astro.redirect('/admin/settings?done=term_delete#glossary');
+      case 'site': await saveSiteDetails(user, f); break;
+      case 'ai': await saveAi(user, f); break;
+      case 'inbox': await saveInbox(user, f); break;
+      default: throw new AdminError('Unknown action.');
+    }
+    return Astro.redirect(`/admin/settings?done=${f.action}`);
+  } catch (err) {
+    if (!(err instanceof AdminError)) throw err;
+    error = err.message;
+  }
+}
+---
+<SettingsView error={error} done={Astro.url.searchParams.get('done') ?? undefined} />

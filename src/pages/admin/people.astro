@@ -1,0 +1,35 @@
+---
+/** People & committees in the admin. Each form posts an action here (src/lib/admin/people.ts checks every rule). */
+import PeopleView from '~/views/admin/PeopleView.astro';
+import { addMember, moveMember, parseKey, publishMember, publishTerm, removeMember, startTerm, updateMember } from '~/lib/admin/people';
+import { AdminError } from '~/lib/admin/publish';
+
+export const prerender = false;
+const user = Astro.locals.user!;
+let error: string | undefined;
+if (Astro.request.method === 'POST') {
+  const f = Object.fromEntries([...(await Astro.request.formData()).entries()].map(([k, v]) => [k, String(v)]));
+  const key = parseKey(f.c);
+  const position = Number(f.position);
+  try {
+    if (!key) throw new AdminError('Choose a committee.');
+    switch (f.action) {
+      case 'add': await addMember(user, key, f); break;
+      case 'update': await updateMember(user, position, f); break;
+      case 'move_up': await moveMember(user, position, 'up'); break;
+      case 'move_down': await moveMember(user, position, 'down'); break;
+      case 'remove': await removeMember(user, position); break;
+      case 'publish': await publishMember(user, position); break;
+      case 'start_term': await startTerm(user, key, f.term); break;
+      case 'publish_term': await publishTerm(user, key); break;
+      default: throw new AdminError('Unknown action.');
+    }
+    const done = f.action.startsWith('move') ? 'move' : f.action === 'add' && user.role === 'district_editor' ? 'proposed' : f.action;
+    return Astro.redirect(`/admin/people?c=${encodeURIComponent(f.c)}&done=${done}`);
+  } catch (err) {
+    if (!(err instanceof AdminError)) throw err;
+    error = err.message;
+  }
+}
+---
+<PeopleView error={error} done={Astro.url.searchParams.get('done') ?? undefined} />

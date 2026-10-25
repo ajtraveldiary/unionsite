@@ -1,15 +1,16 @@
 // Content queries. Pages and components get content only from here. Posts, orders, Kerala Service
-// issues and the home banner come from D1 (src/db/schema.ts), each query reading only what its
-// page shows; events stay hand-written in src/data/site.ts until the admin panel manages them.
+// issues, events and the home banner come from D1 (src/db/schema.ts), each query reading only what
+// its page shows.
 // The URL helpers at the top are plain functions and safe to use anywhere.
-import { and, desc, eq, exists, isNotNull, isNull, ne, notInArray, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, gte, inArray, isNotNull, isNull, lt, ne, notInArray, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { getDb } from '~/db/client';
-import { districts as districtsT, magazineIssues, media, orders as ordersT, posts as postsT, postTranslations, siteSettings } from '~/db/schema';
+import { areaCommittees, districts as districtsT, events as eventsT, magazineIssues, media, offices as officesT, orders as ordersT, people, positions, posts as postsT, postTranslations, siteSettings, videos as videosT } from '~/db/schema';
 import { subjectBySlug } from '~/data/orders';
+import { site } from '~/data/site';
 import { districts } from '~/data/districts';
-import { events } from '~/data/site';
-import type { Cover, L10n, Lang, MagazineIssue, Order, Post, UnionEvent } from './types';
+import type { Cover, L10n, Lang, MagazineIssue, Order, Person, Post, UnionEvent, Video } from './types';
+import type { Body } from './richtext';
 import { href } from './i18n';
 import { newsMatching } from './search-db';
 import { postPath, orderPath, issuePath } from './paths';
@@ -21,9 +22,13 @@ export const districtUrl = (slug: string, lang: Lang) => href(lang, `/districts/
 export const subjectName = (slug: string) => subjectBySlug[slug]?.name;
 export const sortedDistricts = () => [...districts].sort((a, b) => a.sortOrder - b.sortOrder);
 
-/** Files in R2 are served from the media domain; crawled ones still from the old site */
-const MEDIA_BASE = 'https://media.keralangounion.in';
-const fileUrl = (r2Key: string | null, sourceUrl: string | null) => (r2Key ? `${MEDIA_BASE}/${r2Key}` : sourceUrl ?? undefined);
+/** Files in R2 are served by the Worker at /media/… until media.keralangounion.in is connected at
+ * launch (plan, section 4); crawled ones still come from the old site */
+export const MEDIA_BASE = '/media';
+export const fileUrl = (r2Key: string | null, sourceUrl: string | null) => (r2Key ? `${MEDIA_BASE}/${r2Key}` : sourceUrl ?? undefined);
+/** Uploaded photos keep their sizes as R2 keys ("images/2026/10/12/320.webp 320w, …"); crawled ones as full URLs */
+export const srcsetUrls = (srcset: string, r2Key: string | null) =>
+  r2Key ? srcset.split(',').map((s) => { const [key, w] = s.trim().split(/\s+/); return `${MEDIA_BASE}/${key} ${w}`; }).join(', ') : srcset;
 
 // ── Posts ────────────────────────────────────────────────────────────────────────────────
 
@@ -48,14 +53,14 @@ const postColumns = {
   coverAltMl: media.altMl,
   coverAltEn: media.altEn,
 };
-type PostRow = { [K in keyof typeof postColumns]: (typeof postColumns)[K]['_']['data'] | null } & { bodyMl?: string[] | null; bodyEn?: string[] | null };
+type PostRow = { [K in keyof typeof postColumns]: (typeof postColumns)[K]['_']['data'] | null } & { bodyMl?: Body | null; bodyEn?: Body | null };
 
 const l10n = (mlText: string | null, enText: string | null): L10n => ({ ml: mlText ?? '', ...(enText && { en: enText }) });
 
 function toPost(r: PostRow): Post {
   const src = fileUrl(r.coverR2, r.coverSrc);
   const cover: Cover = src
-    ? { kind: 'photo', src, ...(r.coverSrcset && { srcset: r.coverSrcset }), alt: l10n(r.coverAltMl, r.coverAltEn) }
+    ? { kind: 'photo', src, ...(r.coverSrcset && { srcset: srcsetUrls(r.coverSrcset, r.coverR2) }), alt: l10n(r.coverAltMl, r.coverAltEn) }
     : { kind: 'none' };
   return {
     id: r.id!,
@@ -79,7 +84,8 @@ async function selectPosts(where: (SQL | undefined)[], opts: { limit?: number; o
     .select(columns)
     .from(postsT)
     .innerJoin(ml, and(eq(ml.postId, postsT.id), eq(ml.lang, 'ml')))
-    .leftJoin(en, and(eq(en.postId, postsT.id), eq(en.lang, 'en')))
+    // English shows only once a person wrote or approved it, never as an AI draft (plan, section 6)
+    .leftJoin(en, and(eq(en.postId, postsT.id), eq(en.lang, 'en'), inArray(en.source, ['human', 'ai_reviewed'])))
     .leftJoin(media, eq(media.id, postsT.coverMediaId))
     .where(and(eq(postsT.status, 'published'), ...where))
     .orderBy(desc(postsT.publishedAt), desc(postsT.id))
@@ -282,6 +288,7 @@ export async function allIssues(): Promise<MagazineIssue[]> {
     .from(magazineIssues)
     .leftJoin(media, eq(media.id, magazineIssues.coverMediaId))
     .leftJoin(pdf, eq(pdf.id, magazineIssues.pdfMediaId))
+    .where(eq(magazineIssues.status, 'published'))
     .orderBy(desc(magazineIssues.year), desc(magazineIssues.month));
   return rows.map((r) => ({
     year: r.year,
@@ -309,16 +316,169 @@ export async function activeBanner(): Promise<ActiveBanner | null> {
     const [post] = await selectPosts([eq(postsT.id, banner.post)], { limit: 1 });
     return post ? { kind: 'post', post, headline: banner.headline } : null;
   }
-  const slug = banner.event;
-  const event = events.find((e) => e.slug === slug);
+  const event = await eventBySlug(banner.event);
   return event ? { kind: 'event', event, headline: banner.headline } : null;
 }
 
-// ── Events (hand-written for now) ────────────────────────────────────────────────────────
+// ── Events ───────────────────────────────────────────────────────────────────────────────
 
-const NOW = () => new Date();
-export const allEvents = () => [...events].sort((a, b) => a.start.localeCompare(b.start));
-export const isUpcoming = (e: { start: string; end?: string }) => new Date(e.end ?? e.start) >= NOW();
-export const upcomingEvents = (n = 3) => allEvents().filter(isUpcoming).slice(0, n);
-export const eventsForDistrict = (slug: string) => allEvents().filter((e) => e.district === slug && isUpcoming(e));
+/** Now in India, in the form event times are stored ("2026-10-24T09:30:00+05:30"), so they compare as text */
+export const nowIst = () => `${new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 19)}+05:30`;
+/** An event is upcoming until it ends (or, without an end time, until it starts) */
+export const isUpcoming = (e: { start: string; end?: string }) => new Date(e.end ?? e.start) >= new Date();
+const ends = sql<string>`coalesce(${eventsT.endAt}, ${eventsT.startAt})`;
 
+const eventColumns = {
+  slug: eventsT.slug, titleMl: eventsT.titleMl, titleEn: eventsT.titleEn, venueMl: eventsT.venueMl, venueEn: eventsT.venueEn,
+  descriptionMl: eventsT.descriptionMl, descriptionEn: eventsT.descriptionEn, enSource: eventsT.enSource, start: eventsT.startAt,
+  end: eventsT.endAt, district: eventsT.district, mapUrl: eventsT.mapUrl, registrationUrl: eventsT.registrationUrl, sample: eventsT.sample,
+  reportId: postsT.id, reportSlug: postsT.slug, reportDate: postsT.publishedAt, reportTitleMl: ml.title, reportTitleEn: en.title,
+};
+
+async function selectEvents(where: (SQL | undefined)[], order: 'asc' | 'desc', limit: number): Promise<UnionEvent[]> {
+  const db = await getDb();
+  const rows = await db
+    .select(eventColumns)
+    .from(eventsT)
+    // The news report, once the event is over, and only while that post is on the site
+    .leftJoin(postsT, and(eq(postsT.id, eventsT.reportPostId), eq(postsT.status, 'published')))
+    .leftJoin(ml, and(eq(ml.postId, postsT.id), eq(ml.lang, 'ml')))
+    .leftJoin(en, and(eq(en.postId, postsT.id), eq(en.lang, 'en'), inArray(en.source, ['human', 'ai_reviewed'])))
+    .where(and(eq(eventsT.status, 'published'), ...where))
+    .orderBy(order === 'asc' ? asc(eventsT.startAt) : desc(eventsT.startAt))
+    .limit(limit);
+  return rows.map((r) => {
+    // English shows only once a person wrote or approved it (plan, section 6)
+    const enOk = r.enSource !== 'ai_draft';
+    return {
+      slug: r.slug,
+      title: l10n(r.titleMl, enOk ? r.titleEn : null),
+      start: r.start,
+      ...(r.end && { end: r.end }),
+      venue: l10n(r.venueMl, enOk ? r.venueEn : null),
+      ...(r.district && { district: r.district }),
+      ...(r.descriptionMl && { description: l10n(r.descriptionMl, enOk ? r.descriptionEn : null) }),
+      ...(r.mapUrl && { mapUrl: r.mapUrl }),
+      ...(r.registrationUrl && { registrationUrl: r.registrationUrl }),
+      ...(r.reportId && r.reportSlug && r.reportDate && { report: { title: l10n(r.reportTitleMl, r.reportTitleEn), path: postPath({ date: r.reportDate, slug: r.reportSlug }) } }),
+      ...(r.sample && { sample: true }),
+    };
+  });
+}
+
+/** Events that haven't ended, soonest first */
+export const upcomingEvents = (n = 3) => selectEvents([gte(ends, nowIst())], 'asc', n);
+/** Events that are over, latest first */
+export const pastEvents = (n = 30) => selectEvents([lt(ends, nowIst())], 'desc', n);
+/** One district's upcoming events */
+export const eventsForDistrict = (slug: string, n = 20) => selectEvents([eq(eventsT.district, slug), gte(ends, nowIst())], 'asc', n);
+export const eventBySlug = async (slug: string) => (await selectEvents([eq(eventsT.slug, slug)], 'asc', 1))[0];
+
+/** Upcoming district events, keyed by district slug, for the Districts page: one query */
+export async function upcomingEventsByDistrict() {
+  const list = await selectEvents([isNotNull(eventsT.district), gte(ends, nowIst())], 'asc', 300);
+  const out: Record<string, UnionEvent[]> = {};
+  for (const e of list) (out[e.district!] ??= []).push(e);
+  return out;
+}
+
+// ── Committees, offices, videos ──────────────────────────────────────────────────────────
+
+/** The smallest listed size at least `min` px wide (srcset "url 320w, …"), else the main file */
+function sized(srcset: string | null, r2Key: string | null, src: string | undefined, min: number) {
+  if (!src) return undefined;
+  const sizes = (srcset ? srcsetUrls(srcset, r2Key) : '').split(',').map((s) => s.trim().split(/\s+/)).filter(([, w]) => w?.endsWith('w')).map(([url, w]) => ({ url, w: parseInt(w) }));
+  return sizes.filter((s) => s.w >= min).sort((a, b) => a.w - b.w)[0]?.url ?? src;
+}
+
+/**
+ * The members a committee has now (published), in the order the state office set: the state
+ * committee, the women's sub-committee, a district committee or an area committee.
+ */
+export async function committee(body: 'state' | 'women_subcommittee' | 'district' | 'area', where: { district?: string; area?: number } = {}): Promise<Person[]> {
+  const db = await getDb();
+  const rows = await db
+    .select({ ml: people.nameMl, en: people.nameEn, role: positions.role, body: positions.body, district: positions.district, phone: people.phone, r2Key: media.r2Key, src: media.sourceUrl, srcset: media.srcset })
+    .from(positions)
+    .innerJoin(people, eq(people.id, positions.personId))
+    .leftJoin(media, eq(media.id, people.photoMediaId))
+    .where(and(
+      eq(positions.body, body),
+      // Area committees keep their district too, so they are found by the area alone
+      where.area ? eq(positions.areaCommitteeId, where.area) : isNull(positions.areaCommitteeId),
+      where.area ? undefined : where.district ? eq(positions.district, where.district) : isNull(positions.district),
+      eq(positions.status, 'published'),
+    ))
+    .orderBy(asc(positions.sortOrder), asc(positions.id));
+  return rows.map((r) => ({
+    name: { ml: r.ml, en: r.en || r.ml },
+    role: r.role,
+    body: r.body,
+    ...(r.district && { district: r.district }),
+    ...(r.phone && { phone: r.phone }),
+    ...(fileUrl(r.r2Key, r.src) && { photo: sized(r.srcset, r.r2Key, fileUrl(r.r2Key, r.src), 160) }),
+  }));
+}
+
+export interface Office {
+  kind: 'state' | 'district' | 'area';
+  area?: L10n;
+  address: L10n;
+  phone?: string;
+  email?: string;
+  /** A link that opens directions in the phone's map app */
+  directions?: string;
+}
+
+/** A district's office addresses: the district office first, then the area offices in order */
+export async function districtOffices(slug: string): Promise<Office[]> {
+  const db = await getDb();
+  const rows = await db
+    .select({ kind: officesT.kind, addressMl: officesT.addressMl, addressEn: officesT.addressEn, phone: officesT.phone, email: officesT.email, lat: officesT.lat, lng: officesT.lng, mapUrl: officesT.mapUrl, areaMl: areaCommittees.nameMl, areaEn: areaCommittees.nameEn })
+    .from(officesT)
+    .leftJoin(areaCommittees, eq(areaCommittees.id, officesT.areaCommitteeId))
+    .where(eq(officesT.district, slug))
+    .orderBy(sql`${officesT.kind} = 'area'`, asc(officesT.sortOrder), asc(officesT.id));
+  return rows.map((r) => ({
+    kind: r.kind,
+    ...(r.areaMl && { area: l10n(r.areaMl, r.areaEn) }),
+    address: l10n(r.addressMl, r.addressEn),
+    ...(r.phone && { phone: r.phone }),
+    ...(r.email && { email: r.email }),
+    ...((r.lat != null && r.lng != null) ? { directions: `https://www.google.com/maps/dir/?api=1&destination=${r.lat / 1e6},${r.lng / 1e6}` } : r.mapUrl ? { directions: r.mapUrl } : {}),
+  }));
+}
+
+/** The newest videos that aren't hidden */
+export async function latestVideos(n = 12): Promise<Video[]> {
+  const db = await getDb();
+  const rows = await db.select({ id: videosT.youtubeId, ml: videosT.titleMl, en: videosT.titleEn, date: videosT.publishedAt })
+    .from(videosT).where(eq(videosT.hidden, false)).orderBy(desc(videosT.publishedAt), desc(videosT.id)).limit(n);
+  return rows.map((r) => ({ id: r.id, title: l10n(r.ml, r.en), date: r.date }));
+}
+
+// ── Site details (Admin → Settings) ─────────────────────────────────────────────────────
+
+export interface SiteDetails { addressMl: string; addressEn: string; phone: string; email: string; facebook: string; youtube: string }
+
+export const defaultSiteDetails = (): SiteDetails => ({
+  addressMl: site.address.ml, addressEn: site.address.en, phone: site.phone, email: site.email, facebook: site.social.facebook, youtube: site.social.youtube,
+});
+
+/** The State Centre's address, phone, email and social links, as set in Settings (site.ts until then).
+ * Pages built ahead of time, and any page when the database can't be read, use the site.ts values. */
+export async function siteDetails(): Promise<SiteDetails> {
+  try {
+    const db = await getDb();
+    const row = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, 'site_details')).get();
+    return { ...defaultSiteDetails(), ...((row?.value as Partial<SiteDetails> | undefined) ?? {}) };
+  } catch {
+    return defaultSiteDetails();
+  }
+}
+
+/** The same details in the shape of `site` in src/data/site.ts, for the views that show them */
+export async function siteInfo() {
+  const d = await siteDetails();
+  return { address: { ml: d.addressMl, en: d.addressEn || d.addressMl }, phone: d.phone, email: d.email, social: { facebook: d.facebook, youtube: d.youtube } };
+}

@@ -1,0 +1,121 @@
+---
+/**
+ * Admin: one photo album (approved wireframe "Media", Albums). Title, district (fixed for district
+ * roles) and date; then many photos at once from the phone or the computer, each made smaller here
+ * before it uploads; captions, order, the cover; publish or keep as a draft. District admins and
+ * editors publish their own district's albums (plan, section 10).
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import type { loadAlbum } from '~/lib/admin/albums';
+import { isState } from '~/lib/admin/roles';
+import { districtBySlug } from '~/data/districts';
+import { sortedDistricts } from '~/lib/content';
+
+interface Props { a: NonNullable<Awaited<ReturnType<typeof loadAlbum>>>; error?: string; done?: string }
+const { a, error, done } = Astro.props;
+const user = Astro.locals.user!;
+const doneText: Record<string, string> = { save: 'Saved.', publish: 'Published.', unpublish: 'Taken off the site; it is a draft now.', archive: 'Archived.', photo: 'Saved.', added: 'Photos added.' };
+---
+<AdminLayout title="Album" section="media">
+  <a href="/admin/media?tab=albums" class="btn btn-ghost btn-sm -ml-2"><Icon name="ArrowLeft" size={18} /> Albums</a>
+  <div class="mt-2 flex flex-wrap items-center gap-3">
+    <h1 lang="ml" class="t-h1">{a.titleMl}</h1>
+    <span class:list={['badge', a.status === 'published' ? 'badge-success' : 'badge-neutral']}>{a.status === 'published' ? 'Published' : a.status === 'archived' ? 'Archived' : 'Draft'}</span>
+    <span class="t-meta">{a.items.length} photos</span>
+  </div>
+  {error && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent-ink" role="alert"><Icon name="CircleAlert" size={17} class="mt-0.5" /> {error}</p>}
+  {done && doneText[done] && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm" role="status"><Icon name="CircleCheck" size={17} class="mt-0.5" /> {doneText[done]}</p>}
+  <p class="t-meta mt-2">Albums show on the Media page and the district hub’s Gallery tab once their public pages are built (Phase 3).</p>
+
+  <form method="post" class="card mt-5 grid gap-3 p-4 sm:grid-cols-2">
+    <label class="block"><span class="t-label">Title · Malayalam</span><input name="titleMl" lang="ml" class="field mt-1" value={a.titleMl} required maxlength="200" /></label>
+    <label class="block"><span class="t-label">Title · English · optional</span><input name="titleEn" lang="en" class="field mt-1" value={a.titleEn ?? ''} maxlength="200" /></label>
+    {isState(user)
+      ? <label class="block"><span class="t-label">District</span><select name="district" class="field mt-1"><option value="">State level</option>{sortedDistricts().map((d) => <option value={d.slug} selected={a.district === d.slug}>{d.name.en}</option>)}</select></label>
+      : <p class="field mt-6 flex items-center bg-bg-subtle text-ink-2">{districtBySlug[a.district ?? '']?.name.en} (your district)</p>}
+    <label class="block"><span class="t-label">Date</span><input name="eventDate" type="date" class="field mt-1" value={a.eventDate ?? ''} /></label>
+    <div class="flex flex-wrap gap-2 sm:col-span-2">
+      {a.status === 'published'
+        ? <Fragment><button name="action" value="save" class="btn btn-primary">Save</button><button name="action" value="unpublish" class="btn btn-ghost">Unpublish</button></Fragment>
+        : <Fragment><button name="action" value="publish" class="btn btn-primary"><Icon name="Check" size={18} /> Publish album</button><button name="action" value="save" class="btn btn-secondary">Save draft</button></Fragment>}
+      {a.status !== 'archived' && <button name="action" value="archive" class="btn btn-ghost !text-accent-ink" data-confirm="Archive this album? It comes off the site.">Archive</button>}
+    </div>
+  </form>
+
+  <section class="mt-8" aria-labelledby="photos" data-album-photos data-id={a.id} data-title={a.titleMl}>
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-2">
+      <h2 id="photos" class="t-h2">Photos</h2>
+      <label class="btn btn-primary btn-sm"><Icon name="ImagePlus" size={17} /> Add photos<input type="file" accept="image/*" multiple class="sr-only" data-add /></label>
+    </div>
+    <p class="t-meta mt-2" data-progress aria-live="polite">Pick many at once. Each is made smaller on this device first, so it’s quick on mobile data.</p>
+    <ul class="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {a.items.map((it, i) => (
+        <li class="card overflow-hidden">
+          <div class="relative">
+            {it.thumb && <img src={it.thumb} alt="" loading="lazy" class="aspect-[4/3] w-full bg-bg-subtle object-cover" />}
+            {a.coverMediaId === it.mediaId && <span class="badge badge-accent absolute left-2 top-2">Cover</span>}
+          </div>
+          <form method="post" class="space-y-2 p-3">
+            <input type="hidden" name="mediaId" value={it.mediaId} />
+            <label class="block"><span class="sr-only">Caption</span><input name="captionMl" lang="ml" class="field !min-h-10 text-sm" value={it.captionMl ?? ''} placeholder="Caption · optional" maxlength="300" /></label>
+            <div class="flex flex-wrap gap-1">
+              <button name="action" value="photo_caption" class="btn btn-secondary btn-sm">Save</button>
+              <button name="action" value="photo_up" class="btn btn-ghost btn-icon btn-sm" aria-label="Move earlier" disabled={i === 0}><Icon name="ArrowUp" size={16} /></button>
+              <button name="action" value="photo_down" class="btn btn-ghost btn-icon btn-sm" aria-label="Move later" disabled={i === a.items.length - 1}><Icon name="ArrowDown" size={16} /></button>
+              {a.coverMediaId !== it.mediaId && <button name="action" value="photo_cover" class="btn btn-ghost btn-sm">Make cover</button>}
+              <button name="action" value="photo_remove" class="btn btn-ghost btn-sm !text-accent-ink" data-confirm="Take this photo out of the album? It stays in the media library.">Remove</button>
+            </div>
+          </form>
+        </li>
+      ))}
+    </ul>
+    {a.items.length === 0 && <p class="t-meta py-4">No photos yet.</p>}
+  </section>
+</AdminLayout>
+
+<script>
+  import { api, toast } from '~/lib/admin/client';
+  import { prepareImage } from '~/lib/admin/image-prep';
+
+  function initAlbum() {
+    document.querySelectorAll<HTMLFormElement>('form').forEach((f) => {
+      if (f.dataset.ready) return;
+      f.dataset.ready = '1';
+      f.addEventListener('submit', (e) => {
+        const msg = (e.submitter as HTMLElement | null)?.dataset.confirm;
+        if (msg && !window.confirm(msg)) e.preventDefault();
+      });
+    });
+    const box = document.querySelector<HTMLElement>('[data-album-photos]');
+    if (!box || box.dataset.ready) return;
+    box.dataset.ready = '1';
+    const progress = box.querySelector<HTMLElement>('[data-progress]')!;
+    box.querySelector<HTMLInputElement>('[data-add]')!.addEventListener('change', async (e) => {
+      const input = e.currentTarget as HTMLInputElement;
+      const files = [...(input.files ?? [])];
+      input.value = '';
+      if (!files.length) return;
+      const ids: number[] = [];
+      let failed = 0;
+      // One at a time, so a phone on mobile data isn't swamped; the album's title describes them until captions are added
+      for (const [n, file] of files.entries()) {
+        progress.textContent = `Photo ${n + 1} of ${files.length}: preparing and uploading…`;
+        try {
+          const res = await fetch('/api/admin/media', { method: 'POST', body: await prepareImage(file, box.dataset.title ?? ''), credentials: 'same-origin' });
+          const out = (await res.json().catch(() => ({}))) as { item?: { id: number }; error?: string };
+          if (!res.ok || !out.item) throw new Error(out.error);
+          ids.push(out.item.id);
+        } catch { failed++; }
+      }
+      if (ids.length) {
+        try {
+          await api(`/api/admin/albums/${box.dataset.id}`, { body: { mediaIds: ids } });
+        } catch (err) { return toast(err instanceof Error ? err.message : 'The photos could not be added.', 'error'); }
+      }
+      if (failed) toast(`${failed} ${failed === 1 ? 'photo' : 'photos'} could not be uploaded.`, 'error');
+      location.assign(`${location.pathname}?done=added`);
+    });
+  }
+  initAlbum();
+</script>

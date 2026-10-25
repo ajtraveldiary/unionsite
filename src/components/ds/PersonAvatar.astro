@@ -1,0 +1,17 @@
+---
+/**
+ * An office-bearer's circle (plan, section 9: 1:1 circles, 48–120 px): their photo when one was
+ * uploaded in the admin, otherwise their initials on a tinted disc, so lists keep one shape.
+ */
+import type { Person } from '~/lib/types';
+
+interface Props { person: Pick<Person, 'name' | 'photo'>; size: number; tone?: 'accent' | 'neutral'; class?: string }
+const { person: p, size, tone = 'neutral', class: cls = '' } = Astro.props;
+const initials = p.name.en.replace(/[^A-Za-z ]/g, ' ').trim().split(/\s+/).slice(-2).map((w) => w[0]).join('') || p.name.ml.slice(0, 1);
+const text = size >= 60 ? 'text-xl font-bold' : size >= 40 ? 'text-sm font-semibold' : 'text-xs font-semibold';
+---
+{p.photo ? (
+  <img src={p.photo} alt="" width={size} height={size} loading="lazy" decoding="async" class:list={['shrink-0 rounded-full bg-bg-subtle object-cover', cls]} style={`width:${size}px;height:${size}px`} />
+) : (
+  <span lang="en" aria-hidden="true" class:list={['grid shrink-0 place-items-center rounded-full', tone === 'accent' ? 'bg-accent-soft text-accent-ink' : 'bg-bg-subtle text-ink-2', text, cls]} style={`width:${size}px;height:${size}px`}>{initials}</span>
+)}

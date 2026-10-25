@@ -1,0 +1,195 @@
+---
+/**
+ * Admin: every post in one list (plan, section 10; approved wireframe "News list"). Search and
+ * status tabs, then district, topic and English menus, all kept in the URL so a filtered list can
+ * be shared. A table on laptops, cards on phones, 50 a page. District roles only ever see their
+ * own district, so they get no District menu.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import StatusBadge from '~/components/admin/StatusBadge.astro';
+import EnglishBadge from '~/components/admin/EnglishBadge.astro';
+import { listPosts, statusCounts, type ListFilter, type PostStatus } from '~/lib/admin/posts';
+import { isState } from '~/lib/admin/roles';
+import { topics, topicBySlug, districtBySlug } from '~/data/districts';
+import { sortedDistricts } from '~/lib/content';
+import { formatDate } from '~/lib/i18n';
+
+const PAGE = 50;
+const user = Astro.locals.user!;
+const p = Astro.url.searchParams;
+const statuses = ['draft', 'in_review', 'scheduled', 'published', 'archived', 'changes'] as const;
+const status = statuses.find((s) => s === p.get('status'));
+const english = (['none', 'draft', 'outdated', 'ok'] as const).find((e) => e === p.get('english'));
+const page = Math.max(1, parseInt(p.get('page') ?? '1', 10) || 1);
+const filter: ListFilter = {
+  status,
+  topic: topics.some((t) => t.slug === p.get('topic')) ? p.get('topic')! : undefined,
+  district: isState(user) && (p.get('district') === 'state' || districtBySlug[p.get('district') ?? '']) ? p.get('district')! : undefined,
+  english,
+  q: p.get('q')?.slice(0, 100) || undefined,
+  offset: (page - 1) * PAGE,
+  limit: PAGE,
+};
+const [{ rows, total }, counts] = await Promise.all([listPosts(user, filter), statusCounts(user, filter)]);
+const pages = Math.max(1, Math.ceil(total / PAGE));
+
+/** This list's address with some filters changed (and back to page 1) */
+const link = (change: Record<string, string | undefined>) => {
+  const u = new URLSearchParams(Astro.url.search);
+  u.delete('page');
+  for (const [k, v] of Object.entries(change)) v ? u.set(k, v) : u.delete(k);
+  const s = u.toString();
+  return `/admin/news${s ? `?${s}` : ''}`;
+};
+const pageLink = (n: number) => {
+  const u = new URLSearchParams(Astro.url.search);
+  n > 1 ? u.set('page', String(n)) : u.delete('page');
+  return `/admin/news${u.size ? `?${u}` : ''}`;
+};
+const tabs: { id?: (typeof statuses)[number]; label: string; n: number }[] = [
+  { label: 'All', n: counts.all },
+  { id: 'draft', label: 'Drafts', n: counts.draft ?? 0 },
+  { id: 'in_review', label: 'Waiting for review', n: counts.in_review ?? 0 },
+  { id: 'changes', label: 'Unpublished changes', n: counts.changes },
+  { id: 'scheduled', label: 'Scheduled', n: counts.scheduled ?? 0 },
+  { id: 'published', label: 'Published', n: counts.published ?? 0 },
+  { id: 'archived', label: 'Archived', n: counts.archived ?? 0 },
+];
+const districtName = (slug: string | null) => (slug ? districtBySlug[slug]?.name.en.replace('Thiruvananthapuram', 'TVM') : 'State');
+const when = (r: (typeof rows)[number]) => r.status === 'published' || r.status === 'scheduled' ? formatDate(r.date, 'en', 'short') : `Changed ${formatDate(r.draftAt ?? r.updatedAt, 'en', 'short')}`;
+const filtered = !!(filter.q || filter.topic || filter.district || filter.english);
+---
+<AdminLayout title="News" section="news">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="t-h1">News</h1>
+      <p class="t-meta mt-1">{isState(user) ? 'Every post on the site' : `Posts of ${districtName(user.district)} district`}</p>
+    </div>
+    <a href="/admin/news/new" class="btn btn-primary hidden lg:inline-flex"><Icon name="Plus" size={18} /> New post</a>
+  </div>
+
+  <form method="get" action="/admin/news" class="mt-5" data-filters>
+    {status && <input type="hidden" name="status" value={status} />}
+    <div class="relative max-w-xl">
+      <Icon name="Search" size={18} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
+      <input type="search" name="q" value={filter.q ?? ''} class="field pl-10" placeholder="Search titles" aria-label="Search post titles, in Malayalam or English" />
+    </div>
+
+    <div class="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0" role="group" aria-label="Status">
+      {tabs.map((t) => (
+        <a href={link({ status: t.id })} class="chip" aria-current={t.id === status ? 'page' : undefined}>
+          {t.label} <span class="tabular text-xs opacity-75">{t.n.toLocaleString('en-IN')}</span>
+        </a>
+      ))}
+    </div>
+
+    <div class="mt-3 grid grid-cols-2 gap-3 md:flex md:flex-wrap">
+      {isState(user) && (
+        <select name="district" class="field md:w-48" aria-label="District" data-autosubmit>
+          <option value="">All districts</option>
+          <option value="state" selected={filter.district === 'state'}>State level</option>
+          {sortedDistricts().map((d) => <option value={d.slug} selected={filter.district === d.slug}>{d.name.en}</option>)}
+        </select>
+      )}
+      <select name="topic" class="field md:w-48" aria-label="Topic" data-autosubmit>
+        <option value="">All topics</option>
+        {topics.map((t) => <option value={t.slug} selected={filter.topic === t.slug}>{t.name.en}</option>)}
+      </select>
+      {user.role !== 'district_editor' && (
+        <select name="english" class="field md:w-56" aria-label="English" data-autosubmit>
+          <option value="">English: any</option>
+          <option value="draft" selected={english === 'draft'}>English to approve</option>
+          <option value="outdated" selected={english === 'outdated'}>English out of date</option>
+          <option value="ok" selected={english === 'ok'}>English live</option>
+          <option value="none" selected={english === 'none'}>No English yet</option>
+        </select>
+      )}
+      <button class="btn btn-secondary" data-filter-submit>Filter</button>
+      {filtered && <a href={link({ q: undefined, topic: undefined, district: undefined, english: undefined })} class="btn btn-ghost">Clear</a>}
+    </div>
+  </form>
+
+  <p class="t-meta mt-5" aria-live="polite">{total.toLocaleString('en-IN')} {total === 1 ? 'post' : 'posts'}{pages > 1 ? ` · page ${page} of ${pages}` : ''}</p>
+
+  {rows.length === 0 ? (
+    <div class="card mt-3 p-8 text-center">
+      <Icon name="Newspaper" size={32} class="mx-auto text-ink-3" />
+      <p class="mt-3 font-semibold">No posts here</p>
+      <p class="t-meta mt-1">{filtered ? 'Try fewer filters.' : 'Posts you write appear here.'}</p>
+    </div>
+  ) : (
+    <Fragment>
+      <!-- Laptops: a table -->
+      <table class="mt-3 hidden w-full border-collapse text-left text-sm md:table">
+        <thead>
+          <tr class="border-b-2 border-ink text-xs uppercase tracking-wide text-ink-3">
+            <th class="py-2 pr-4 font-semibold">Title</th>
+            <th class="py-2 pr-4 font-semibold">Status</th>
+            {isState(user) && <th class="py-2 pr-4 font-semibold">District</th>}
+            <th class="py-2 pr-4 font-semibold">Topic</th>
+            <th class="py-2 font-semibold">Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr class="relative border-b border-line align-top hover:bg-surface">
+              <td class="max-w-xl py-3 pr-4">
+                <a href={`/admin/news/${r.id}`} lang="ml" class="stretched clamp-2 font-semibold leading-snug">{r.title || 'Untitled post'}</a>
+                <span class="mt-1 flex flex-wrap gap-1.5">
+                  {r.hasDraft && <span class="badge badge-warning">Unpublished changes</span>}
+                  {r.homeRequested && <span class="badge badge-accent">Home page requested</span>}
+                  {user.role !== 'district_editor' && <EnglishBadge state={r.english} />}
+                </span>
+              </td>
+              <td class="whitespace-nowrap py-3 pr-4"><StatusBadge status={r.status as PostStatus} /></td>
+              {isState(user) && <td class="whitespace-nowrap py-3 pr-4 text-ink-2">{districtName(r.district)}</td>}
+              <td class="whitespace-nowrap py-3 pr-4 text-ink-2">{topicBySlug[r.topic]?.name.en}</td>
+              <td class="whitespace-nowrap py-3 tabular text-ink-2">{when(r)}{r.updatedBy && <span class="t-meta block">by {r.updatedBy}</span>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <!-- Phones: cards, status first -->
+      <ul class="mt-3 divide-y divide-line border-y border-line md:hidden">
+        {rows.map((r) => (
+          <li class="relative py-3">
+            <p class="flex flex-wrap items-center gap-1.5 text-xs"><StatusBadge status={r.status as PostStatus} /><span class="t-meta">{isState(user) ? `${districtName(r.district)} · ` : ''}{when(r)}</span></p>
+            <a href={`/admin/news/${r.id}`} lang="ml" class="stretched clamp-2 mt-1.5 block font-semibold leading-snug">{r.title || 'Untitled post'}</a>
+            {(r.hasDraft || r.homeRequested || (user.role !== 'district_editor' && r.english !== 'none')) && (
+              <p class="mt-1.5 flex flex-wrap gap-1.5">
+                {r.hasDraft && <span class="badge badge-warning">Unpublished changes</span>}
+                {r.homeRequested && <span class="badge badge-accent">Home page requested</span>}
+                {user.role !== 'district_editor' && <EnglishBadge state={r.english} />}
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </Fragment>
+  )}
+
+  {pages > 1 && (
+    <nav class="mt-6 flex items-center justify-between gap-3" aria-label="Pages">
+      {page > 1 ? <a href={pageLink(page - 1)} class="btn btn-secondary"><Icon name="ChevronLeft" size={18} /> Newer</a> : <span></span>}
+      <span class="t-meta">Page {page} of {pages}</span>
+      {page < pages ? <a href={pageLink(page + 1)} class="btn btn-secondary">Older <Icon name="ChevronRight" size={18} /></a> : <span></span>}
+    </nav>
+  )}
+</AdminLayout>
+
+<script>
+  // Menus filter as soon as they change; the Filter button stays for searching by title
+  function initFilters() {
+    const form = document.querySelector<HTMLFormElement>('[data-filters]');
+    if (!form || form.dataset.ready) return;
+    form.dataset.ready = '1';
+    form.querySelectorAll('[data-autosubmit]').forEach((el) => el.addEventListener('change', () => form.requestSubmit()));
+    // Leave empty fields out of the address
+    form.addEventListener('formdata', (e) => {
+      for (const [k, v] of [...e.formData.entries()]) if (v === '') e.formData.delete(k);
+    });
+  }
+  initFilters();
+</script>

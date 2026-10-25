@@ -12,14 +12,14 @@ import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
 import EmptyState from '~/components/ds/EmptyState.astro';
 import type { Lang, UnionEvent } from '~/lib/types';
 import { t, langOf, href, dateParts, formatDate, formatTime, monthName } from '~/lib/i18n';
-import { allEvents, isUpcoming, sortedDistricts } from '~/lib/content';
+import { upcomingEvents, pastEvents, sortedDistricts } from '~/lib/content';
 import { districtBySlug } from '~/data/districts';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
-const events = allEvents();
-const upcoming = events.filter(isUpcoming);
-const past = events.filter((e) => !isUpcoming(e)).reverse();
+// Every upcoming event, and the latest past ones (with their reports); never the whole archive
+const [upcoming, past] = await Promise.all([upcomingEvents(200), pastEvents(30)]);
+const events = [...past].reverse().concat(upcoming);
 
 // Upcoming events by month
 const byMonth: { label: string; items: UnionEvent[] }[] = [];
@@ -119,6 +119,9 @@ const dateRange = (e: UnionEvent) => {
                 <li id={e.slug} class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 py-3">
                   <span lang={langOf(e.title, lang)} class="font-semibold">{t(e.title, lang)}</span>
                   <span class="t-meta">{formatDate(e.start, 'en', 'short')} · <span lang={langOf(e.venue, lang)}>{t(e.venue, lang)}</span></span>
+                  {e.report && (
+                    <a href={href(lang, e.report.path)} class="link mt-1 inline-flex w-full items-center gap-1.5"><Icon name="Newspaper" size={16} /> Report: <span lang={langOf(e.report.title, lang)} class="font-normal">{t(e.report.title, lang)}</span></a>
+                  )}
                 </li>
               ))}
             </ul>

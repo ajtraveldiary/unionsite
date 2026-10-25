@@ -1,0 +1,24 @@
+---
+/** A short list of posts for the dashboard: status, title and one line of detail, each opening the editor */
+import StatusBadge from './StatusBadge.astro';
+import type { ListRow } from '~/lib/admin/posts';
+
+interface Props {
+  rows: ListRow[];
+  meta: (row: ListRow) => string;
+  /** A button label beside each post, e.g. "Review" */
+  action?: string;
+}
+const { rows, meta, action } = Astro.props;
+---
+<ul class="divide-y divide-line">
+  {rows.map((r) => (
+    <li class="relative flex items-center gap-3 py-3">
+      <div class="min-w-0 flex-1">
+        <a href={`/admin/news/${r.id}`} lang="ml" class="stretched clamp-2 font-semibold leading-snug">{r.title || 'Untitled post'}</a>
+        <p class="t-meta mt-0.5 flex flex-wrap items-center gap-1.5"><StatusBadge status={r.status} /> {meta(r)}</p>
+      </div>
+      {action && <span class="btn btn-secondary btn-sm shrink-0" aria-hidden="true">{action}</span>}
+    </li>
+  ))}
+</ul>

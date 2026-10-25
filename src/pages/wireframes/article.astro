@@ -4,6 +4,7 @@ import Note from '~/components/wire/Note.astro';
 import Ph from '~/components/wire/Ph.astro';
 import { allPosts, relatedPosts } from '~/lib/sample';
 import { formatDate, readingMinutes } from '~/lib/i18n';
+import { bodyText } from '~/lib/richtext';
 import { topicBySlug } from '~/data/districts';
 
 // Example: the Secretariat protest story, which has full text in both languages
@@ -19,7 +20,7 @@ const topic = topicBySlug[p.topic].name.en;
     <h1 lang="ml" class="t-display mt-1">{p.title.ml}</h1>
     <p lang="ml" class="mt-3 text-lg text-zinc-600">{p.summary.ml}</p>
     <div lang="en" class="mt-4 flex flex-wrap items-center justify-between gap-3 border-y border-zinc-200 py-3">
-      <p class="t-meta">{formatDate(p.date, 'en')} · {readingMinutes(p.body?.ml)} min read</p>
+      <p class="t-meta">{formatDate(p.date, 'en')} · {readingMinutes(bodyText(p.body?.ml))} min read</p>
       <div class="flex gap-2">
         <span class="wf-btn wf-btn-line !min-h-9 text-sm">WhatsApp</span>
         <span class="wf-btn wf-btn-line !min-h-9 text-sm">Facebook</span>
@@ -34,7 +35,7 @@ const topic = topicBySlug[p.topic].name.en;
     <Note n={2}>Reading width is about 68 characters, with 18 px body text for long reads. A gallery of more photos would follow the text.</Note>
 
     <div lang="ml" class="mt-6 space-y-5 text-[1.125rem] leading-[1.85]">
-      {p.body!.ml.map((para) => <p>{para}</p>)}
+      {bodyText(p.body!.ml).map((para) => <p>{para}</p>)}
     </div>
   </article>
 

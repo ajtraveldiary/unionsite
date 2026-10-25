@@ -157,6 +157,20 @@
   .prose p { margin-block: 0 1.1em; }
   .prose:lang(ml), .prose :lang(ml) { line-height: 1.85; }
   .prose a { color: var(--link); text-decoration: underline; text-underline-offset: 3px; }
+  /* Written in the admin's editor (src/lib/richtext.ts): subheads, lists, quotes, photos */
+  .prose :is(h2, h3) { font-family: var(--font-title); font-stretch: 86%; font-weight: 650; line-height: 1.3; margin: 1.6em 0 0.6em; }
+  .prose h2 { font-size: calc(1.3rem * 1.16); }
+  .prose h3 { font-size: calc(1.1rem * 1.16); }
+  .prose :is(ul, ol) { margin: 0 0 1.1em; padding-left: 1.4em; }
+  .prose ul { list-style: disc; }
+  .prose ol { list-style: decimal; }
+  .prose li { margin-block: 0.3em; }
+  .prose li > p { margin: 0; }
+  .prose blockquote { margin: 0 0 1.1em; padding-left: 1em; border-left: 3px solid var(--line-strong); color: var(--ink-2); }
+  .prose hr { margin: 2em 0; border: 0; border-top: 1px solid var(--line); }
+  .prose figure { margin: 1.6em 0; }
+  .prose figure img { width: 100%; height: auto; border-radius: var(--radius-card); }
+  .prose figcaption { margin-top: 0.5em; font-size: 0.8125rem; color: var(--ink-3); }
 
   .clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
@@ -232,6 +246,8 @@
   .badge-neutral { background: var(--bg-subtle); color: var(--ink-2); border: 1px solid var(--line); }
   .badge-accent { background: var(--accent-soft); color: var(--accent-ink); }
   .badge-warning { background: var(--warning-soft); color: var(--warning); }
+  /* Admin: "Published" and other done states (5.4:1 on the surface in light, 8:1 in dark) */
+  .badge-success { background: var(--surface); color: var(--success); border: 1px solid currentColor; }
 
   .field {
     width: 100%; min-height: 44px; padding: 0 0.9rem; border-radius: var(--radius-control);

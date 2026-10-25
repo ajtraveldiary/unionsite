@@ -3,6 +3,6 @@ import DistrictsView from '~/views/DistrictsView.astro';
 import { cachePage, tags } from '~/lib/cache';
 
 export const prerender = false;
-cachePage(Astro, 'list', [tags.posts]);
+cachePage(Astro, 'list', [tags.posts, tags.events]);
 ---
 <DistrictsView lang="ml" />

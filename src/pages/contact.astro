@@ -1,4 +1,8 @@
 ---
 import ContactView from '~/views/ContactView.astro';
+import { cachePage, tags } from '~/lib/cache';
+
+export const prerender = false;
+cachePage(Astro, 'list', [tags.offices]);
 ---
 <ContactView lang="ml" />

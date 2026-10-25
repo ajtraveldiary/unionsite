@@ -45,7 +45,7 @@ for (const p of posts.slice(1, PAGE + 1)) {
 }
 
 const usedTopics = topics.filter((tp) => topicCounts[tp.slug]);
-const events = upcomingEvents(3);
+const events = await upcomingEvents(3);
 ---
 <AppLayout lang={lang} title="News" description="News from the Kerala NGO Union and its 15 district committees.">
   <div class="wrap pt-5 lg:pt-8" lang="en">

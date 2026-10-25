@@ -6,6 +6,6 @@ import { cachePage, tags } from '~/lib/cache';
 export const prerender = false;
 const slug = Astro.params.district!;
 if (!districtBySlug[slug]) return new Response(null, { status: 404 });
-cachePage(Astro, 'list', [tags.posts]);
+cachePage(Astro, 'list', [tags.posts, tags.events, tags.people, tags.offices, tags.albums, tags.pages]);
 ---
 <DistrictView lang="ml" slug={slug} />

@@ -1,0 +1,226 @@
+---
+/**
+ * Admin: Home & banner (plan, sections 8 and 10; approved wireframe "Home & banner"). The banner
+ * now, shown as on the site, with its headline and Remove; replacing it in three steps (find a
+ * news post or an event, an optional shorter headline, preview at phone and laptop size, publish);
+ * the Top news lead story; district admins' requests; and past banners to show again. State
+ * roles only. Plain forms; the route (src/pages/admin/banner.astro) does each action.
+ */
+import AdminLayout from '~/layouts/AdminLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import Banner from '~/components/ds/Banner.astro';
+import { activeBanner, upcomingEvents } from '~/lib/content';
+import { bannerValue, findPosts, homeRequests, leadPost, pastBanners } from '~/lib/admin/home';
+import { can } from '~/lib/admin/roles';
+import { topicBySlug, districtBySlug } from '~/data/districts';
+import { ago } from '~/lib/admin/client';
+import { formatDate, t } from '~/lib/i18n';
+import { getDb } from '~/db/client';
+import { users } from '~/db/schema';
+import { eq } from 'drizzle-orm';
+
+interface Props { error?: string; done?: string }
+const { error, done } = Astro.props;
+const user = Astro.locals.user!;
+const allowed = can.feature(user);
+const p = Astro.url.searchParams;
+const kind = p.get('kind') === 'event' ? 'event' : 'post';
+const q = p.get('q')?.slice(0, 100) ?? '';
+const [banner, value, lead, requests, past, results, events] = allowed
+  ? await Promise.all([activeBanner(), bannerValue(), leadPost(), homeRequests(), pastBanners(user), kind === 'post' ? findPosts(q) : [], kind === 'event' ? upcomingEvents(30) : []])
+  : [null, null, null, [], [], [], []];
+const setBy = value?.setBy ? (await (await getDb()).select({ name: users.name }).from(users).where(eq(users.id, value.setBy)).get())?.name : null;
+const doneText: Record<string, string> = {
+  set: 'Banner published. The home page shows it now.', headline: 'Headline saved.', remove: 'Banner removed.', lead: 'Lead story set.', lead_clear: 'Lead story cleared: Top news leads with the newest post.',
+  decline: 'Request declined.', again: 'That banner is up again.',
+};
+const district = (slug: string | null) => (slug ? districtBySlug[slug]?.name.en.replace('Thiruvananthapuram', 'TVM') : 'State');
+const nowTitle = banner ? (banner.kind === 'post' ? banner.post.title.ml : t(banner.event.title, 'ml')) : '';
+---
+<AdminLayout title="Home & banner" section="banner">
+  {!allowed ? (
+    <div class="card p-6 text-ink-2"><p>The home page is managed by the state office.</p><p class="t-meta mt-1">District admins can ask for a place from a post’s settings.</p></div>
+  ) : (
+    <Fragment>
+      <h1 class="t-h1">Home & banner</h1>
+      {error && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent-ink" role="alert"><Icon name="CircleAlert" size={17} class="mt-0.5" /> {error}</p>}
+      {done && doneText[done] && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm" role="status"><Icon name="CircleCheck" size={17} class="mt-0.5" /> {doneText[done]}</p>}
+
+      <!-- The banner now -->
+      <section class="mt-6" aria-labelledby="now">
+        <div class="flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-2">
+          <h2 id="now" class="t-h2">Banner now</h2>
+          {value?.setAt && <span class="t-meta">since {ago(value.setAt)}{setBy ? `, by ${setBy}` : ''}</span>}
+        </div>
+        {banner ? (
+          <Fragment>
+            <div class="mt-4"><Banner banner={banner} lang="ml" id="banner-now" /></div>
+            <form method="post" class="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+              <label class="block"><span class="t-label">Shorter headline · Malayalam</span><input name="headlineMl" lang="ml" maxlength="80" class="field mt-1" value={value?.headline?.ml ?? ''} placeholder="Leave empty to use the full title" /></label>
+              <label class="block"><span class="t-label">Shorter headline · English</span><input name="headlineEn" lang="en" maxlength="80" class="field mt-1" value={value?.headline?.en ?? ''} placeholder="For the English site" /></label>
+              <div class="flex gap-2"><button name="action" value="headline" class="btn btn-secondary">Save headline</button><button name="action" value="remove" class="btn btn-ghost !text-accent-ink" data-confirm="Remove the banner? The home page then starts with Top news.">Remove</button></div>
+            </form>
+          </Fragment>
+        ) : <p class="t-meta mt-3">No banner. The home page starts with Top news.</p>}
+        <p class="t-meta mt-2">It stays until someone replaces or removes it. The quicker way to replace it is “Show in the home banner” in a post’s settings.</p>
+      </section>
+
+      <!-- Replace the banner -->
+      <section class="mt-10" aria-labelledby="replace">
+        <h2 id="replace" class="t-h2 border-b border-line pb-2">Replace the banner</h2>
+        <p class="t-meta mt-2">1. Find a news post or an event. Only those can be a banner: no free text, no orders.</p>
+        <form method="get" action="/admin/banner#replace" class="mt-3 flex flex-wrap items-center gap-2">
+          <div class="flex gap-2" role="group" aria-label="Kind">
+            <a href="/admin/banner?kind=post#replace" class="chip" aria-current={kind === 'post' ? 'true' : undefined}>News post</a>
+            <a href="/admin/banner?kind=event#replace" class="chip" aria-current={kind === 'event' ? 'true' : undefined}>Event</a>
+          </div>
+          {kind === 'post' && (
+            <Fragment>
+              <input type="search" name="q" value={q} class="field !min-h-10 max-w-sm flex-1" placeholder="Search posts by title" aria-label="Search posts by title" />
+              <button class="btn btn-secondary btn-sm">Search</button>
+            </Fragment>
+          )}
+        </form>
+
+        <form method="post" class="mt-3" data-banner-form>
+          <input type="hidden" name="kind" value={kind} />
+          <ul class="divide-y divide-line border-y border-line">
+            {kind === 'post' && results.map((r, i) => (
+              <li><label class="flex cursor-pointer items-start gap-3 py-3">
+                <input type="radio" name="post" value={r.id} class="mt-1.5" required checked={i === 0} />
+                <span class="min-w-0"><span lang="ml" class="clamp-2 block font-semibold leading-snug">{r.title}</span><span class="t-meta">{topicBySlug[r.topic]?.name.en} · {district(r.district)} · {formatDate(r.date, 'en', 'short')}</span></span>
+              </label></li>
+            ))}
+            {kind === 'event' && events.map((e, i) => (
+              <li><label class="flex cursor-pointer items-start gap-3 py-3">
+                <input type="radio" name="event" value={e.slug} class="mt-1.5" required checked={i === 0} />
+                <span class="min-w-0"><span lang="ml" class="clamp-2 block font-semibold leading-snug">{e.title.ml}</span><span class="t-meta">Event · {formatDate(e.start, 'en', 'short')} · {district(e.district ?? null)}</span></span>
+              </label></li>
+            ))}
+            {(kind === 'post' ? results.length : events.length) === 0 && <li class="t-meta py-3">{kind === 'post' ? 'No published posts match.' : 'No upcoming events. Add one in Events first.'}</li>}
+          </ul>
+          <p class="t-meta mt-4">2. Optionally a shorter headline, so it fits two lines on a phone. The article keeps its full title.</p>
+          <div class="mt-2 grid gap-3 md:grid-cols-2">
+            <label class="block"><span class="t-label">Shorter headline · Malayalam · optional</span><input name="headlineMl" lang="ml" maxlength="80" class="field mt-1" placeholder="Leave empty to use the title" data-count /><span class="t-meta" data-counter>0 / 80</span></label>
+            <label class="block"><span class="t-label">Shorter headline · English · optional</span><input name="headlineEn" lang="en" maxlength="80" class="field mt-1" placeholder="For the English site" data-count /><span class="t-meta" data-counter>0 / 80</span></label>
+          </div>
+          <p class="t-meta mt-4">3. Preview it, then publish. The chosen item then leaves Top news and Coming up, so nothing shows twice.</p>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <button type="button" class="btn btn-secondary" data-preview><Icon name="Eye" size={18} /> Preview</button>
+            <button name="action" value="set" class="btn btn-primary" data-confirm={nowTitle ? `Publish this banner? It replaces “${nowTitle}”.` : 'Publish this banner?'}><Icon name="Check" size={18} /> Publish banner</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Lead story -->
+      <section class="mt-10" aria-labelledby="lead">
+        <h2 id="lead" class="t-h2 border-b border-line pb-2">Top news lead</h2>
+        {lead ? (
+          <div class="mt-3 flex flex-wrap items-center gap-3">
+            <p lang="ml" class="min-w-0 flex-1 font-semibold">{lead.title}<span class="t-meta block font-normal" lang="en">{formatDate(lead.date, 'en', 'short')}</span></p>
+            <a href={`/admin/news/${lead.id}`} class="btn btn-secondary btn-sm">Open</a>
+            <form method="post"><button name="action" value="lead_clear" class="btn btn-ghost btn-sm">Clear</button></form>
+          </div>
+        ) : <p class="t-meta mt-3">No lead chosen: Top news leads with the newest post.</p>}
+        {kind === 'post' && results.length > 0 && (
+          <form method="post" class="mt-3 flex flex-wrap items-center gap-2">
+            <select name="post" class="field min-w-0 flex-1 sm:max-w-xl" aria-label="Post to lead Top news" lang="ml">
+              {results.map((r) => <option value={r.id}>{r.title}</option>)}
+            </select>
+            <button name="action" value="lead" class="btn btn-secondary">Make lead story</button>
+          </form>
+        )}
+        <p class="t-meta mt-2">The search above also fills this list. Editors can tick “Lead story in Top news” in a post’s settings too.</p>
+      </section>
+
+      <!-- Requests -->
+      {requests.length > 0 && (
+        <section class="mt-10" aria-labelledby="requests">
+          <h2 id="requests" class="t-h2 border-b border-line pb-2">Requests from districts</h2>
+          <ul class="divide-y divide-line">
+            {requests.map((r) => (
+              <li class="flex flex-wrap items-center gap-3 py-3">
+                <div class="min-w-0 flex-1">
+                  <a href={`/admin/news/${r.id}`} lang="ml" class="clamp-2 font-semibold leading-snug hover:underline">{r.title}</a>
+                  <p class="t-meta">{district(r.district)} · asked {r.at ? ago(r.at) : ''}{r.by ? ` by ${r.by}` : ''}{r.status !== 'published' ? ' · not published yet' : ''}</p>
+                </div>
+                <form method="post" class="flex flex-wrap gap-2">
+                  <input type="hidden" name="post" value={r.id} />
+                  <input type="hidden" name="kind" value="post" />
+                  {r.status === 'published' && <button name="action" value="lead" class="btn btn-secondary btn-sm">Make lead story</button>}
+                  {r.status === 'published' && <button name="action" value="set" class="btn btn-secondary btn-sm" data-confirm={nowTitle ? `Put this in the banner? It replaces “${nowTitle}”.` : undefined}>Put in banner</button>}
+                  <button name="action" value="decline" class="btn btn-ghost btn-sm">Decline</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <!-- Past banners -->
+      <section class="mt-10" aria-labelledby="past">
+        <h2 id="past" class="t-h2 border-b border-line pb-2">Past banners</h2>
+        {past.length ? (
+          <ul class="divide-y divide-line">
+            {past.map((b) => (
+              <li class="flex flex-wrap items-center gap-3 py-3">
+                <p class="min-w-0 flex-1"><span lang="ml" class="font-semibold">{(b.doc as { headline?: { ml: string } }).headline?.ml ?? b.title}</span><span class="t-meta block">Replaced {ago(b.at)}{b.by ? ` · set by ${b.by}` : ''}</span></p>
+                <form method="post"><input type="hidden" name="revision" value={b.id} /><button name="action" value="again" class="btn btn-secondary btn-sm" data-confirm={nowTitle ? `Show this again? It replaces “${nowTitle}”.` : undefined}>Show again</button></form>
+              </li>
+            ))}
+          </ul>
+        ) : <p class="t-meta mt-3">Banners replaced from now on are listed here, with “Show again”.</p>}
+      </section>
+
+      <dialog class="admin-dialog wide" data-preview-dialog aria-labelledby="bp-title">
+        <div class="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
+          <h2 id="bp-title" class="font-semibold">Banner preview</h2>
+          <div class="ml-auto flex gap-2" role="group" aria-label="Preview size">
+            <button type="button" class="chip" aria-pressed="true" data-size="phone"><Icon name="Smartphone" size={16} /> Phone</button>
+            <button type="button" class="chip" aria-pressed="false" data-size="laptop"><Icon name="Monitor" size={16} /> Laptop</button>
+            <button type="button" class="chip" aria-pressed="false" data-lang>English</button>
+            <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close-dialog aria-label="Close preview"><Icon name="X" /></button>
+          </div>
+        </div>
+        <div class="flex justify-center bg-bg-subtle p-3"><iframe title="Banner preview" class="h-[60dvh] w-[390px] max-w-full rounded-[var(--radius-card)] border border-line bg-bg" data-frame></iframe></div>
+      </dialog>
+    </Fragment>
+  )}
+</AdminLayout>
+
+<script>
+  function initBannerScreen() {
+    const form = document.querySelector<HTMLFormElement>('[data-banner-form]');
+    if (!form || form.dataset.ready) return;
+    form.dataset.ready = '1';
+    // Every form on the screen asks first where a button says so
+    document.querySelectorAll('form').forEach((f) => f.addEventListener('submit', (e) => {
+      const msg = (e.submitter as HTMLElement | null)?.dataset.confirm;
+      if (msg && !window.confirm(msg)) e.preventDefault();
+    }));
+    form.querySelectorAll<HTMLInputElement>('[data-count]').forEach((input) => {
+      const counter = input.parentElement!.querySelector('[data-counter]')!;
+      input.addEventListener('input', () => (counter.textContent = `${input.value.length} / 80`));
+    });
+    const dialog = document.querySelector<HTMLDialogElement>('[data-preview-dialog]')!;
+    const frame = dialog.querySelector<HTMLIFrameElement>('[data-frame]')!;
+    let lang = 'ml';
+    const load = () => {
+      const data = new FormData(form);
+      const u = new URLSearchParams({ kind: String(data.get('kind')), post: String(data.get('post') ?? ''), event: String(data.get('event') ?? ''), ml: String(data.get('headlineMl') ?? ''), en: String(data.get('headlineEn') ?? ''), lang });
+      frame.src = `/admin/preview/banner?${u}`;
+    };
+    form.querySelector('[data-preview]')!.addEventListener('click', () => { dialog.showModal(); load(); });
+    dialog.querySelectorAll<HTMLButtonElement>('[data-size]').forEach((b) => b.addEventListener('click', () => {
+      dialog.querySelectorAll('[data-size]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      frame.classList.toggle('w-[390px]', b.dataset.size === 'phone');
+      frame.classList.toggle('w-full', b.dataset.size === 'laptop');
+    }));
+    dialog.querySelector<HTMLButtonElement>('[data-lang]')!.addEventListener('click', (e) => {
+      lang = lang === 'ml' ? 'en' : 'ml';
+      (e.currentTarget as HTMLElement).setAttribute('aria-pressed', String(lang === 'en'));
+      load();
+    });
+  }
+  initBannerScreen();
+</script>

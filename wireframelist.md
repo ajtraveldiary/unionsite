@@ -46,23 +46,23 @@ Not wireframed, waiting for the union's decision: the Tools & guides calculators
 
 | Screen | Wireframe | Built | Review |
 | --- | --- | --- | --- |
-| Dashboard | `/wireframes/admin` | Not yet | Approved 21 Oct 2026 |
-| News list | `/wireframes/admin/news` | Not yet | Approved 21 Oct 2026 |
-| Post editor | `/wireframes/admin/editor` | Not yet | Approved 21 Oct 2026 |
-| Orders upload | `/wireframes/admin/orders` | Not yet | Approved 21 Oct 2026 |
-| Home & banner | `/wireframes/admin/banner` | Not yet | Approved 21 Oct 2026 |
-| Users | `/wireframes/admin/users` | Not yet | Approved 21 Oct 2026 |
-| Events | `/wireframes/admin/events` | Not yet | Approved 21 Oct 2026 |
-| Kerala Service upload | `/wireframes/admin/kerala-service` | Not yet | Approved 21 Oct 2026 |
-| People & committees | `/wireframes/admin/people` | Not yet | Approved 21 Oct 2026 |
-| Media (with albums and videos) | `/wireframes/admin/media` | Not yet | Approved 21 Oct 2026 |
-| Inbox | `/wireframes/admin/inbox` | Not yet | Approved 21 Oct 2026 |
-| Settings (with the glossary and AI key) | `/wireframes/admin/settings` | Not yet | Approved 21 Oct 2026 |
-| Pages & documents | `/wireframes/admin/pages` | Not yet | Approved 22 Oct 2026 |
-| Districts | `/wireframes/admin/districts` | Not yet | Approved 22 Oct 2026 |
-| Analytics | `/wireframes/admin/analytics` | Not yet | Approved 22 Oct 2026 |
-| Audit log | `/wireframes/admin/audit` | Not yet | Approved 22 Oct 2026 |
-| Import | `/wireframes/admin/import` | Not yet | Approved 22 Oct 2026 |
-| Help | `/wireframes/admin/help` | Not yet | Approved 22 Oct 2026 |
+| Dashboard | `/wireframes/admin` | `/admin` (23 Oct 2026) | Approved 21 Oct 2026 |
+| News list | `/wireframes/admin/news` | `/admin/news` (23 Oct 2026) | Approved 21 Oct 2026 |
+| Post editor | `/wireframes/admin/editor` | `/admin/news/new`, `/admin/news/{id}` (23 Oct 2026) | Approved 21 Oct 2026 |
+| Orders upload | `/wireframes/admin/orders` | `/admin/orders`, `/admin/orders/upload` (25 Oct 2026) | Approved 21 Oct 2026 |
+| Home & banner | `/wireframes/admin/banner` | `/admin/banner` (25 Oct 2026) | Approved 21 Oct 2026 |
+| Users | `/wireframes/admin/users` | `/admin/users` (25 Oct 2026) | Approved 21 Oct 2026 |
+| Events | `/wireframes/admin/events` | `/admin/events`, `/admin/events/{id}` (25 Oct 2026) | Approved 21 Oct 2026 |
+| Kerala Service upload | `/wireframes/admin/kerala-service` | `/admin/kerala-service` (25 Oct 2026) | Approved 21 Oct 2026 |
+| People & committees | `/wireframes/admin/people` | `/admin/people` (25 Oct 2026) | Approved 21 Oct 2026 |
+| Media (with albums and videos) | `/wireframes/admin/media` | `/admin/media`, `/admin/media/albums/{id}` (25 Oct 2026) | Approved 21 Oct 2026 |
+| Inbox | `/wireframes/admin/inbox` | `/admin/inbox` (25 Oct 2026) | Approved 21 Oct 2026 |
+| Settings (with the glossary and AI key) | `/wireframes/admin/settings` | `/admin/settings` (25 Oct 2026) | Approved 21 Oct 2026 |
+| Pages & documents | `/wireframes/admin/pages` | `/admin/pages`, `/admin/pages/{id}` (25 Oct 2026) | Approved 22 Oct 2026 |
+| Districts | `/wireframes/admin/districts` | `/admin/districts`, `/admin/districts/{slug}` (25 Oct 2026) | Approved 22 Oct 2026 |
+| Analytics | `/wireframes/admin/analytics` | `/admin/analytics` (25 Oct 2026) | Approved 22 Oct 2026 |
+| Audit log | `/wireframes/admin/audit` | `/admin/audit` (25 Oct 2026) | Approved 22 Oct 2026 |
+| Import | `/wireframes/admin/import` | `/admin/import` (25 Oct 2026) | Approved 22 Oct 2026 |
+| Help | `/wireframes/admin/help` | `/admin/help` (25 Oct 2026) | Approved 22 Oct 2026 |
 
 Login is Cloudflare Access's own screen (an email and a 6-digit code), so it has no wireframe.

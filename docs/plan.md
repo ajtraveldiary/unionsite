@@ -1,6 +1,6 @@
 # Kerala NGO Union — Website Rebuild Plan
 
-Oct 4, 2026 · @Sherlock · last updated 22 Oct 2026
+Oct 4, 2026 · @Sherlock · last updated 25 Oct 2026
 
 This is the master plan, kept in the repository at `docs/plan.md`. Code comments that say "plan, section N" refer to it. The plan was written before the build; where a section has a dated **Update** note, the note describes what was decided or built and wins over the original text below it. The README has the built site map. What is left to do, item by item and phase by phase, is in [`todo.md`](../todo.md) at the repository root; it is kept in step with this plan (items are added, ticked, rewritten or removed as the plan and the work change).
 
@@ -33,14 +33,14 @@ The new keralangounion.in will be a fast, mobile-first site on Cloudflare, manag
 | --- | --- |
 | Data for development | Crawl the public site and use it as demo data |
 | Real migration | Admin panel gets a "WordPress import" tool (WXR export file or DB dump) |
-| Admin roles | Super admin, state editors, and 15 district admins limited to their own district |
+| Admin roles | Super admin, state editors, and 15 district admins limited to their own district, plus district editors who write drafts for their district admin (section 10) |
 | Language | Menus and UI labels stay in English; only article content switches between Malayalam and English |
 | English content | AI drafts the English version; an admin reviews it before publishing |
 | Extra features | Search across GOs and news, magazine reader, events calendar |
 | Hosting | Cloudflare Pages + Workers, R2 for files, Cloudflare D1 for data (decided 22 Oct 2026, replacing Neon Postgres) |
 | Out of scope (v1) | Member login, member directory, online payments |
 
-**Development status (updated 22 Oct 2026):** the public site is designed and every page is built, running as a preview on real content crawled from the current site. The admin panel is wireframed but not built. Nothing is on the real domain yet.
+**Development status (updated 25 Oct 2026):** the public site is designed and every page is built, running as a preview on real content crawled from the current site. The admin panel is being built in four slices inside the Astro app; slices 1–3 (sign-in, roles, Dashboard, News, the post editor, Orders, Kerala Service, Events, Home & banner, People & committees, Districts, Pages & documents, Media) run locally. Nothing is on the real domain yet.
 
 | Step | Status |
 | --- | --- |
@@ -56,7 +56,11 @@ The new keralangounion.in will be a fast, mobile-first site on Cloudflare, manag
 | Admin wireframes | Done and approved: all 18 screens at `/wireframes/admin` (the last six, Pages & documents, Districts, Analytics, Audit log, Import and Help, on 22 Oct 2026), with a "View as" switch for the four roles (section 10) |
 | Database | Decided 22 Oct 2026: Cloudflare D1 (section 4); Malayalam search tested on a local D1 with the crawled content (section 11) |
 | Phase 1, local part | Done 22 Oct 2026: D1 tables and migrations, the crawl loaded into a local D1, every content page reading D1 on request, and the edge cache with purge by tag, tested locally (sections 4, 5 and 15) |
-| Phase 1 onwards (section 15) | Not started: union-owned accounts, deploying D1 and R2, admin login, the admin panel build, WordPress import |
+| Admin panel, slice 1 | Done 23 Oct 2026, locally: sign-in (Cloudflare Access check plus a local stand-in), the four roles enforced in the API, Dashboard, News list and the post editor (autosave, working copy of published posts, history and restore, edit lock, preview, cover photos to R2, English drafted with Gemini and approved), publishing that updates search and purges the cache, and the audit log (sections 4, 5, 6 and 10) |
+| Admin panel, slice 2 | Done 25 Oct 2026, locally: Orders (upload many PDFs, GO number, date, title and subject read from each PDF's text in the browser, duplicates caught, publish together; list and edit, replace the PDF), Kerala Service (add an issue with its cover drawn from page 1 and the month guessed from the file name, contents lines, drafts, replace the PDF), Events (moved from `site.ts` into D1 and into search; drafts, review, English approval, the report link), Home & banner (banner with a shorter headline, preview, history and "Show again"; the lead story; district requests), and scheduled posts published by a Cron Trigger (sections 4, 5, 10 and 11) |
+| Admin panel, slice 3 | Done 25 Oct 2026, locally: People & committees (people kept once and reused, committees with terms, "Start new term" and "Publish new term", past terms kept, district editors' additions approved by their admin, photos), Districts (the state office's overview, cover photo, area committees, offices with a map pin from a pasted link), Pages & documents (About pages and district histories in a rich-text editor with English approval, documents with their PDFs, the conference list), Media (library with "used in", descriptions, replace and delete; albums; videos by link or from the channel, hidden or shown). The State committee, About, Media and district pages now read committees, offices and videos from D1 (sections 5, 9 and 10) |
+| Admin panel, slice 4 | Done 25 Oct 2026, locally: the contact form now saves to the admin Inbox (assign, note, reply by email, done; deleted after 12 months), Users (invite, role, district, switch off), Settings (each admin's Gemini key, auto-draft on publish, glossary, site details, the AI switch and model, how long messages are kept), the Audit log screen, Analytics (cookie-less beacon, hourly roll-ups, the dashboard narrowed by role), Import (the WordPress export wizard) and Help (Malayalam drafts, by role). Every section of the admin is now built (sections 10, 12 and 14) |
+| Phase 1 onwards (section 15) | Not started: union-owned accounts, deploying D1 and R2, switching on Cloudflare Access for the admin, WordPress import |
 
 Still open from the design work: whether to build the Tools & guides calculators and how-to guides (their home-page tiles show "Coming soon"), and moving History, Conferences, Struggles and Documents over from the old site (their About cards show "Coming soon"). Section 17 lists every open question.
 
@@ -225,6 +229,13 @@ Members only ever hit cached pages and files; admins pass Cloudflare Access befo
 | Analytics | Own cookie-less analytics on Workers Analytics Engine + Cloudflare Web Analytics for speed metrics | Visits, page views and per-article view counts without cookies or a consent banner (section 14) |
 | CI/CD | GitHub → Cloudflare Pages builds; preview URL per branch with its own D1 database | Every change is reviewable before going live |
 
+> **Update, 23 Oct 2026: the admin is part of the Astro app (the owner's decision).** The plan's separate React + Vite app with TanStack and shadcn/ui, and its Hono API, were dropped: the built site is one Astro app deployed as a Worker with no client framework, and a second app would have meant a second build and a second component library. Instead:
+>
+> - Admin screens are server-rendered Astro pages under `/admin` (`src/pages/admin/`, `src/views/admin/`, `src/layouts/AdminLayout.astro`) with plain page scripts and the same design tokens as the public site. Only the post editor loads a library: TipTap (ProseMirror) without React, about 410 KB of script on that one admin page.
+> - The API is Astro endpoints under `/api/admin/` (`src/pages/api/admin/`), with the rules in `src/lib/admin/`. Every call checks the user's role and district itself.
+> - Hosting is a Worker with static assets (`wrangler.jsonc`), not Cloudflare Pages, as the hosting note below allows.
+> - Uploads go through the Worker into R2 instead of signed upload URLs: a Worker accepts request bodies up to 100 MB and the plan caps PDFs at 50 MB, so this is simpler, works locally, and checks permissions in one place. Files are served by the Worker at `/media/…` until `media.keralangounion.in` is connected at launch.
+
 **Build note.** Until 22 Oct 2026 the preview built every page ahead of time (about 4,330 pages from the crawled JSON, about 75 s). Now pages that show posts, orders or Kerala Service issues render on request from D1 and are kept in the edge cache, as described below; only the fixed pages (about 40) are built ahead, in about 10 s. `src/lib/content.ts` is still the only place pages get content from; its functions are Drizzle queries that each read only what their page shows. The wireframes and `/design-system` stay prebuilt from the crawled JSON.
 
 **Hosting note.** Cloudflare Pages is used as requested. Cloudflare now steers new full-stack projects towards Workers with static assets, while Pages remains fully supported. The same Astro build deploys to either, so this can be switched later without code changes.
@@ -275,6 +286,12 @@ Sources: [D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/), [
 Every content type is a D1 (SQLite) table. Readable text sits in a separate `*_translations` table with one row per language (ml, en), so the site can show Malayalam, English, or a fallback for any item.
 
 > **Update, 22 Oct 2026: the first tables.** `src/db/schema.ts` (Drizzle) defines the tables for the content that exists: `districts`, `topics`, `order_subjects` (fixed lists, copied from `src/data/`), `media`, `posts` + `post_translations`, `orders`, `magazine_issues` and `site_settings` (the home banner). `npm run db:generate` writes migrations into `migrations/`; `npm run db:seed` loads the crawl. Differences from the list below: districts, topics and subjects are keyed by their slug; a post's slug sits on `posts` (both languages share the URL); crawled files are `media` rows with the old site's `source_url` until they move to R2 (`r2_key`); order titles stay as columns on `orders`, as listed. Events, videos and people are still hand-written in `src/data/site.ts`; their tables come with the admin screens that edit them.
+
+> **Update, 25 Oct 2026: people, places, pages and media** (migration `0005_people_pages_media`). `people`, `positions` (body: state, women_subcommittee, district or area; status draft · published · past, with a term name), `area_committees`, `offices` (map pin stored as degrees × 1,000,000), `district_extras` (a district's cover photo), `pages` (About pages and district histories, both languages, path and template), `documents`, `conferences`, `albums`, `album_items` and `videos` (with `hidden`). The state committee and the channel's videos moved there from `site.ts`. Indexes on `posts.cover_media_id` and `orders.pdf_media_id` serve the media library's "used in".
+
+> **Update, 25 Oct 2026: events, and more for orders and issues** (migration `0004_events`). `events` holds title, venue and description in both languages (English shown only once approved, `en_source`), start and end times in India time, district, map and registration links, the linked news report and a status (draft · in_review · published · archived); the preview's four sample events moved there from `site.ts`, and events are now in `search_docs` (kind `event`) like posts and orders. `magazine_issues` gained `status` (draft · published) and `toc` (contents lines: title, author, page); `orders` gained `created_by`/`updated_by` and an index on `go_number` for the duplicate check.
+
+> **Update, 23 Oct 2026: the admin's tables** (migration `0003_admin`). `users` holds each person's email, name, role and district (one role per person, so there is no separate `user_roles` table); `post_drafts` holds the working copy of a published post while it is edited; `revisions` keeps a full copy each time an item is published or updated; `edit_locks` holds "being edited by …"; `audit_log` records every sign-in and change with the item's district. New columns: `posts.event_slug`, `posts.home_requested_by`/`_at`, `posts.created_by`/`updated_by`; `post_translations.reviewed_by`, `text_hash` and `based_on` (the English is "Out of date" when its `based_on` no longer matches the Malayalam's `text_hash`); `media.sha256` and `uploaded_by`. Post bodies written in the editor are TipTap JSON; crawled posts keep their list of paragraphs until edited, and `src/lib/richtext.ts` renders both from an allow-list of nodes and marks. Still to come with their screens: events, people and positions, area committees, offices, pages, documents, conferences, albums, videos, the glossary, contact messages and notifications.
 
 **Shared columns on every content table:** `id`, `district_id` (null = state level), `status` (draft · in\_review · scheduled · published · archived), `published_at`, `created_by`, `updated_by`, `created_at`, `updated_at`, `legacy_url` (old WordPress URL, for redirects).
 
@@ -330,6 +347,8 @@ Menus, buttons and labels are always in English. The ML / EN switch changes only
 3. The admin's browser sends the Malayalam text, the glossary and fixed rules directly to the Gemini API with the admin's key, and saves the result as an English draft marked `ai_draft`.
 4. The editor sees the two versions side by side, corrects the English and presses **Approve English**. The draft becomes `ai_reviewed` and goes live.
 5. If the Malayalam changes later, the English is flagged **Out of date** in the admin list until it is re-drafted or re-approved.
+
+> **Update, 23 Oct 2026: built in the post editor.** "Draft English with AI" sends the Malayalam (as HTML), the rules and the glossary from the browser to Gemini (`gemini-2.5-flash` by default) and fills the English tab; Approve English puts it live. Any later edit to the English makes it a draft again, so nothing reaches the English site without approval, and the site never shows an `ai_draft` row. The key is kept for the open tab only and forgotten after 30 minutes without use; "Remember on this device", the model choice, the site-wide switch, the glossary screen and Auto-translate come with Settings (slice 4). Auto-translate will run on Publish and Update, never on the 10-second autosave.
 
 **Gemini key: bring your own key (BYOK)**
 
@@ -649,6 +668,42 @@ The admin panel at `/admin` lets state staff manage the whole site and lets each
 >
 > The other six screens followed the same day and were approved: **Pages & documents** (About pages in the post editor, organisation documents, the conference list behind the timeline), **Districts** (state roles see what each district lacks; a district admin edits their cover photo, history, area committees and office addresses), **Analytics** (section 14's dashboard, narrowed by role), **Audit log** (filters, before/after, restore), **Import** (the section 12 wizard, super admin only) and **Help** (the Malayalam how-to, filtered by role). Albums and videos live in Media, and the glossary in Settings.
 
+> **Update, 25 Oct 2026: slice 4 built** (Inbox, Users, Settings, Audit log, Analytics, Import, Help), locally. With it every admin section is built. How it differs from the wireframes and the text below:
+>
+> - **Contact form and Inbox.** The form posts to `/api/contact`, which drops messages whose hidden "website" field is filled, checks Turnstile once `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET` are set, and accepts at most 5 messages a day from one sender (a hash of address, browser and day; the address itself is not kept). A message with a district goes to that district's admin and the state office; others to the state office. No email is sent yet: "Reply by email" opens the admin's own mail app with the message quoted, and notifications wait for a sending service (section 17). Messages are deleted after 12 months by the hourly job (the length is a Settings value; the Privacy page says 12 months).
+> - **Users.** Inviting adds the email to `users`; Cloudflare Access does the rest. A district admin invites editors for their own district only. Nobody can change or switch off themselves, and the last active super admin can't be removed.
+> - **Settings.** Each admin's Gemini key stays in their browser: for the session (cleared after 30 minutes unused) or for 7 days on that device, encrypted with a key the browser can't export. "Draft English automatically" runs on Publish and Update only, when the English is missing or out of date and a key is kept. The glossary moved from code into D1 and Settings. Site details (address, phone, email, Facebook, YouTube) are read from D1 by Contact, About, Media, Home and the footer of pages made on request; saving them purges every cached page (each now carries the `site` tag). Pages built ahead of time keep the `site.ts` values until the next build.
+> - **Analytics** (section 14). Pages send a small beacon to `/api/e`: a view, a read (75 % of an article's text seen), a PDF opened, a share, a search with its number of results, a page not found. Robots and admin pages are left out; the visitor is a hash that changes daily (salt `ANALYTICS_SALT`), so there are no cookies. With an Analytics Engine binding `ANALYTICS` the events go there and the hourly roll-up reads them through the SQL API (`CF_ACCOUNT_ID`, `CF_API_TOKEN`, `ANALYTICS_DATASET`); without it (now, locally) they go to the `analytics_raw` table, kept 2 days. The roll-up writes `content_views_daily`, `site_stats_daily` and `search_terms_daily`; "Update the numbers now" runs it at once. "Right now" shows only without Analytics Engine (its data arrives with a delay). Visitors over several days add each day's visitors, since the code changes daily. Public view counts on articles are not shown yet.
+> - **Analytics by role**: state roles see everything, including searches that found nothing, sources, devices, places, 404s and the districts compared against the 4-posts-a-month measure; a district admin sees their district's posts and hub; a district editor their own posts. Tables download as CSV.
+> - **Import** (section 12, super admin). The WordPress export (WXR .xml) is read in the browser; the wizard shows what's in it, maps each category to a district and topic (prefilled with the crawl's mapping, now shared in `src/lib/wp-map.ts`), checks up to 20 posts in a dry run, then imports 25 at a time with a report per run (CSV). Posts are matched by their old address, then by WordPress id, so a second run updates rather than copies; a post changed in the admin since is kept. Only posts come over: pages, the uploads folder, the SQL dump, Download Manager orders and 3D FlipBook issues show "Coming soon" until the real files are in hand (section 17). Photos inside the text are left out; the featured photo is linked from the old site like the crawl's.
+> - **Help.** The tasks the approved wireframe lists, with Malayalam steps written as first drafts for the state office to correct (`src/data/help.ts`); no screenshots or videos yet. "Still stuck?" shows the state office's phone from Settings, which is still blank (section 17).
+> - **Dashboard**: new messages and today's visitors and most read posts replace the "Today" placeholder.
+
+> **Update, 25 Oct 2026: slice 3 built** (People & committees, Districts, Pages & documents, Media), locally. How it differs from the wireframes and the text below:
+>
+> - **Committees**: up and down buttons reorder people instead of dragging (they work the same on a phone). "Start new term" asks for the term's name and copies the committee as drafts; the site shows the current committee until "Publish new term", and the old one stays under Past terms. A district editor's addition waits for the district admin's approval.
+> - **Phone numbers**: as the approved wireframe says, a person's phone shows on the district page only when typed in with their agreement; section 13 says only office phones are published. The union should confirm which rule stands (section 17).
+> - **Districts**: district editors read the district page; their district admin changes the cover, areas and offices (editors still add office-bearers as drafts and draft the history). The map pin comes from a pasted Google Maps link rather than tapping a map, so no map library is added. The cover photo is stored, but the approved district-hub design has no place for it yet.
+> - **Pages, documents, conferences, albums** are edited and published in the admin, but their public pages (`/about/history`, `/about/documents`, `/about/conferences`, `/gallery/{album}`) are Phase 3 work and not built yet; the content waits in D1 until they are.
+> - **Media library**: "used in" counts covers, orders, issues, people, albums, documents and districts, not photos inside article text. Replacing a file gives it new addresses and removes the old ones; deleting is for unused files, by state roles. Photos added to an album in bulk take the album's title as their description until captions are written.
+> - **Videos** are synced from the channel's public feed every hour by the Cron Trigger, or now with "Sync now"; a video added by link takes its title from YouTube.
+
+> **Update, 25 Oct 2026: slice 2 built** (Orders, Kerala Service, Events, Home & banner), locally:
+>
+> - **Orders** (state roles): drop any number of GO PDFs; in the browser pdf.js reads each one's text and page count, and the GO number ("G.O.(P) No.123/2026/Fin" or "Circular No.…"), the date after "Dated", the subject line after "Abstract" or "Sub:", the department and a likely subject are filled in for the editor to check. Scanned PDFs (no text) are flagged to type in; whether to OCR them is still open (section 17). A file whose GO number or file is already in the library is flagged before anything is saved. Ready rows are published together; others can be saved as drafts. Each order's PDF text goes into search. The single-order page edits details, replaces the PDF (the address keeps its id) and archives or restores.
+> - **Kerala Service** (state roles): one issue per month; the cover is drawn from page 1 in the browser, the month guessed from the file name, contents lines optional; publish or keep as a draft; replacing a PDF keeps the issue's address.
+> - **Events**: as posts, district roles work on their own district and district editors send drafts for review; English is optional and shown only after someone ticks "English checked" (it can be drafted with Gemini); after the day the news report is linked, and "Write the report" opens a new post already linked to the event.
+> - **Home & banner** (state roles): the banner now (as drawn on the site), its shorter headline, Remove; replacing it with a published post or event, previewed at phone and laptop size; past banners with "Show again" (every replaced banner is kept); the lead story (one at a time; the banner's own post can't be the lead, as the home page never shows a story twice); and district admins' requests (lead, banner or decline).
+> - **Scheduled posts** go live through a Cron Trigger every five minutes (`src/worker.ts`, the Worker's entry, wraps Astro's handler and adds `scheduled`); they keep the day they were scheduled for.
+
+> **Update, 23 Oct 2026: slice 1 built** (sign-in, roles, Dashboard, News, post editor), locally. How it differs from the text below:
+>
+> - **Sign-in.** Cloudflare Access asks for the email and one-time code, but lets any email through to the app; the app checks Access's signed token and then the `users` table, so Users is the only list to keep and deactivating someone works on their next click. Access's free plan has 50 users, which the union may pass once district editors are added (section 16). The first super admin is the email in `ADMIN_BOOTSTRAP_EMAIL`, let in while `users` is empty. Without Access (on a laptop) `/admin/login` is a stand-in that signs in as one of four test users, one per role.
+> - **Editing.** Drafts and posts waiting for review are edited in place; a published post is edited in a working copy that autosave rewrites every 10 seconds, and the live page changes on Update ("Discard changes" drops the copy). History keeps a copy at each Publish and Update (a crawled post also gets its original version on its first change), and Restore puts one back in the editor. "Being edited by …" is a 90-second lock renewed while the editor is open; the second person gets a read-only view and their saves are refused.
+> - **District editors** write drafts and send them for review; once a post is sent or published, only their district admin changes it. The district admin can publish it or send it back.
+> - **Home page.** Only state roles tick "Lead story" (one at a time) or "Show in the home banner" (the banner stays until another post replaces it); a district admin presses "Request a place on the home page", which shows on the state editors' dashboard.
+> - **Not yet:** scheduled posts are saved as Scheduled, but a Cron Trigger that publishes them at their time comes with slice 2; review notifications by email need a sending service (section 17); the dashboard's visitor numbers wait for analytics (section 14).
+
 **How an admin logs in**
 
 1. The admin opens `keralangounion.in/admin` on a phone or computer.
@@ -764,6 +819,8 @@ Four features go beyond a plain news site: site-wide search, the orders library,
 - Single page on phones (swipe), two-page spread on desktop, thumbnail strip, zoom, page jump, full-screen and download.
 - Each issue has a cover thumbnail generated at upload, and an optional table of contents that deep-links to pages (`/kerala-service/2026/03#p=12`).
 - **Acceptance:** a 20 MB issue shows its first page in under 3 seconds on 4G.
+
+> **Update, 25 Oct 2026: events come from D1.** The Events page, home page, News page, Districts page and district hubs read events from D1 on request and carry the `events` cache tag, so publishing or changing an event in the admin purges exactly those pages (the acceptance below is met as soon as the cache is purged). Past events show their linked news report. One page per event, "Add to calendar" links, the calendar feed and albums are still to come (Phase 3).
 
 **Events calendar**
 
@@ -1029,6 +1086,7 @@ During the build there is a 30-minute weekly review call, a demo at each gate, a
 | Scope grows (member login, payments) | Medium | Medium | New requests go on a version 2 list, reviewed at 90 days |
 | AI translation misreads union terms | Medium | Low | Glossary, mandatory review, English hidden until approved |
 | Free-tier limits exceeded | Low | Low | Alerts at 80 %; paid tiers cost a few dollars a month |
+| More than 50 admins (Cloudflare Access free plan) | Medium | Low | Count admins and editors before inviting district editors; Zero Trust's paid plan, or fewer editor accounts |
 
 ## 17. Open questions and assumptions
 
@@ -1045,6 +1103,8 @@ These do not block the design work, but each needs an answer before the phase no
 - [ ] Who will be the first super admin and state editors, and who is each district's admin? *Before Phase 4*
 - [ ] Should scanned GO PDFs be OCR'd so their text is searchable? This adds a small cost per page. *Phase 4*
 - [ ] Is there a target launch date (for example, ahead of a conference or campaign)? *Now*
+- [ ] Which service sends the admin's emails (review notifications), and on whose account: Resend, or Cloudflare's own email sending? *Before Phase 4 ends*
+- [ ] Office-bearers' personal phone numbers: section 13 publishes only office phones, while the approved People wireframe shows a person's phone when they agree. Which rule stands? *Before Phase 4 ends*
 - [ ] Build the Tools & guides calculators and how-to guides, or hide their home-page tiles? *Before launch*
 - [ ] How long are done inbox messages kept? Section 13 says 12 months; confirm it, and the privacy page states it. *Before Phase 4*
 - [ ] Turn on old-link redirects before launch? On hold for now (section 12). *Before Phase 5*

@@ -17,13 +17,20 @@ export const tags = {
   order: (id: number) => `order:${id}`,
   issues: 'issues',
   banner: 'banner',
+  events: 'events',
+  people: 'people',
+  offices: 'offices',
+  videos: 'videos',
+  albums: 'albums',
+  pages: 'pages',
 };
 
 interface HasCache {
   cache: { set(options: CacheOptions): void; invalidate(options: InvalidateOptions): Promise<void> };
 }
 
-export const cachePage = (ctx: HasCache, kind: keyof typeof RULES, pageTags: string[]) => ctx.cache.set({ ...RULES[kind], tags: pageTags });
+/** Every cached page also carries `site`, so changing the site details (footer, Contact) purges them all */
+export const cachePage = (ctx: HasCache, kind: keyof typeof RULES, pageTags: string[]) => ctx.cache.set({ ...RULES[kind], tags: [...pageTags, 'site'] });
 
 /**
  * The tags to purge when something is published or edited: the item's own pages and every list
@@ -34,4 +41,10 @@ export const purgeTags = {
   order: (id: number) => [tags.orders, tags.order(id)],
   issue: () => [tags.issues],
   banner: () => [tags.banner],
+  event: () => [tags.events],
+  people: () => [tags.people],
+  offices: () => [tags.offices],
+  videos: () => [tags.videos],
+  albums: () => [tags.albums],
+  pages: () => [tags.pages],
 };

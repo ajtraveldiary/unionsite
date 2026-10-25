@@ -1,4 +1,8 @@
 ---
 import AboutView from '~/views/AboutView.astro';
+import { cachePage, tags } from '~/lib/cache';
+
+export const prerender = false;
+cachePage(Astro, 'list', [tags.people]);
 ---
 <AboutView lang="ml" />

@@ -1,13 +1,20 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "kerala-ngo-union",
-  "main": "@astrojs/cloudflare/entrypoints/server",
+  // Astro's handler plus the scheduled jobs (src/worker.ts)
+  "main": "./src/worker.ts",
   "compatibility_date": "2026-09-01",
   "compatibility_flags": ["nodejs_compat"],
   // Content (plan, section 4). Locally wrangler keeps this database in .wrangler/state; the real
   // database_id comes when the union's Cloudflare account exists (plan, section 17).
   "d1_databases": [
     { "binding": "DB", "database_name": "union", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "migrations" }
-  ]
-  // Later: "r2_buckets" (MEDIA), "analytics_engine_datasets"
+  ],
+  // Uploaded photos and PDFs (plan, sections 4 and 9). Locally wrangler keeps the bucket in
+  // .wrangler/state; the real bucket is created in the union's account. Served at /media/… until
+  // media.keralangounion.in is connected at launch.
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "union-media" }],
+  // Every five minutes: publish scheduled posts (src/worker.ts)
+  "triggers": { "crons": ["*/5 * * * *"] }
+  // Later: "analytics_engine_datasets"; vars ACCESS_TEAM_DOMAIN and ACCESS_AUD for admin login
 }
