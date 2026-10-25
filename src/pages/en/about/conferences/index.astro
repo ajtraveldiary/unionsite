@@ -1,0 +1,8 @@
+---
+import ConferencesView from '~/views/ConferencesView.astro';
+import { cachePage, tags } from '~/lib/cache';
+
+export const prerender = false;
+cachePage(Astro, 'list', [tags.pages]);
+---
+<ConferencesView lang="en" />

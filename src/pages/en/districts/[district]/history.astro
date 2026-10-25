@@ -1,0 +1,14 @@
+---
+/** A district's history (/districts/{district}/history), written by its district admin in Admin → Pages & documents. */
+import HistoryView from '~/views/HistoryView.astro';
+import { aboutPage } from '~/lib/content';
+import { districtBySlug } from '~/data/districts';
+import { cachePage, tags } from '~/lib/cache';
+
+export const prerender = false;
+const d = districtBySlug[Astro.params.district!];
+const page = d ? await aboutPage(`/districts/${d.slug}/history`) : null;
+if (!page) return new Response(null, { status: 404 });
+cachePage(Astro, 'item', [tags.pages]);
+---
+<HistoryView lang="en" page={page} crumbs={[{ label: 'Districts', path: '/districts' }, { label: d.name.en, path: `/districts/${d.slug}` }, { label: 'History' }]} />

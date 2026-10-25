@@ -92,6 +92,26 @@ export function renderBody(body: Body | null | undefined): string {
   return body.map((p) => `<p>${esc(p)}</p>`).join('');
 }
 
+/**
+ * A long page cut at its main (h2) headings: the text before the first one, then one part per
+ * heading with its own HTML. History builds its contents list from these, Struggles its timeline.
+ */
+export function bodySections(body: Body | null | undefined): { intro: string; sections: { title: string; html: string }[] } {
+  if (!isRich(body)) return { intro: renderBody(body), sections: [] };
+  let intro = '';
+  const sections: { title: string; html: string }[] = [];
+  for (const n of body.content) {
+    if (n.type === 'heading' && Number(n.attrs?.level) < 3) {
+      const title = textOf(n).trim();
+      if (title) { sections.push({ title, html: '' }); continue; }
+    }
+    const html = renderNode(n);
+    if (sections.length) sections[sections.length - 1].html += html;
+    else intro += html;
+  }
+  return { intro, sections };
+}
+
 function textOf(n: RichNode): string {
   if (n.type === 'text') return n.text ?? '';
   if (n.type === 'hardBreak') return ' ';

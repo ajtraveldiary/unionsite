@@ -1,0 +1,20 @@
+---
+/** A photo album in a list (Media, a district's Gallery tab): its cover, title, and where, when and how many. */
+import Icon from '~/components/ui/Icon.astro';
+import type { Album, Lang } from '~/lib/types';
+import { href, t, langOf, formatDate } from '~/lib/i18n';
+import { districtBySlug } from '~/data/districts';
+
+interface Props { album: Album; lang: Lang; showDistrict?: boolean }
+const { album: a, lang, showDistrict = true } = Astro.props;
+const meta = [showDistrict && a.district && districtBySlug[a.district]?.name.en, a.date && formatDate(a.date, 'en', 'short'), `${a.count} ${a.count === 1 ? 'photo' : 'photos'}`].filter(Boolean).join(' · ');
+---
+<article class="group relative">
+  <div class="aspect-[4/3] overflow-hidden rounded-[10px] bg-bg-subtle">
+    {a.cover
+      ? <img src={a.cover} alt="" loading="lazy" decoding="async" class="size-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+      : <span class="grid size-full place-items-center text-ink-3" aria-hidden="true"><Icon name="Images" size={32} /></span>}
+  </div>
+  <h3 class="mt-2 font-semibold leading-snug"><a href={href(lang, `/gallery/${a.slug}`)} lang={langOf(a.title, lang)} class="stretched clamp-2 group-hover:text-accent-ink">{t(a.title, lang)}</a></h3>
+  <p lang="en" class="t-meta mt-0.5">{meta}</p>
+</article>

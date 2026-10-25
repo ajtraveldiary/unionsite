@@ -26,7 +26,7 @@ const doneText: Record<string, string> = { save: 'Saved.', publish: 'Published.'
   </div>
   {error && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent-ink" role="alert"><Icon name="CircleAlert" size={17} class="mt-0.5" /> {error}</p>}
   {done && doneText[done] && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm" role="status"><Icon name="CircleCheck" size={17} class="mt-0.5" /> {doneText[done]}</p>}
-  <p class="t-meta mt-2">Albums show on the Media page and the district hub’s Gallery tab once their public pages are built (Phase 3).</p>
+  <p class="t-meta mt-2">{a.status === 'published' ? <Fragment>On the site at <a href={`/gallery/${a.slug}`} class="link" target="_blank" rel="noopener">/gallery/{a.slug}</a>, on the Media page{a.district ? ' and the district’s Gallery tab' : ''}.</Fragment> : `Published albums show on the Media page${a.district ? ' and the district’s Gallery tab' : ''}.`}</p>
 
   <form method="post" class="card mt-5 grid gap-3 p-4 sm:grid-cols-2">
     <label class="block"><span class="t-label">Title · Malayalam</span><input name="titleMl" lang="ml" class="field mt-1" value={a.titleMl} required maxlength="200" /></label>

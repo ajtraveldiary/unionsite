@@ -1,0 +1,8 @@
+---
+import DocumentsView from '~/views/DocumentsView.astro';
+import { cachePage, tags } from '~/lib/cache';
+
+export const prerender = false;
+cachePage(Astro, 'list', [tags.pages]);
+---
+<DocumentsView lang="ml" />

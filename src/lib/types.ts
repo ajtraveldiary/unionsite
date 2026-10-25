@@ -138,3 +138,46 @@ export interface Video {
   title: L10n;
   date: string;
 }
+
+/** An About page or a district's history (Admin → Pages & documents). English only once approved. */
+export interface AboutPage {
+  path: string;
+  title: L10n;
+  summary: L10n;
+  body: { ml: Body; en?: Body };
+  updatedAt: string;
+}
+
+export interface UnionDocument {
+  slug: string;
+  kind: 'bye_law' | 'resolution' | 'jubilee' | 'other';
+  year?: number;
+  title: L10n;
+  summary?: string;
+  pdfUrl?: string;
+  pages?: number;
+  kb?: number;
+  updatedAt: string;
+}
+
+export interface Conference {
+  number: number;
+  year?: number;
+  start?: string;
+  end?: string;
+  place?: L10n;
+  report?: string;
+  albumSlug?: string;
+  eventSlug?: string;
+}
+
+export interface AlbumPhoto { src: string; srcset?: string; width?: number; height?: number; caption: L10n }
+
+export interface Album {
+  slug: string;
+  title: L10n;
+  district?: string;
+  date?: string;
+  cover?: string;
+  count: number;
+}

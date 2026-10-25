@@ -1,0 +1,18 @@
+---
+/** An About page written in Admin → Pages & documents: History, Struggles, FSETO or any other (/about/{page}). */
+import HistoryView from '~/views/HistoryView.astro';
+import StrugglesView from '~/views/StrugglesView.astro';
+import { aboutPage, aboutAvailability } from '~/lib/content';
+import { aboutNext } from '~/lib/about';
+import { cachePage, tags } from '~/lib/cache';
+
+export const prerender = false;
+const slug = Astro.params.page!;
+const page = /^[a-z0-9-]+$/.test(slug) ? await aboutPage(`/about/${slug}`) : null;
+if (!page) return new Response(null, { status: 404 });
+cachePage(Astro, 'item', slug === 'struggles' ? [tags.pages, tags.posts] : [tags.pages]);
+const next = slug === 'history' ? aboutNext(await aboutAvailability(), ['conferences', 'struggles', 'documents']) : [];
+---
+{slug === 'struggles'
+  ? <StrugglesView lang="ml" page={page} />
+  : <HistoryView lang="ml" page={page} crumbs={[{ label: 'About', path: '/about' }, { label: page.title.en ?? (slug === 'history' ? 'History' : page.title.ml) }]} next={next} />}

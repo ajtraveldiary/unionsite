@@ -1,0 +1,83 @@
+---
+/**
+ * One state conference (approved wireframe "One conference"): the number and place lead, the dates
+ * under them, then a photo, the report, the committee it elected, photos from its album, and the
+ * conferences either side. Every conference page has the same parts; parts with nothing in them
+ * are left out. The committee is today's for the newest conference, and for an older one the past
+ * term named after it in People & committees ("62nd conference").
+ */
+import AppLayout from '~/layouts/AppLayout.astro';
+import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
+import SectionHead from '~/components/ds/SectionHead.astro';
+import PersonAvatar from '~/components/ds/PersonAvatar.astro';
+import ShareBar from '~/components/ds/ShareBar.astro';
+import type { AlbumPhoto, Conference, Lang, Person } from '~/lib/types';
+import { href, t, langOf, ordinal } from '~/lib/i18n';
+import { confWhen } from '~/lib/conferences';
+import { roleLabels } from '~/data/site';
+
+interface Props { lang: Lang; conference: Conference; older?: number; newer?: number; leaders: Person[]; photos: AlbumPhoto[] }
+const { lang, conference: c, older, newer, leaders, photos } = Astro.props;
+const L = (p: string) => href(lang, p);
+const name = `${ordinal(c.number)} state conference`;
+const when = confWhen(c);
+const report = (c.report ?? '').split(/\n\s*\n|\n/).map((p) => p.trim()).filter(Boolean);
+// The first photo leads the page; the next six sit under Photos
+const [hero, ...thumbs] = photos;
+const pageUrl = new URL(L(`/about/conferences/${c.number}`), Astro.site).toString();
+---
+<AppLayout lang={lang} title={`${name}${c.place?.en ? `, ${c.place.en}` : ''}`} description={`The Kerala NGO Union's ${name}${when ? `, ${when}` : ''}.`}>
+  <div class="wrap max-w-[860px] pt-5 lg:pt-8">
+    <Breadcrumbs lang={lang} items={[{ label: 'About', path: '/about' }, { label: 'Conferences', path: '/about/conferences' }, { label: ordinal(c.number) }]} />
+    {c.place ? (
+      <Fragment>
+        <p lang="en" class="t-label mt-4">{name}</p>
+        <h1 lang={langOf(c.place, lang)} class="t-display mt-1">{t(c.place, lang)}</h1>
+      </Fragment>
+    ) : <h1 lang="en" class="t-display mt-4">{name}</h1>}
+    {when && <p lang="en" class="mt-2 text-ink-2">{when}</p>}
+    <ShareBar url={pageUrl} title={c.place ? `${name}, ${t(c.place, lang)}` : name} class="mt-4" />
+
+    {hero && (
+      <figure class="mt-6">
+        <img src={hero.src} srcset={hero.srcset} sizes="(min-width: 900px) 860px, 100vw" width={hero.width} height={hero.height} alt={t(hero.caption, lang)} class="aspect-video w-full rounded-[var(--radius-card)] object-cover" />
+      </figure>
+    )}
+
+    {report.length > 0 && (
+      <section class="mt-8" aria-labelledby="report">
+        <h2 id="report" lang="en" class="t-h2">Report</h2>
+        <div lang="ml" class="prose mt-3">{report.map((p) => <p>{p}</p>)}</div>
+      </section>
+    )}
+
+    {leaders.length > 0 && (
+      <section class="mt-8" aria-labelledby="elected">
+        <SectionHead title="Committee elected" id="elected" href={newer ? undefined : L('/about/state-committee')} linkLabel="Full committee" size="h2" />
+        <ul class="grid gap-4 sm:grid-cols-3">
+          {leaders.map((p) => (
+            <li class="flex items-center gap-3">
+              <PersonAvatar person={p} size={56} tone="accent" />
+              <div class="min-w-0"><p lang="en" class="t-label">{roleLabels[p.role].en}</p><p lang={lang === 'en' ? 'en' : 'ml'} class="font-semibold">{lang === 'en' ? p.name.en : p.name.ml}</p></div>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    {thumbs.length > 0 && c.albumSlug && (
+      <section class="mt-8" aria-labelledby="photos">
+        <SectionHead title="Photos" id="photos" href={L(`/gallery/${c.albumSlug}`)} linkLabel="Whole album" size="h2" />
+        <ul class="grid grid-cols-3 gap-2 sm:grid-cols-6">
+          {thumbs.map((p) => <li><a href={L(`/gallery/${c.albumSlug}`)}><img src={p.src} srcset={p.srcset} sizes="(min-width: 640px) 140px, 33vw" alt={t(p.caption, lang)} loading="lazy" decoding="async" class="aspect-square w-full rounded-[var(--radius-control)] object-cover" /></a></li>)}
+        </ul>
+      </section>
+    )}
+
+    <nav lang="en" class="mt-10 grid grid-cols-2 gap-3 border-t border-line pt-6" aria-label="Other conferences">
+      {older ? <a href={L(`/about/conferences/${older}`)} class="card card-hover p-4"><p class="t-meta">Older</p><p class="font-semibold">{ordinal(older)} conference</p></a> : <span />}
+      {newer ? <a href={L(`/about/conferences/${newer}`)} class="card card-hover p-4 text-right"><p class="t-meta">Newer</p><p class="font-semibold">{ordinal(newer)} conference</p></a> : <span class="card bg-bg-subtle p-4 text-right text-ink-3"><span class="t-meta block">Newer</span><span class="block font-semibold">None yet</span></span>}
+    </nav>
+    <p lang="en" class="mt-4"><a href={L('/about/conferences')} class="link">All conferences</a></p>
+  </div>
+</AppLayout>

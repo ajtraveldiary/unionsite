@@ -1,0 +1,122 @@
+---
+/**
+ * A long About page (approved wireframe "History"): History itself, a district's history, or any
+ * other page written in Admin → Pages & documents. Milestones come from the headings that start
+ * with a year ("1962 · …"), as a strip of dates that jump to their place; the contents list comes
+ * from the main headings, beside the text on laptops and a dropdown on phones, and marks the part
+ * being read. Pages without headings are a plain long read. Shown in Malayalam on the English
+ * site, with a note, until an English version is approved.
+ */
+import AppLayout from '~/layouts/AppLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
+import ShareBar from '~/components/ds/ShareBar.astro';
+import type { AboutPage, Lang } from '~/lib/types';
+import { href, t, langOf, ui, formatDate } from '~/lib/i18n';
+import { bodySections } from '~/lib/richtext';
+
+interface Props {
+  lang: Lang;
+  page: AboutPage;
+  crumbs: { label: string; path?: string }[];
+  /** Cards at the foot: the other About sections that have something on the site */
+  next?: { title: string; text: string; path: string }[];
+}
+const { lang, page, crumbs, next = [] } = Astro.props;
+const enMissing = lang === 'en' && !page.title.en;
+const useEn = lang === 'en' && !!page.body.en && !enMissing;
+const bodyLang = useEn ? 'en' : 'ml';
+const { intro, sections } = bodySections(useEn ? page.body.en : page.body.ml);
+const milestones = sections.flatMap((s, i) => {
+  const m = s.title.match(/^(\d{4})\s*[·:–—-]?\s*(.*)$/);
+  return m ? [{ year: m[1], text: m[2] || s.title, i }] : [];
+});
+const title = t(page.title, lang);
+const pageUrl = new URL(href(lang, page.path), Astro.site).toString();
+---
+<AppLayout lang={lang} title={page.title.en ?? page.title.ml} description={t(page.summary, lang) || title} noindex={enMissing}>
+  <div class="wrap pt-5 lg:pt-8">
+    <Breadcrumbs lang={lang} items={crumbs} />
+    <h1 lang={langOf(page.title, lang)} class="t-display mt-2">{title}</h1>
+    {t(page.summary, lang) && <p lang={langOf(page.summary, lang)} class="mt-3 max-w-2xl text-lg text-ink-2">{t(page.summary, lang)}</p>}
+    <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <ShareBar url={pageUrl} title={title} />
+      <p lang="en" class="t-meta">Updated {formatDate(page.updatedAt.slice(0, 10), 'en', 'short')}</p>
+    </div>
+    {enMissing && (
+      <p lang="en" class="mt-4 flex max-w-2xl items-start gap-2 rounded-[var(--radius-card)] border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
+        <Icon name="Info" size={17} class="mt-0.5 shrink-0" /> {ui.enMissing}
+      </p>
+    )}
+  </div>
+
+  {milestones.length > 1 && (
+    <section class="wrap mt-8" aria-labelledby="milestones">
+      <h2 id="milestones" lang="en" class="t-h2 mb-3">Milestones</h2>
+      <ol class="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 lg:mx-0 lg:grid lg:grid-cols-6 lg:overflow-visible lg:px-0">
+        {milestones.map((m) => (
+          <li class="w-40 shrink-0 snap-start lg:w-auto">
+            <a href={`#part-${m.i}`} class="card card-hover block h-full p-3">
+              <p lang="en" class="text-xl font-bold tabular">{m.year}</p>
+              <p lang={bodyLang} class="clamp-3 mt-1 text-sm text-ink-2">{m.text}</p>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )}
+
+  <div class:list={['wrap mt-8', sections.length > 1 && 'grid gap-8 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-12']}>
+    {sections.length > 1 && (
+      <nav aria-label="Contents" data-contents>
+        <label class="block lg:hidden"><span lang="en" class="t-label">Contents</span>
+          <select class="field mt-1" lang={bodyLang} data-contents-select>{sections.map((s, i) => <option value={`part-${i}`}>{s.title}</option>)}</select>
+        </label>
+        <div class="hidden lg:sticky lg:top-24 lg:block">
+          <p lang="en" class="t-label">Contents</p>
+          <ol lang={bodyLang} class="mt-2 space-y-1 border-l border-line text-sm">
+            {sections.map((s, i) => <li><a href={`#part-${i}`} data-contents-link={`part-${i}`} class="-ml-px block border-l-2 border-transparent py-1 pl-3 text-ink-2 hover:text-ink aria-[current=true]:border-ink aria-[current=true]:font-semibold aria-[current=true]:text-ink">{s.title}</a></li>)}
+          </ol>
+        </div>
+      </nav>
+    )}
+
+    <article lang={bodyLang} class="min-w-0">
+      {intro && <div class="prose" set:html={intro} />}
+      {sections.map((s, i) => (
+        <section id={`part-${i}`} class="scroll-mt-24" data-part>
+          <h2 class="t-h2 mt-8 max-w-[68ch]">{s.title}</h2>
+          <div class="prose mt-3" set:html={s.html} />
+        </section>
+      ))}
+      {next.length > 0 && (
+        <ul lang="en" class="mt-10 grid max-w-[68ch] gap-3 border-t border-line pt-6 sm:grid-cols-3">
+          {next.map((n) => <li><a href={href(lang, n.path)} class="card card-hover block h-full p-4"><p class="font-semibold">{n.title}</p><p class="t-meta">{n.text}</p></a></li>)}
+        </ul>
+      )}
+    </article>
+  </div>
+</AppLayout>
+
+<script>
+  function initContents() {
+    const nav = document.querySelector<HTMLElement>('[data-contents]');
+    if (!nav || nav.dataset.ready) return;
+    nav.dataset.ready = '1';
+    const select = nav.querySelector<HTMLSelectElement>('[data-contents-select]')!;
+    select.addEventListener('change', () => document.getElementById(select.value)?.scrollIntoView({ behavior: 'smooth' }));
+    const links = [...nav.querySelectorAll<HTMLElement>('[data-contents-link]')];
+    // The part being read: the last one whose heading has passed the top third of the screen
+    const parts = [...document.querySelectorAll<HTMLElement>('[data-part]')];
+    const mark = () => {
+      const line = window.innerHeight / 3;
+      const current = parts.filter((p) => p.getBoundingClientRect().top < line).pop() ?? parts[0];
+      links.forEach((a) => a.setAttribute('aria-current', String(a.dataset.contentsLink === current.id)));
+      if (select.value !== current.id) select.value = current.id;
+    };
+    let queued = false;
+    window.addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; mark(); }); } }, { passive: true });
+    mark();
+  }
+  initContents();
+</script>

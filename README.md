@@ -44,13 +44,20 @@ path (for example `/news` and `/en/news`).
 ├── /districts                       All 15 districts + Kerala map
 │   └── /districts/{district}        15 district hubs
 │           #news  #office-bearers  #offices  #gallery      tabs, each linkable
+│       └── /districts/{district}/history   The district's history, once its admin writes one
 ├── /kerala-service                  Current issue + archive by year (#y2026 … #y2014)
 │   └── /kerala-service/{year}/{month}   138 issues, Sep 2014 → Mar 2026
 ├── /events                          Upcoming by month, calendar, past events
 │       ?district=…  #{event-slug}
 ├── /about                           About hub
-│   └── /about/state-committee       Office-bearers, secretariat, women's sub-committee
-├── /gallery                         Media: videos (photo albums later)
+│   ├── /about/state-committee       Office-bearers, secretariat, women's sub-committee
+│   ├── /about/history               History: milestones, contents, long read
+│   ├── /about/struggles             Struggles: recent stories and the timeline
+│   ├── /about/{page}                Any other About page written in the admin
+│   ├── /about/documents             Bye-Law, resolutions; /{slug} reads one on the page (pdf.js)
+│   └── /about/conferences           State conferences timeline; /{number} for one
+├── /gallery                         Media: videos and photo albums
+│   └── /gallery/{album}             One album: photo grid and lightbox
 ├── /contact                         State Centre, district committees, message form
 ├── /useful-links                    Government portals
 ├── /search                          Site-wide search (?q=…); a GO number opens that order

@@ -5,8 +5,8 @@
  * own link, e.g. #office-bearers, so a secretary can share one); the district's events beside
  * them on laptops; previous / next district at the foot.
  *
- * Office-bearers, office addresses and photos come from each district before launch
- * (plan, section 17), so those tabs say so for now.
+ * The district's history, once its admin has written one, is linked under the name; the Gallery
+ * tab shows the district's photo albums from Admin → Media.
  */
 import AppLayout from '~/layouts/AppLayout.astro';
 import Icon from '~/components/ui/Icon.astro';
@@ -15,10 +15,11 @@ import Tabs from '~/components/ds/Tabs.astro';
 import StoryItem from '~/components/ds/StoryItem.astro';
 import EventCard from '~/components/ds/EventCard.astro';
 import EmptyState from '~/components/ds/EmptyState.astro';
+import AlbumCard from '~/components/ds/AlbumCard.astro';
 import KeralaMap from '~/components/ds/KeralaMap.astro';
 import type { Lang } from '~/lib/types';
 import { href, t, langOf } from '~/lib/i18n';
-import { sortedDistricts, latestPosts, districtPostCount, districtsWithNews, eventsForDistrict, districtUrl, committee, districtOffices } from '~/lib/content';
+import { sortedDistricts, latestPosts, districtPostCount, districtsWithNews, eventsForDistrict, districtUrl, committee, districtOffices, publishedAlbums, aboutPage } from '~/lib/content';
 import PersonAvatar from '~/components/ds/PersonAvatar.astro';
 import { roleLabels } from '~/data/site';
 import { districtBySlug } from '~/data/districts';
@@ -33,7 +34,7 @@ const prev = all[i - 1];
 const next = all[i + 1];
 // The newest 20 here; the rest are in News, filtered to this district
 const [posts, postCount, withNews] = await Promise.all([latestPosts({ limit: 20, district: slug }), districtPostCount(slug), districtsWithNews()]);
-const [events, bearers, offices] = await Promise.all([eventsForDistrict(slug), committee('district', { district: slug }), districtOffices(slug)]);
+const [events, bearers, offices, albums, history] = await Promise.all([eventsForDistrict(slug), committee('district', { district: slug }), districtOffices(slug), publishedAlbums({ district: slug, limit: 12 }), aboutPage(`/districts/${slug}/history`)]);
 const leaders = bearers.filter((p) => ['president', 'secretary', 'treasurer'].includes(p.role));
 const members = bearers.filter((p) => !leaders.includes(p));
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -46,6 +47,7 @@ const bearerRoles = ['President', 'Secretary', 'Treasurer'];
         <Breadcrumbs lang={lang} items={[{ label: 'Districts', path: '/districts' }, { label: d.name.en }]} />
         <h1 lang="en" class="t-display mt-2">{d.name.en}</h1>
         <p lang="en" class="mt-1 text-ink-2">District committee · HQ {d.hq.en} · {plural(postCount, 'post')} · {plural(events.length, 'upcoming event')}</p>
+        {history && <a href={L(`/districts/${slug}/history`)} lang="en" class="link mt-2 inline-flex items-center gap-1"><Icon name="Landmark" size={16} /> History of the district</a>}
       </div>
       <KeralaMap lang={lang} withNews={withNews} active={slug} label={`${d.name.en} on the map of Kerala`} class="hidden max-h-44 md:block" />
     </div>
@@ -144,7 +146,9 @@ const bearerRoles = ['President', 'Secretary', 'Treasurer'];
         </section>
 
         <section role="tabpanel" id="district-panel-3" aria-labelledby="district-tab-3" hidden>
-          <EmptyState icon="Images" title="No photos yet" text="Albums from the district arrive with the import, and district admins add new ones from their phones." />
+          {albums.length
+            ? <ul class="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3">{albums.map((a) => <li><AlbumCard album={a} lang={lang} showDistrict={false} /></li>)}</ul>
+            : <EmptyState icon="Images" title="No photos yet" text="Albums from the district arrive with the import, and district admins add new ones from their phones." />}
         </section>
       </div>
 

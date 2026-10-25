@@ -1,0 +1,11 @@
+---
+import DocumentView from '~/views/DocumentView.astro';
+import { documentBySlug } from '~/lib/content';
+import { cachePage, tags } from '~/lib/cache';
+
+export const prerender = false;
+const doc = await documentBySlug(Astro.params.slug!);
+if (!doc) return new Response(null, { status: 404 });
+cachePage(Astro, 'item', [tags.pages]);
+---
+<DocumentView lang="en" doc={doc} />

@@ -1,7 +1,7 @@
 ---
 /**
  * Media (redesign, Phase D): the union's latest YouTube videos (only the thumbnail loads
- * until play is tapped, via VideoCard), then photo albums, which arrive with the import.
+ * until play is tapped, via VideoCard), then the newest photo albums from Admin → Media.
  */
 import AppLayout from '~/layouts/AppLayout.astro';
 import Brand from '~/components/ui/Brand.astro';
@@ -9,13 +9,14 @@ import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
 import SectionHead from '~/components/ds/SectionHead.astro';
 import VideoCard from '~/components/ds/VideoCard.astro';
 import EmptyState from '~/components/ds/EmptyState.astro';
+import AlbumCard from '~/components/ds/AlbumCard.astro';
 import type { Lang } from '~/lib/types';
-import { latestVideos, siteInfo } from '~/lib/content';
+import { latestVideos, publishedAlbums, siteInfo } from '~/lib/content';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
 const info = await siteInfo();
-const videos = await latestVideos(24);
+const [videos, albums] = await Promise.all([latestVideos(24), publishedAlbums({ limit: 24 })]);
 ---
 <AppLayout lang={lang} title="Media" description="Videos and photos from Kerala NGO Union programmes and campaigns.">
   <div class="wrap pt-5 lg:pt-8">
@@ -34,7 +35,9 @@ const videos = await latestVideos(24);
 
     <section class="section" aria-labelledby="photos">
       <SectionHead title="Photo albums" id="photos" size="h2" />
-      <EmptyState icon="Images" title="Albums are on their way" text="Photos from the current site are moved over in the import, and admins add new albums from their phones." />
+      {albums.length
+        ? <ul class="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4">{albums.map((a) => <li><AlbumCard album={a} lang={lang} /></li>)}</ul>
+        : <EmptyState icon="Images" title="Albums are on their way" text="Photos from the current site are moved over in the import, and admins add new albums from their phones." />}
     </section>
   </div>
 </AppLayout>

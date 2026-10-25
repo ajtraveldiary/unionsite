@@ -37,7 +37,11 @@ const toolbar = [
       <span class="t-meta">{where} · changed {formatDate(`${p.updatedAt.replace(' ', 'T')}Z`, 'en', 'short')}{p.updatedBy ? ` by ${p.updatedBy}` : ''}</span>
     </div>
     {readOnly && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm"><Icon name="Lock" size={17} class="mt-0.5" /> Only your district admin changes it now it is on the site.</p>}
-    {p.template !== 'district_history' && <p class="t-meta mt-2">The public page for this address comes with the About pages (Phase 3); until then it is kept here.</p>}
+    <p class="t-meta mt-2">
+      {p.status === 'published' ? <Fragment>On the site at <a href={p.path} class="link" target="_blank" rel="noopener">{p.path}</a>.</Fragment> : <Fragment>Goes on the site at {p.path} when published.</Fragment>}
+      {p.path === '/about/history' && ' Start a heading with its year (“1962 · The union is formed”) to add it to the milestones; the main headings make the contents list.'}
+      {p.path === '/about/struggles' && ' Give each struggle a main heading starting with its year (“2002 · 32-day strike”) and a few lines under it; the page shows them as a timeline, newest first.'}
+    </p>
 
     <div class="mt-6 grid gap-8 xl:grid-cols-2">
       <section aria-labelledby="ml-head" class="min-w-0 space-y-4">

@@ -1,0 +1,11 @@
+---
+import AlbumView from '~/views/AlbumView.astro';
+import { albumBySlug } from '~/lib/content';
+import { cachePage, tags } from '~/lib/cache';
+
+export const prerender = false;
+const data = await albumBySlug(Astro.params.album!);
+if (!data) return new Response(null, { status: 404 });
+cachePage(Astro, 'item', [tags.albums]);
+---
+<AlbumView lang="ml" {...data} />

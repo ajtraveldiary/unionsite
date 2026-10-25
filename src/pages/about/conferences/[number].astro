@@ -1,0 +1,12 @@
+---
+import ConferenceView from '~/views/ConferenceView.astro';
+import { conferenceByNumber } from '~/lib/content';
+import { cachePage, tags } from '~/lib/cache';
+
+export const prerender = false;
+const n = Number(Astro.params.number);
+const data = Number.isInteger(n) && n > 0 && String(n) === Astro.params.number ? await conferenceByNumber(n) : null;
+if (!data) return new Response(null, { status: 404 });
+cachePage(Astro, 'item', [tags.pages, tags.albums, tags.people]);
+---
+<ConferenceView lang="ml" {...data} />

@@ -86,7 +86,7 @@ const tabs = [['pages', 'Pages'], ['documents', 'Documents'], ['conferences', 'C
               <p lang="ml" class="font-semibold">{d.titleMl}</p>
               <p class="t-meta">{DOC_KINDS[d.kind]}{d.year ? ` · ${d.year}` : ''} · {d.status === 'published' ? 'Published' : 'Draft'}{d.pdfUrl ? '' : ' · no PDF yet'}</p>
             </div>
-            {d.pdfUrl && <a href={d.pdfUrl} target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Open</a>}
+            {d.status === 'published' ? <a href={`/about/documents/${d.slug}`} target="_blank" rel="noopener" class="btn btn-ghost btn-sm">View on site</a> : d.pdfUrl && <a href={d.pdfUrl} target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Open</a>}
             <a href={`/admin/pages?tab=documents&doc=${d.id}#doc-form`} class="btn btn-secondary btn-sm">Edit</a>
           </li>
         ))}
@@ -128,6 +128,7 @@ const tabs = [['pages', 'Pages'], ['documents', 'Documents'], ['conferences', 'C
               <p class="font-semibold">{c.number}{ord(c.number)} state conference</p>
               <p class="t-meta">{[c.startDate ? formatDate(c.startDate, 'en', 'short') : c.year, c.placeMl].filter(Boolean).join(' · ') || 'Year and place to add'}{c.reportMl ? ' · report' : ''}{c.albumId ? ' · album' : ''}</p>
             </div>
+            {c.status === 'published' && <a href={`/about/conferences/${c.number}`} target="_blank" rel="noopener" class="btn btn-ghost btn-sm">View on site</a>}
             <a href={`/admin/pages?tab=conferences&conf=${c.id}#conf-form`} class="btn btn-secondary btn-sm">Edit</a>
           </li>
         ))}

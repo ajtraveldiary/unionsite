@@ -5,11 +5,11 @@
 import { and, asc, desc, eq, exists, gte, inArray, isNotNull, isNull, lt, ne, notInArray, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { getDb } from '~/db/client';
-import { areaCommittees, districts as districtsT, events as eventsT, magazineIssues, media, offices as officesT, orders as ordersT, people, positions, posts as postsT, postTranslations, siteSettings, videos as videosT } from '~/db/schema';
+import { albumItems, albums as albumsT, areaCommittees, conferences as conferencesT, districts as districtsT, documents as documentsT, events as eventsT, magazineIssues, media, offices as officesT, orders as ordersT, pages as pagesT, people, positions, posts as postsT, postTranslations, siteSettings, videos as videosT } from '~/db/schema';
 import { subjectBySlug } from '~/data/orders';
 import { site } from '~/data/site';
 import { districts } from '~/data/districts';
-import type { Cover, L10n, Lang, MagazineIssue, Order, Person, Post, UnionEvent, Video } from './types';
+import type { AboutPage, Album, AlbumPhoto, Conference, Cover, L10n, Lang, MagazineIssue, Order, Person, Post, UnionDocument, UnionEvent, Video } from './types';
 import type { Body } from './richtext';
 import { href } from './i18n';
 import { newsMatching } from './search-db';
@@ -455,6 +455,154 @@ export async function latestVideos(n = 12): Promise<Video[]> {
   const rows = await db.select({ id: videosT.youtubeId, ml: videosT.titleMl, en: videosT.titleEn, date: videosT.publishedAt })
     .from(videosT).where(eq(videosT.hidden, false)).orderBy(desc(videosT.publishedAt), desc(videosT.id)).limit(n);
   return rows.map((r) => ({ id: r.id, title: l10n(r.ml, r.en), date: r.date }));
+}
+
+// ── About pages, documents, conferences, albums (Admin → Pages & documents, Media) ───────
+
+/** A published About page or district history by its path ("/about/history"); English only once approved */
+export async function aboutPage(path: string): Promise<AboutPage | null> {
+  const db = await getDb();
+  const r = await db.select({ path: pagesT.path, titleMl: pagesT.titleMl, titleEn: pagesT.titleEn, summaryMl: pagesT.summaryMl, summaryEn: pagesT.summaryEn, bodyMl: pagesT.bodyMl, bodyEn: pagesT.bodyEn, enSource: pagesT.enSource, updatedAt: pagesT.updatedAt })
+    .from(pagesT).where(and(eq(pagesT.path, path), eq(pagesT.status, 'published'))).get();
+  if (!r) return null;
+  const en = r.titleEn && r.enSource && r.enSource !== 'ai_draft';
+  return {
+    path: r.path,
+    title: l10n(r.titleMl, en ? r.titleEn : null),
+    summary: l10n(r.summaryMl, en ? r.summaryEn : null),
+    body: { ml: r.bodyMl ?? [], ...(en && r.bodyEn && { en: r.bodyEn }) },
+    updatedAt: r.updatedAt,
+  };
+}
+
+/** Which About sections have something on the site, for the About hub's cards and the district hub's history link */
+export async function aboutAvailability() {
+  const db = await getDb();
+  const [paths, docs, confs] = await Promise.all([
+    db.select({ path: pagesT.path }).from(pagesT).where(eq(pagesT.status, 'published')),
+    db.select({ n: sql<number>`count(*)` }).from(documentsT).where(eq(documentsT.status, 'published')).get(),
+    db.select({ n: sql<number>`count(*)` }).from(conferencesT).where(eq(conferencesT.status, 'published')).get(),
+  ]);
+  return { paths: new Set(paths.map((p) => p.path)), documents: docs?.n ?? 0, conferences: confs?.n ?? 0 };
+}
+
+const docColumns = {
+  slug: documentsT.slug, kind: documentsT.kind, year: documentsT.year, titleMl: documentsT.titleMl, titleEn: documentsT.titleEn, summaryMl: documentsT.summaryMl,
+  pages: documentsT.pageCount, updatedAt: documentsT.updatedAt, r2Key: media.r2Key, src: media.sourceUrl, bytes: media.bytes,
+};
+type DocRow = { slug: string; kind: UnionDocument['kind']; year: number | null; titleMl: string; titleEn: string | null; summaryMl: string | null; pages: number | null; updatedAt: string; r2Key: string | null; src: string | null; bytes: number | null };
+const toDocument = (r: DocRow): UnionDocument => ({
+  slug: r.slug, kind: r.kind, title: l10n(r.titleMl, r.titleEn), updatedAt: r.updatedAt,
+  ...(r.year && { year: r.year }), ...(r.summaryMl && { summary: r.summaryMl }), ...(r.pages && { pages: r.pages }),
+  ...(fileUrl(r.r2Key, r.src) && { pdfUrl: fileUrl(r.r2Key, r.src) }), ...(r.bytes && { kb: Math.round(r.bytes / 1024) }),
+});
+
+/** The organisation's published documents: the Bye-Law first, then resolutions and jubilee volumes, newest first */
+export async function publishedDocuments(): Promise<UnionDocument[]> {
+  const db = await getDb();
+  const rows = await db.select(docColumns).from(documentsT).leftJoin(media, eq(media.id, documentsT.pdfMediaId))
+    .where(eq(documentsT.status, 'published'))
+    .orderBy(sql`case ${documentsT.kind} when 'bye_law' then 0 when 'resolution' then 1 when 'jubilee' then 2 else 3 end`, desc(documentsT.year), asc(documentsT.id));
+  return rows.map(toDocument);
+}
+
+export async function documentBySlug(slug: string): Promise<UnionDocument | null> {
+  const db = await getDb();
+  const r = await db.select(docColumns).from(documentsT).leftJoin(media, eq(media.id, documentsT.pdfMediaId))
+    .where(and(eq(documentsT.slug, slug), eq(documentsT.status, 'published'))).get();
+  return r ? toDocument(r) : null;
+}
+
+type ConfRow = { number: number; year: number | null; start: string | null; end: string | null; placeMl: string | null; placeEn: string | null; report: string | null; albumSlug: string | null; eventSlug: string | null };
+const confColumns = {
+  number: conferencesT.number, year: conferencesT.year, start: conferencesT.startDate, end: conferencesT.endDate, placeMl: conferencesT.placeMl, placeEn: conferencesT.placeEn,
+  report: conferencesT.reportMl, albumSlug: albumsT.slug, eventSlug: conferencesT.eventSlug,
+};
+const toConference = (r: ConfRow): Conference => ({
+  number: r.number,
+  ...(r.year && { year: r.year }), ...(r.start && { start: r.start }), ...(r.end && { end: r.end }),
+  ...(r.placeMl && { place: l10n(r.placeMl, r.placeEn) }), ...(r.report && { report: r.report }),
+  ...(r.albumSlug && { albumSlug: r.albumSlug }), ...(r.eventSlug && { eventSlug: r.eventSlug }),
+});
+// Only an album that is on the site counts
+const confAlbum = and(eq(albumsT.id, conferencesT.albumId), eq(albumsT.status, 'published'));
+
+/** Every published state conference (about 64 rows), newest first */
+export async function publishedConferences(): Promise<Conference[]> {
+  const db = await getDb();
+  const rows = await db.select(confColumns).from(conferencesT).leftJoin(albumsT, confAlbum)
+    .where(eq(conferencesT.status, 'published')).orderBy(desc(conferencesT.number));
+  return rows.map(toConference);
+}
+
+/** One conference, with the published ones either side and the leaders it elected */
+export async function conferenceByNumber(n: number) {
+  const db = await getDb();
+  const r = await db.select(confColumns).from(conferencesT).leftJoin(albumsT, confAlbum)
+    .where(and(eq(conferencesT.number, n), eq(conferencesT.status, 'published'))).get();
+  if (!r) return null;
+  const published = and(eq(conferencesT.status, 'published'));
+  const [older, newer] = await Promise.all([
+    db.select({ number: conferencesT.number }).from(conferencesT).where(and(published, lt(conferencesT.number, n))).orderBy(desc(conferencesT.number)).limit(1).get(),
+    db.select({ number: conferencesT.number }).from(conferencesT).where(and(published, gte(conferencesT.number, n + 1))).orderBy(asc(conferencesT.number)).limit(1).get(),
+  ]);
+  // The newest conference elected today's committee; an older one, the past term named after it ("62nd conference")
+  const ordinal = `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
+  const leaders = (newer ? await committeeTerm(ordinal) : await committee('state')).filter((p) => ['president', 'general_secretary', 'treasurer'].includes(p.role));
+  return { conference: toConference(r), older: older?.number, newer: newer?.number, leaders, photos: r.albumSlug ? (await albumPhotos(r.albumSlug, 7)) : [] };
+}
+
+/** A past state committee whose term mentions this conference ("62nd conference", "2022–2025 · 62nd") */
+async function committeeTerm(ordinal: string): Promise<Person[]> {
+  const db = await getDb();
+  const rows = await db.select({ ml: people.nameMl, en: people.nameEn, role: positions.role, r2Key: media.r2Key, src: media.sourceUrl, srcset: media.srcset })
+    .from(positions).innerJoin(people, eq(people.id, positions.personId)).leftJoin(media, eq(media.id, people.photoMediaId))
+    .where(and(eq(positions.body, 'state'), isNull(positions.district), eq(positions.status, 'past'), sql`lower(${positions.term}) like ${`%${ordinal.toLowerCase()}%`}`))
+    .orderBy(asc(positions.sortOrder), asc(positions.id));
+  return rows.map((r) => ({ name: { ml: r.ml, en: r.en || r.ml }, role: r.role, body: 'state' as const, ...(fileUrl(r.r2Key, r.src) && { photo: sized(r.srcset, r.r2Key, fileUrl(r.r2Key, r.src), 160) }) }));
+}
+
+const albumCount = sql<number>`(select count(*) from album_items where album_items.album_id = "albums"."id")`;
+
+/** Published albums, newest first: all of them (Media) or one district's (its hub's Gallery tab) */
+export async function publishedAlbums({ district, limit = 24 }: { district?: string; limit?: number } = {}): Promise<Album[]> {
+  const db = await getDb();
+  const rows = await db.select({ slug: albumsT.slug, ml: albumsT.titleMl, en: albumsT.titleEn, district: albumsT.district, date: albumsT.eventDate, r2Key: media.r2Key, src: media.sourceUrl, srcset: media.srcset, count: albumCount })
+    .from(albumsT).leftJoin(media, eq(media.id, albumsT.coverMediaId))
+    .where(and(eq(albumsT.status, 'published'), district ? eq(albumsT.district, district) : undefined))
+    .orderBy(desc(albumsT.eventDate), desc(albumsT.id)).limit(limit);
+  return rows.map((r) => ({
+    slug: r.slug, title: l10n(r.ml, r.en), count: r.count,
+    ...(r.district && { district: r.district }), ...(r.date && { date: r.date }),
+    ...(fileUrl(r.r2Key, r.src) && { cover: sized(r.srcset, r.r2Key, fileUrl(r.r2Key, r.src), 480) }),
+  }));
+}
+
+export async function albumBySlug(slug: string) {
+  const db = await getDb();
+  const r = await db.select({ slug: albumsT.slug, ml: albumsT.titleMl, en: albumsT.titleEn, district: albumsT.district, date: albumsT.eventDate, count: albumCount })
+    .from(albumsT).where(and(eq(albumsT.slug, slug), eq(albumsT.status, 'published'))).get();
+  if (!r) return null;
+  const album: Album = { slug: r.slug, title: l10n(r.ml, r.en), count: r.count, ...(r.district && { district: r.district }), ...(r.date && { date: r.date }) };
+  const conference = await db.select({ number: conferencesT.number }).from(conferencesT).innerJoin(albumsT, eq(albumsT.id, conferencesT.albumId))
+    .where(and(eq(albumsT.slug, slug), eq(conferencesT.status, 'published'))).get();
+  return { album, photos: await albumPhotos(slug), conference: conference?.number };
+}
+
+/** An album's photos in the order the admin set (the first few for a conference page) */
+async function albumPhotos(slug: string, limit = 500): Promise<AlbumPhoto[]> {
+  const db = await getDb();
+  const rows = await db.select({ r2Key: media.r2Key, src: media.sourceUrl, srcset: media.srcset, width: media.width, height: media.height, captionMl: albumItems.captionMl, captionEn: albumItems.captionEn, altMl: media.altMl, altEn: media.altEn })
+    .from(albumItems).innerJoin(albumsT, eq(albumsT.id, albumItems.albumId)).innerJoin(media, eq(media.id, albumItems.mediaId))
+    .where(eq(albumsT.slug, slug)).orderBy(asc(albumItems.sortOrder), asc(albumItems.mediaId)).limit(limit);
+  return rows.flatMap((r) => {
+    const src = fileUrl(r.r2Key, r.src);
+    if (!src) return [];
+    return [{
+      src, caption: l10n(r.captionMl ?? r.altMl ?? '', r.captionEn ?? r.altEn),
+      ...(r.srcset && { srcset: srcsetUrls(r.srcset, r.r2Key) }), ...(r.width && { width: r.width }), ...(r.height && { height: r.height }),
+    }];
+  });
 }
 
 // ── Site details (Admin → Settings) ─────────────────────────────────────────────────────

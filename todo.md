@@ -64,17 +64,15 @@ How this list is kept:
 - [ ] Grow the spelling-variants list (`VARIANTS` in `src/lib/search.ts`) as zero-result searches show new ones
 - [ ] Orders page: it puts all 379 orders in its HTML (about 1 MB) and searches them in the browser; page it from the server and use `/api/search` instead
 - [ ] Text of the crawled orders' PDFs into `pdf_text` (new uploads have it since 25 Oct 2026), and OCR for scanned ones if the union agrees
-- [ ] Kerala Service reader on pdf.js: first page while the rest loads, two-page spreads on desktop, thumbnails, zoom, page jump, deep links (`#p=12`). Acceptance: a 20 MB issue shows page 1 in under 3 s on 4G
+- [ ] Kerala Service reader on pdf.js (start from `components/ds/PdfReader.astro`, built for documents): first page while the rest loads, two-page spreads on desktop, thumbnails, zoom, page jump, deep links (`#p=12`). Acceptance: a 20 MB issue shows page 1 in under 3 s on 4G
 - [ ] Events: one page per event (`/events/{slug}`), "Add to calendar" (.ics and Google), a public calendar feed, multi-day spans, and past events linking to their album (the report link is built)
 - [ ] Kerala Service issues in site search (titles and contents lines), and the reader's deep links to contents pages
-- [ ] Photo albums (`/gallery/{album}`) with a lightbox
-- [ ] About pages from the old site: History, Conferences (timeline and one page per conference), Struggles, Documents (their cards say "Coming soon" now)
+- [ ] **(union)** Move the content over from the old site in Admin → Pages & documents: the History text, the Struggles (one heading per struggle, starting with its year), the Bye-Law and resolutions, the 63 past conferences. The pages and their About cards appear as soon as something is published
 - [ ] Orders acceptance test: a member opens a specific GO's PDF from the home page in 3 taps or fewer
 - [ ] Site extras (§8): add-to-home-screen app (manifest, 192/512 maskable icons, offline page with recent orders), a favicon set from the vector logo, print layout for orders and articles
 
 ## Phase 4 · Admin panel and translation (§6, §10, §14)
 
-- [ ] Public pages for what slice 3 manages (Phase 3 wireframes approved): `/about/history`, `/about/struggles`, `/about/documents` and one page per document, `/about/conferences` and one per conference, `/gallery/{album}` with albums on Media and the district hub's Gallery tab, a district's history on its hub; then the About cards stop saying "Coming soon"
 - [ ] Contact page: the district offices from D1 (Admin → Districts), with Directions
 - [ ] Where a district's cover photo shows on the site (the approved hub design has no place for it): design decision
 - [ ] Roles, district limits and cache purges for every new screen's API, as posts have them (`src/lib/admin/roles.ts`, `purgeTags` in `src/lib/cache.ts`)
@@ -105,6 +103,7 @@ How this list is kept:
 ## Done
 
 - [x] 2026-10-25 Admin slice 4: contact form saved to the Inbox (honeypot, Turnstile check, 5 a day per sender, kept 12 months), Users, Settings (Gemini key per admin, auto-draft on publish, glossary in D1, site details with a site-wide purge, AI switch and model), Audit log screen, Analytics (beacon, hourly roll-ups, dashboard by role, CSV), WordPress import wizard (WXR posts: scan, map, dry run, batches, report), Help (Malayalam drafts by role); migration `0006_inbox_analytics_import`
+- [x] 2026-10-25 Public pages for what the admin manages: History (milestones, contents), Struggles (timeline, recent stories), other About pages, Documents and one page per document with an on-page PDF reader, Conferences timeline (newest first, "From the 1st" switch, "Go to") and one page per conference, photo albums with a lightbox on Media and district Gallery tabs, district histories; About cards link once their content is published
 - [x] 2026-10-25 Admin slice 3: People & committees (terms, start and publish a new term, past terms, approvals, photos), Districts (overview, cover, area committees, offices with map pins), Pages & documents (About pages and district histories with English approval, documents, conferences), Media (library with used-in, descriptions, replace, delete; albums; videos with hourly channel sync); migration `0005_people_pages_media`
 - [x] 2026-10-25 State committee, About, Media and district hubs read committees, offices and videos from D1 (moved from `site.ts`)
 - [x] 2026-10-25 Admin slice 2: Orders (upload many PDFs with GO number, date, title and subject read from the PDF, duplicate check, publish together; list, edit, replace the PDF), Kerala Service (cover from page 1, month from the file name, contents lines, drafts, replace the PDF), Events (moved into D1 and search; drafts, review, English approval, report link), Home & banner (banner, headline, preview, history and Show again, lead story, district requests); migration `0004_events`

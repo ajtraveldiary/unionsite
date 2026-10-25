@@ -24,14 +24,14 @@ How this list is kept:
 | Orders | `/wireframes/orders` | `/orders` | Approved (Phase A, Oct 2026) |
 | District | `/wireframes/district` | `/districts/{district}` | Approved (Phase A, Oct 2026) |
 | About | `/wireframes/about` | `/about` | Approved (Phase A, Oct 2026) |
-| History | `/wireframes/history` | Not yet | Approved 22 Oct 2026 |
-| Conferences | `/wireframes/conferences` | Not yet | Approved 22 Oct 2026 (open: newest first, or from the 1st as the plan says; see todo.md) |
-| One conference | `/wireframes/conference` | Not yet | Approved 22 Oct 2026 |
-| Struggles | `/wireframes/struggles` | Not yet | Approved 22 Oct 2026 |
-| Documents | `/wireframes/documents` | Not yet | Approved 22 Oct 2026 |
-| One document | `/wireframes/document` | Not yet | Approved 22 Oct 2026 |
+| History | `/wireframes/history` | `/about/history` (25 Oct 2026) | Approved 22 Oct 2026 |
+| Conferences | `/wireframes/conferences` | `/about/conferences` (25 Oct 2026) | Approved 22 Oct 2026 (open: newest first, or from the 1st as the plan says; see todo.md) |
+| One conference | `/wireframes/conference` | `/about/conferences/{number}` (25 Oct 2026) | Approved 22 Oct 2026 |
+| Struggles | `/wireframes/struggles` | `/about/struggles` (25 Oct 2026) | Approved 22 Oct 2026 |
+| Documents | `/wireframes/documents` | `/about/documents` (25 Oct 2026) | Approved 22 Oct 2026 |
+| One document | `/wireframes/document` | `/about/documents/{slug}` (25 Oct 2026) | Approved 22 Oct 2026 |
 | One event | `/wireframes/event` | Not yet | Approved 22 Oct 2026 |
-| Photo album | `/wireframes/album` | Not yet | Approved 22 Oct 2026 |
+| Photo album | `/wireframes/album` | `/gallery/{album}` (25 Oct 2026) | Approved 22 Oct 2026 |
 | Kerala Service reader | `/wireframes/reader` | Not yet | Approved 22 Oct 2026 |
 | Offline page | `/wireframes/offline` | Not yet | Approved 22 Oct 2026 (open: also save the home page and the Orders list; see todo.md) |
 

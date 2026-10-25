@@ -3,6 +3,6 @@ import AboutView from '~/views/AboutView.astro';
 import { cachePage, tags } from '~/lib/cache';
 
 export const prerender = false;
-cachePage(Astro, 'list', [tags.people]);
+cachePage(Astro, 'list', [tags.people, tags.pages]);
 ---
 <AboutView lang="en" />

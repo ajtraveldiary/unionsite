@@ -2,8 +2,8 @@
 /**
  * About (redesign, Phase D), the hub from the wireframe: a short introduction, one card per
  * sub-page, the three office-bearers and the State Centre's address. History, Conferences,
- * Struggles and Documents (pages the old site had) aren't moved over yet, so their cards say
- * "Coming soon" and aren't links, like the Tools & guides tiles on the home page.
+ * Struggles and Documents link once the state office has put them on the site (Admin → Pages &
+ * documents); until then their cards say "Coming soon" and aren't links.
  */
 import AppLayout from '~/layouts/AppLayout.astro';
 import Icon from '~/components/ui/Icon.astro';
@@ -12,7 +12,8 @@ import SectionHead from '~/components/ds/SectionHead.astro';
 import type { Lang } from '~/lib/types';
 import { href, t, langOf } from '~/lib/i18n';
 import { site, roleLabels } from '~/data/site';
-import { committee, siteInfo } from '~/lib/content';
+import { aboutAvailability, committee, siteInfo } from '~/lib/content';
+import { aboutSections } from '~/lib/about';
 import PersonAvatar from '~/components/ds/PersonAvatar.astro';
 
 interface Props { lang: Lang }
@@ -20,15 +21,8 @@ const { lang } = Astro.props;
 const info = await siteInfo();
 const L = (p: string) => href(lang, p);
 const leaders = (await committee('state')).filter((p) => ['president', 'general_secretary', 'treasurer'].includes(p.role));
-const sections = [
-  { title: 'State committee', text: 'Office-bearers and secretariat', icon: 'Users', path: '/about/state-committee' },
-  { title: 'Media', text: 'Videos and photo albums', icon: 'Images', path: '/gallery' },
-  { title: 'Contact', text: 'State Centre and district offices', icon: 'Mail', path: '/contact' },
-  { title: 'History', text: 'From the 1920 NGO Association to today', icon: 'Landmark' },
-  { title: 'Conferences', text: `${site.conferences} state conferences since ${site.founded}`, icon: 'Flag' },
-  { title: 'Struggles', text: 'Major strikes and campaigns', icon: 'Megaphone' },
-  { title: 'Documents', text: 'Bye-law and policy resolutions', icon: 'FileText' },
-] as const;
+const available = await aboutAvailability();
+const sections = aboutSections.map((s) => ({ ...s, path: s.live(available) ? s.path : undefined }));
 const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Kerala NGO Union, ${info.address.en}`)}`;
 ---
 <AppLayout lang={lang} title="About" description="About the Kerala NGO Union: the organisation of Kerala State Government employees since 1962.">
@@ -39,7 +33,7 @@ const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURICompo
 
     <ul lang="en" class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {sections.map((s) => {
-        const path = 'path' in s ? s.path : undefined;
+        const path = s.path;
         return (
           <li>
             <article class:list={['card group relative flex h-full gap-3 p-4', path ? 'card-hover' : 'bg-bg-subtle']}>

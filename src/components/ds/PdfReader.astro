@@ -1,0 +1,45 @@
+---
+/**
+ * A PDF read on the page (src/lib/pdf-reader.ts loads pdf.js only when this is on the page):
+ * a toolbar with "Page n of N", zoom and full screen above the pages, which draw as they scroll
+ * near. Without JavaScript, or for a file the reader can't open, it offers the PDF itself.
+ */
+import Icon from '~/components/ui/Icon.astro';
+
+interface Props { src: string; title: string }
+const { src, title } = Astro.props;
+---
+<div class="reader overflow-hidden rounded-[var(--radius-card)] border border-line bg-bg-subtle" data-pdf-reader data-src={src} role="region" aria-label={`${title}, PDF`}>
+  <div data-reader-body>
+    <div lang="en" class="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-line bg-surface px-3 py-2 text-sm">
+      <span class="mr-auto font-semibold tabular" data-reader-status aria-live="polite">Opening the PDF…</span>
+      <button type="button" class="btn btn-secondary btn-sm btn-icon" data-reader-out aria-label="Zoom out"><Icon name="ZoomOut" size={16} /></button>
+      <button type="button" class="btn btn-secondary btn-sm btn-icon" data-reader-in aria-label="Zoom in"><Icon name="ZoomIn" size={16} /></button>
+      <button type="button" class="btn btn-secondary btn-sm" data-reader-full><Icon name="Maximize" size={16} /> Full screen</button>
+    </div>
+    <div class="overflow-x-auto p-3 sm:p-6">
+      <div class="reader-pages mx-auto grid gap-4" data-reader-pages></div>
+    </div>
+    <noscript><p lang="en" class="p-4 text-sm"><a href={src} class="link">Open the PDF</a></p></noscript>
+  </div>
+  <p lang="en" class="p-6 text-center text-sm" hidden data-reader-failed>This PDF can’t be shown here. <a href={src} class="link" target="_blank" rel="noopener">Open the PDF</a></p>
+</div>
+
+<style>
+  .reader-pages { width: calc(min(100%, 760px) * var(--reader-zoom, 1)); }
+  .reader-pages :global(.reader-page) { width: 100%; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 0.15); }
+  .reader-pages :global(canvas) { display: block; width: 100%; height: auto; }
+  .reader:fullscreen { overflow: auto; }
+</style>
+
+<script>
+  async function initPdfReaders() {
+    for (const root of document.querySelectorAll<HTMLElement>('[data-pdf-reader]')) {
+      if (root.dataset.ready) continue;
+      root.dataset.ready = '1';
+      const { startReader } = await import('~/lib/pdf-reader');
+      void startReader(root);
+    }
+  }
+  initPdfReaders();
+</script>

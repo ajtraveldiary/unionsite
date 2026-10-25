@@ -78,6 +78,11 @@ in light and dark themes.
 - `src/lib/sample.ts`: the crawled JSON, synchronous, only for the prebuilt `/wireframes` and `/design-system`.
 - Site details (address, phone, email, social links) come from `siteInfo()`/`siteDetails()` in `content.ts`
   (D1, set in Settings), not `site.ts` directly; every cached page carries the `site` tag so saving them purges all.
+- About pages, documents, conferences and albums (Admin → Pages & documents, Media) have public pages: `/about/{page}`
+  (History, Struggles, …: `HistoryView`/`StrugglesView`, which cut the body at its h2 headings with `bodySections()`),
+  `/about/documents/{slug}` (`components/ds/PdfReader.astro` + `src/lib/pdf-reader.ts`, pdf.js on demand),
+  `/about/conferences/{number}`, `/gallery/{album}`, `/districts/{district}/history`. `src/lib/about.ts` decides which
+  About cards link (only those with published content).
 - `src/lib/wp-map.ts`: the old WordPress categories → district and topic, and HTML → paragraphs, shared by
   `scripts/import-crawl.mjs` and the admin's import. `src/lib/contact.ts` saves contact messages.
 - Search runs on D1 (plan, section 11): `search_docs` (one result row per post, order and event) and the

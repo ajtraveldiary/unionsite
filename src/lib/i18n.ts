@@ -87,3 +87,6 @@ export function formatViews(n: number | undefined) {
 export function formatKb(kb: number) {
   return kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`;
 }
+
+/** 1st, 2nd, 3rd, 11th, 63rd */
+export const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
