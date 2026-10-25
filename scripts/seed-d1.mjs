@@ -1,13 +1,13 @@
 // Loads the crawled content (src/data/live/*.json) into the local D1 database, replacing what's
 // there: posts and their translations, orders, Kerala Service issues, their files (as media rows
-// that still point at the old site), the home banner, the search index and one local test user
+// with the old site's address; those scripts/copy-media.mjs has copied into R2 point at the copy), the home banner, the search index and one local test user
 // per admin role. Anything made in the admin is wiped too. Run `npm run db:migrate` first.
 //
 //   node scripts/seed-d1.mjs
 //
 // Text goes in as bound parameters, never inlined SQL: D1 caps one statement at 100 KB and the
 // longest article is about 280 KB of Malayalam.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { getPlatformProxy } from 'wrangler';
 import { districts, topics } from '../src/data/districts.ts';
 import { orderSubjects } from '../src/data/orders.ts';
@@ -43,10 +43,16 @@ for (const d of districts) add('INSERT INTO districts VALUES (?, ?, ?, ?, ?, ?)'
 for (const t of topics) add('INSERT INTO topics VALUES (?, ?, ?)', t.slug, t.name.ml, t.name.en);
 for (const s of orderSubjects) add('INSERT INTO order_subjects VALUES (?, ?, ?, ?)', s.slug, s.group, s.name.ml, s.name.en);
 
+// Files already copied into R2 by scripts/copy-media.mjs: the old address → the copy
+const mapFile = new URL('./.cache/media-map.json', import.meta.url);
+const copied = existsSync(mapFile) ? JSON.parse(readFileSync(mapFile, 'utf8')) : {};
+
 let mediaId = 0;
 const addMedia = (kind, url, { srcset, bytes, altMl, altEn } = {}) => {
   if (!url) return null;
-  add('INSERT INTO media (id, kind, source_url, srcset, bytes, alt_ml, alt_en) VALUES (?, ?, ?, ?, ?, ?, ?)', ++mediaId, kind, url, srcset, bytes, altMl, altEn);
+  const c = copied[url];
+  add('INSERT INTO media (id, kind, source_url, r2_key, srcset, width, height, bytes, sha256, alt_ml, alt_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ++mediaId, kind, url, c?.r2Key, c ? c.srcset : srcset, c?.width, c?.height, c?.bytes ?? bytes, c?.sha256, altMl, altEn);
   return mediaId;
 };
 
@@ -124,5 +130,5 @@ const SIZE = 200;
 for (let i = 0; i < stmts.length; i += SIZE) await db.batch(stmts.slice(i, i + SIZE));
 
 const count = async (t) => (await db.prepare(`SELECT count(*) AS n FROM ${t}`).first()).n;
-console.log(`posts ${await count('posts')} · translations ${await count('post_translations')} · orders ${await count('orders')} · issues ${await count('magazine_issues')} · events ${await count('events')} · people ${await count('people')} · videos ${await count('videos')} · media ${await count('media')} · search ${await count('search_docs')}/${await count('search_fts')} · admin users ${await count('users')}`);
+console.log(`posts ${await count('posts')} · translations ${await count('post_translations')} · orders ${await count('orders')} · issues ${await count('magazine_issues')} · events ${await count('events')} · people ${await count('people')} · videos ${await count('videos')} · media ${await count('media')} · search ${await count('search_docs')}/${await count('search_fts')} · admin users ${await count('users')} · files in R2 ${Object.keys(copied).length}`);
 await dispose();

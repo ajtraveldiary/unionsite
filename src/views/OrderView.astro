@@ -3,8 +3,9 @@
  * A single government order (redesign, Phase C). Built like the article page: one meta line
  * (GO number, date, Important), the title in the page's language with the other language
  * under it, then share. The PDF card comes first because opening the PDF is why people are
- * here; the summary follows, and the order's details sit beside it on laptops (under it on
- * phones). Related orders close the page.
+ * here; once the PDF is on our own server (R2) it is also shown under the card in the reader
+ * (pdf.js), as the plan's order page asks. The summary follows, and the order's details sit
+ * beside it on laptops (under it on phones). Related orders close the page.
  */
 import AppLayout from '~/layouts/AppLayout.astro';
 import Icon from '~/components/ui/Icon.astro';
@@ -12,10 +13,11 @@ import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
 import SectionHead from '~/components/ds/SectionHead.astro';
 import ShareBar from '~/components/ds/ShareBar.astro';
 import OrderRow from '~/components/ds/OrderRow.astro';
+import PdfReader from '~/components/ds/PdfReader.astro';
 import type { Lang, Order } from '~/lib/types';
 import { t, langOf, href, formatDate, formatKb, hasEn, ui } from '~/lib/i18n';
 import { subjectBySlug, orderGroups } from '~/data/orders';
-import { orderPath, relatedOrders } from '~/lib/content';
+import { orderPath, relatedOrders, MEDIA_BASE } from '~/lib/content';
 
 interface Props { lang: Lang; order: Order }
 const { lang, order: o } = Astro.props;
@@ -27,6 +29,8 @@ const otherTitle = lang === 'en' ? o.title.ml : o.title.en;
 const pageUrl = new URL(L(orderPath(o)), Astro.site).toString();
 const pdfInfo = [o.pages && `${o.pages} ${o.pages === 1 ? 'page' : 'pages'}`, o.pdfKb && formatKb(o.pdfKb)].filter(Boolean).join(' · ');
 const dateLabel = o.dateIsUpload ? 'Added' : 'Date';
+// Read on the page only from our own server; a file still on the old site just opens
+const ownPdf = o.pdfUrl?.startsWith(`${MEDIA_BASE}/`);
 const related = await relatedOrders(o);
 const sameSubject = related.every((r) => r.subject === o.subject);
 // "DA orders", but "Pension Orders" stays as it is
@@ -62,7 +66,6 @@ const details = [
       </header>
 
       <div class="mt-6 min-w-0 max-w-[800px] lg:col-start-1">
-        <!-- The PDF, opened from the current site for now; it moves to R2 (with a pdf.js viewer) in Phase 2 -->
         <section lang="en" class="card flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-5" aria-label="PDF">
           <div class="flex min-w-0 flex-1 items-center gap-4">
             <span class="doc" aria-hidden="true"><span>PDF</span></span>
@@ -71,12 +74,15 @@ const details = [
               <p class="t-meta">{pdfInfo}{!o.pdfUrl && ' · arrives with the import'}</p>
             </div>
           </div>
-          {o.pdfUrl ? (
+          {ownPdf ? (
+            <a href={o.pdfUrl} download class="btn btn-primary"><Icon name="Download" size={18} /> Download</a>
+          ) : o.pdfUrl ? (
             <a href={o.pdfUrl} target="_blank" rel="noopener" class="btn btn-primary"><Icon name="Download" size={18} /> Open PDF</a>
           ) : (
             <button type="button" class="btn btn-primary" disabled><Icon name="Download" size={18} /> Open PDF</button>
           )}
         </section>
+        {ownPdf && <PdfReader src={o.pdfUrl!} bytes={o.pdfBytes} title={o.goNumber || title} class="mt-4" />}
 
         {o.summary && (
           <section class="mt-8" aria-labelledby="summary">

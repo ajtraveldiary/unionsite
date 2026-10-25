@@ -1,8 +1,9 @@
 ---
 /**
  * One Kerala Service issue (redesign, Phase D): cover, month, read / download and share;
- * older and newer issue at the foot, then the rest of that year. The reader and download
- * open once the issue's PDF is moved over from the current site.
+ * older and newer issue at the foot, then the rest of that year. Once the issue's PDF is on our
+ * own server (R2), it is read on the page in the reader (pdf.js, a page at a time, so a 35 MB
+ * issue starts at once); a PDF still on the old site just opens.
  */
 import AppLayout from '~/layouts/AppLayout.astro';
 import Icon from '~/components/ui/Icon.astro';
@@ -10,9 +11,10 @@ import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
 import SectionHead from '~/components/ds/SectionHead.astro';
 import ShareBar from '~/components/ds/ShareBar.astro';
 import MagazineCover from '~/components/ui/MagazineCover.astro';
+import PdfReader from '~/components/ds/PdfReader.astro';
 import type { Lang, MagazineIssue } from '~/lib/types';
 import { href, monthName } from '~/lib/i18n';
-import { issuePath } from '~/lib/content';
+import { issuePath, MEDIA_BASE } from '~/lib/content';
 
 /** `issues` is every issue, newest first (allIssues()); the page shows the one at year/month */
 interface Props { lang: Lang; issues: MagazineIssue[]; year: number; month: number }
@@ -26,6 +28,7 @@ const issue = magazineIssues[i];
 const sameYear = magazineIssues.filter((x) => x.year === year);
 const label = `${monthName(month, 'en')} ${year}`;
 const pageUrl = new URL(L(issuePath(year, month)), Astro.site).toString();
+const ownPdf = issue.pdfUrl?.startsWith(`${MEDIA_BASE}/`);
 ---
 <AppLayout lang={lang} title={`Kerala Service · ${label}`} description={`Kerala Service, ${label}: the Kerala NGO Union's monthly magazine.`}>
   <div class="wrap pt-5 lg:pt-8" lang="en">
@@ -38,12 +41,17 @@ const pageUrl = new URL(L(issuePath(year, month)), Astro.site).toString();
       <div>
         <p class="t-label">Kerala Service</p>
         <h1 class="t-display mt-1">{label}</h1>
-        {issue.pdfUrl ? (
+        {ownPdf ? (
+          <div class="mt-5 flex flex-wrap gap-2">
+            <a href="#read" class="btn btn-primary"><Icon name="BookOpen" size={18} /> Read the PDF</a>
+            <a href={issue.pdfUrl} download class="btn btn-secondary"><Icon name="Download" size={18} /> Download</a>
+          </div>
+        ) : issue.pdfUrl ? (
           <>
             <div class="mt-5 flex flex-wrap gap-2">
               <a href={issue.pdfUrl} target="_blank" rel="noopener" class="btn btn-primary"><Icon name="BookOpen" size={18} /> Read the PDF</a>
             </div>
-            <p class="t-meta mt-2 max-w-md">Opens the issue's PDF from the current site. A page-by-page reader comes with Phase 3.</p>
+            <p class="t-meta mt-2 max-w-md">Opens the issue's PDF from the current site.</p>
           </>
         ) : (
           <>
@@ -58,6 +66,12 @@ const pageUrl = new URL(L(issuePath(year, month)), Astro.site).toString();
         </div>
       </div>
     </div>
+
+    {ownPdf && (
+      <section id="read" class="mt-8 scroll-mt-20" aria-label={`Kerala Service, ${label}`}>
+        <PdfReader src={issue.pdfUrl!} bytes={issue.pdfBytes} title={`Kerala Service, ${label}`} />
+      </section>
+    )}
 
     <nav aria-label="Other issues" class="mt-10 grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-y border-line py-3 text-sm">
       {older ? <a href={L(issuePath(older.year, older.month))} class="flex items-center gap-1 font-semibold hover:text-accent-ink"><Icon name="ChevronLeft" size={16} /> {monthName(older.month, 'en').slice(0, 3)} {older.year}</a> : <span />}

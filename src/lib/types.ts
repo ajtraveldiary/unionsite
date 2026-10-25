@@ -81,6 +81,8 @@ export interface Order {
   pdfKb: number;
   pages?: number;
   pdfUrl?: string;
+  /** Exact size, known once the PDF is in R2; the reader then fetches it in byte ranges */
+  pdfBytes?: number;
   legacyUrl?: string;
   sample?: boolean;
 }
@@ -128,6 +130,7 @@ export interface MagazineIssue {
   year: number;
   month: number; // 1-12
   pdfUrl?: string;
+  pdfBytes?: number;
   /** Cover image (page 1); without one the archive draws a stand-in cover */
   coverUrl?: string;
   legacyUrl?: string;
@@ -157,6 +160,7 @@ export interface UnionDocument {
   pdfUrl?: string;
   pages?: number;
   kb?: number;
+  bytes?: number;
   updatedAt: string;
 }
 

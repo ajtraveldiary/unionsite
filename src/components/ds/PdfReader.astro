@@ -6,10 +6,11 @@
  */
 import Icon from '~/components/ui/Icon.astro';
 
-interface Props { src: string; title: string }
-const { src, title } = Astro.props;
+/** `bytes`: the file's exact size, when known, so the reader fetches just the parts it needs */
+interface Props { src: string; title: string; bytes?: number; class?: string }
+const { src, title, bytes, class: cls = '' } = Astro.props;
 ---
-<div class="reader overflow-hidden rounded-[var(--radius-card)] border border-line bg-bg-subtle" data-pdf-reader data-src={src} role="region" aria-label={`${title}, PDF`}>
+<div class:list={['reader overflow-hidden rounded-[var(--radius-card)] border border-line bg-bg-subtle', cls]} data-pdf-reader data-src={src} data-bytes={bytes} role="region" aria-label={`${title}, PDF`}>
   <div data-reader-body>
     <div lang="en" class="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-line bg-surface px-3 py-2 text-sm">
       <span class="mr-auto font-semibold tabular" data-reader-status aria-live="polite">Opening the PDF…</span>
@@ -37,8 +38,14 @@ const { src, title } = Astro.props;
     for (const root of document.querySelectorAll<HTMLElement>('[data-pdf-reader]')) {
       if (root.dataset.ready) continue;
       root.dataset.ready = '1';
-      const { startReader } = await import('~/lib/pdf-reader');
-      void startReader(root);
+      try {
+        const { startReader } = await import('~/lib/pdf-reader');
+        void startReader(root);
+      } catch {
+        // The reader couldn't load (offline, an old cached page): offer the file itself
+        root.querySelector<HTMLElement>('[data-reader-failed]')!.hidden = false;
+        root.querySelector<HTMLElement>('[data-reader-body]')!.hidden = true;
+      }
     }
   }
   initPdfReaders();

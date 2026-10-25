@@ -41,6 +41,7 @@ How this list is kept:
 ## Phase 1 · Foundations: the part that needs the account (§15)
 
 - [ ] Create the real D1 database, put its id in `wrangler.jsonc`, apply the migrations remotely and load the content
+- [ ] Copy the media into the real R2 bucket: give `scripts/copy-media.mjs` a remote mode (or upload `scripts/.cache/media/` with rclone), then run the D1 update against the real database
 - [ ] Create the R2 bucket; until launch, files are served through the Worker (or the bucket's r2.dev address, for testing only), and `media.keralangounion.in` is added at launch
 - [ ] Deploy to the Worker's `workers.dev` address from GitHub through Cloudflare, with a preview URL per branch and its own D1 database (no domain needed until launch)
 - [ ] Confirm the edge cache on the `workers.dev` address: a second visit reads no D1, and a tag purge makes the next visit read D1 again (Cloudflare's Workers cache works on workers.dev and preview URLs, each with its own cache)
@@ -50,8 +51,8 @@ How this list is kept:
 
 ## Phase 2 · Demo data and core site (§12, §9)
 
-- [ ] Copy the crawled photos and PDFs into R2 in the standard WebP sizes, and stop linking to the old site (§9 "Media and thumbnails")
-- [ ] Turn on the disabled "Open PDF" and "Read the PDF" buttons once every file is in R2
+- [ ] **(union)** The order PDFs the old site itself has lost (its download page says "File not found"; listed in `scripts/.cache/media-report.txt` after a copy run): find the files, then replace them in Admin → Orders
+- [ ] Kerala Service covers: the old site's are 212 px thumbnails, blurred on the issue page; draw page 1 of each issue's PDF at 160, 320 and 640 px instead (§9)
 - [ ] District data from the ~100 district posts (office-bearers, committees, history, addresses, galleries) into people and positions tables, with a "Needs checking" queue; show it on the district hub tabs
 - [ ] Review the topics the importer guessed from title keywords
 - [ ] Fix crawl data: post 15526 has an empty title
@@ -64,7 +65,7 @@ How this list is kept:
 - [ ] Grow the spelling-variants list (`VARIANTS` in `src/lib/search.ts`) as zero-result searches show new ones
 - [ ] Orders page: it puts all 379 orders in its HTML (about 1 MB) and searches them in the browser; page it from the server and use `/api/search` instead
 - [ ] Text of the crawled orders' PDFs into `pdf_text` (new uploads have it since 25 Oct 2026), and OCR for scanned ones if the union agrees
-- [ ] Kerala Service reader on pdf.js (start from `components/ds/PdfReader.astro`, built for documents): first page while the rest loads, two-page spreads on desktop, thumbnails, zoom, page jump, deep links (`#p=12`). Acceptance: a 20 MB issue shows page 1 in under 3 s on 4G
+- [ ] Kerala Service reader on pdf.js (start from `components/ds/PdfReader.astro`, built for documents): first page while the rest loads, two-page spreads on desktop, thumbnails, zoom, page jump, deep links (`#p=12`). Acceptance: a 20 MB issue shows page 1 in under 3 s on 4G. Measured 25 Oct 2026: the crawled issues are ~35 MB, not arranged for fast first-page loading, and page 1 needs about 18 MB even with byte ranges, so the reader should start from page images made at upload (or the PDFs be re-saved "fast web view")
 - [ ] Events: one page per event (`/events/{slug}`), "Add to calendar" (.ics and Google), a public calendar feed, multi-day spans, and past events linking to their album (the report link is built)
 - [ ] Kerala Service issues in site search (titles and contents lines), and the reader's deep links to contents pages
 - [ ] **(union)** Move the content over from the old site in Admin → Pages & documents: the History text, the Struggles (one heading per struggle, starting with its year), the Bye-Law and resolutions, the 63 past conferences. The pages and their About cards appear as soon as something is published
@@ -103,6 +104,7 @@ How this list is kept:
 ## Done
 
 - [x] 2026-10-25 Admin slice 4: contact form saved to the Inbox (honeypot, Turnstile check, 5 a day per sender, kept 12 months), Users, Settings (Gemini key per admin, auto-draft on publish, glossary in D1, site details with a site-wide purge, AI switch and model), Audit log screen, Analytics (beacon, hourly roll-ups, dashboard by role, CSV), WordPress import wizard (WXR posts: scan, map, dry run, batches, report), Help (Malayalam drafts by role); migration `0006_inbox_analytics_import`
+- [x] 2026-10-25 Crawled photos and PDFs copied into the local R2 (`scripts/copy-media.mjs`: WebP at 320–1920 px, SHA-256 keys, resumable, re-applied by the seed); order and Kerala Service pages read their PDF on the page (byte ranges) with Download
 - [x] 2026-10-25 Public pages for what the admin manages: History (milestones, contents), Struggles (timeline, recent stories), other About pages, Documents and one page per document with an on-page PDF reader, Conferences timeline (newest first, "From the 1st" switch, "Go to") and one page per conference, photo albums with a lightbox on Media and district Gallery tabs, district histories; About cards link once their content is published
 - [x] 2026-10-25 Admin slice 3: People & committees (terms, start and publish a new term, past terms, approvals, photos), Districts (overview, cover, area committees, offices with map pins), Pages & documents (About pages and district histories with English approval, documents, conferences), Media (library with used-in, descriptions, replace, delete; albums; videos with hourly channel sync); migration `0005_people_pages_media`
 - [x] 2026-10-25 State committee, About, Media and district hubs read committees, offices and videos from D1 (moved from `site.ts`)

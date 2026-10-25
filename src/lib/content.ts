@@ -259,6 +259,7 @@ async function selectOrders(where: (SQL | undefined)[], limit?: number) {
       pdfKb: r.pdfBytes ? Math.round(r.pdfBytes / 1024) : 0,
       ...(r.pages && { pages: r.pages }),
       ...(fileUrl(r.pdfR2, r.pdfSrc) && { pdfUrl: fileUrl(r.pdfR2, r.pdfSrc) }),
+      ...(r.pdfR2 && r.pdfBytes && { pdfBytes: r.pdfBytes }),
       ...(r.legacyUrl && { legacyUrl: r.legacyUrl }),
     }),
   );
@@ -284,7 +285,7 @@ const pdf = alias(media, 'pdf');
 export async function allIssues(): Promise<MagazineIssue[]> {
   const db = await getDb();
   const rows = await db
-    .select({ year: magazineIssues.year, month: magazineIssues.month, legacyUrl: magazineIssues.legacyUrl, coverR2: media.r2Key, coverSrc: media.sourceUrl, pdfR2: pdf.r2Key, pdfSrc: pdf.sourceUrl })
+    .select({ year: magazineIssues.year, month: magazineIssues.month, legacyUrl: magazineIssues.legacyUrl, coverR2: media.r2Key, coverSrc: media.sourceUrl, pdfR2: pdf.r2Key, pdfSrc: pdf.sourceUrl, pdfBytes: pdf.bytes })
     .from(magazineIssues)
     .leftJoin(media, eq(media.id, magazineIssues.coverMediaId))
     .leftJoin(pdf, eq(pdf.id, magazineIssues.pdfMediaId))
@@ -294,6 +295,7 @@ export async function allIssues(): Promise<MagazineIssue[]> {
     year: r.year,
     month: r.month,
     ...(fileUrl(r.pdfR2, r.pdfSrc) && { pdfUrl: fileUrl(r.pdfR2, r.pdfSrc) }),
+    ...(r.pdfR2 && r.pdfBytes && { pdfBytes: r.pdfBytes }),
     ...(fileUrl(r.coverR2, r.coverSrc) && { coverUrl: fileUrl(r.coverR2, r.coverSrc) }),
     ...(r.legacyUrl && { legacyUrl: r.legacyUrl }),
   }));
@@ -494,7 +496,7 @@ type DocRow = { slug: string; kind: UnionDocument['kind']; year: number | null; 
 const toDocument = (r: DocRow): UnionDocument => ({
   slug: r.slug, kind: r.kind, title: l10n(r.titleMl, r.titleEn), updatedAt: r.updatedAt,
   ...(r.year && { year: r.year }), ...(r.summaryMl && { summary: r.summaryMl }), ...(r.pages && { pages: r.pages }),
-  ...(fileUrl(r.r2Key, r.src) && { pdfUrl: fileUrl(r.r2Key, r.src) }), ...(r.bytes && { kb: Math.round(r.bytes / 1024) }),
+  ...(fileUrl(r.r2Key, r.src) && { pdfUrl: fileUrl(r.r2Key, r.src) }), ...(r.bytes && { kb: Math.round(r.bytes / 1024) }), ...(r.r2Key && r.bytes && { bytes: r.bytes }),
 });
 
 /** The organisation's published documents: the Bye-Law first, then resolutions and jubilee volumes, newest first */

@@ -35,7 +35,7 @@ const pageUrl = new URL(href(lang, `/about/documents/${doc.slug}`), Astro.site).
 
   {doc.pdfUrl && (
     <section class="wrap mt-6" aria-label="Document">
-      <PdfReader src={doc.pdfUrl} title={title} />
+      <PdfReader src={doc.pdfUrl} bytes={doc.bytes} title={title} />
     </section>
   )}
 

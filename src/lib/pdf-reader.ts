@@ -3,12 +3,26 @@
 // Zoom in and out, full screen, and "Page n of N" following the scroll. Loaded only on pages
 // that have a reader (components/ds/PdfReader.astro imports this on demand). A PDF on another
 // site that doesn't allow reading it here shows the Download link instead.
-import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy } from 'pdfjs-dist';
+import { getDocument, GlobalWorkerOptions, PDFDataRangeTransport, type PDFDocumentProxy } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 
 const ZOOMS = [0.75, 1, 1.25, 1.5, 2];
+
+/**
+ * Fetches only the byte ranges pdf.js asks for. pdf.js does this itself only when the response
+ * carries Content-Length, which a streamed response may not; with the size known from the
+ * database, this works however the file is served.
+ */
+class RangeTransport extends PDFDataRangeTransport {
+  constructor(private url: string, length: number) { super(length, null); }
+  requestDataRange(begin: number, end: number) {
+    fetch(this.url, { headers: { Range: `bytes=${begin}-${end - 1}` } })
+      .then((r) => r.arrayBuffer())
+      .then((buf) => this.onDataRange(begin, new Uint8Array(buf)));
+  }
+}
 
 export async function startReader(root: HTMLElement) {
   const pagesBox = root.querySelector<HTMLElement>('[data-reader-pages]')!;
@@ -16,7 +30,10 @@ export async function startReader(root: HTMLElement) {
   const fail = () => { root.querySelector<HTMLElement>('[data-reader-failed]')!.hidden = false; root.querySelector<HTMLElement>('[data-reader-body]')!.hidden = true; };
   let pdf: PDFDocumentProxy;
   try {
-    pdf = await getDocument({ url: root.dataset.src!, disableAutoFetch: true, useSystemFonts: true }).promise;
+    // Byte ranges, not the whole file: only the parts of a 35 MB issue that pages on screen need
+    const length = Number(root.dataset.bytes);
+    const source = length > 0 ? { range: new RangeTransport(root.dataset.src!, length), length } : { url: root.dataset.src! };
+    pdf = await getDocument({ ...source, disableAutoFetch: true, disableStream: true, rangeChunkSize: 256 * 1024, useSystemFonts: true }).promise;
   } catch {
     return fail();
   }

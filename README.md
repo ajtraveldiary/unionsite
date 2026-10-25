@@ -25,7 +25,8 @@ phone-first site on Cloudflare, in Malayalam with English versions of articles.
 
 Interface text is English on both sites; only content (headlines, articles, names) switches
 language. News, orders and magazine issues are real content from the current site; their photos
-and PDFs are still linked from it. Events are sample data.
+and PDFs are copied into the local R2 by `node scripts/copy-media.mjs` (the site links to the old one
+only for files that couldn't be copied). Events are sample data.
 
 ## Site map
 

@@ -15,7 +15,8 @@ date when the owner approves it, fill in **Built** when the real page exists, an
 
 Right now the site is a **preview**. News, GO orders and Kerala Service are real content crawled
 from the current keralangounion.in into `src/data/live/*.json`, then loaded into a **local D1
-database** (photos and PDFs are still linked from the old site). Pages that show this content read
+database**. `scripts/copy-media.mjs` copies the crawl's photos (as WebP sizes) and PDFs into the local
+R2; the few it can't still link to the old site. Pages that show this content read
 D1 on request and are cached (plan, section 4, "Caching and database reads"). Events are in D1 too
 (the seed loads four sample events from `src/data/site.ts`), and so are the state committee and videos
 (also seeded from `site.ts`), district office-bearers and offices, pages, documents and albums, all
@@ -51,6 +52,10 @@ site Cloudflare Access does the sign-in and `src/lib/admin/auth.ts` checks its t
 - `node scripts/import-crawl.mjs`: turns the crawl into `src/data/live/*.json` (topics, districts,
   subjects, GO numbers, transliterated slugs). Never edit those JSON files by hand; change the
   script and rerun it, then `npm run db:seed` to reload D1.
+- `node scripts/copy-media.mjs`: copies the crawl's photos and PDFs from the old site into the local R2
+  and points D1 at them (one request at a time, resumable; about two hours from scratch; `--limit 20` to
+  try, `--progress` to watch). It keeps `scripts/.cache/media-map.json`, which `npm run db:seed` applies
+  again, and lists what failed in `scripts/.cache/media-report.txt`.
 
 There are no automated tests. Check changes in the browser at phone (375 px) and laptop width,
 in light and dark themes.
