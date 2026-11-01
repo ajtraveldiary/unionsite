@@ -16,6 +16,9 @@
   // in the same account; locally wrangler keeps the bucket in .wrangler/state. Served at /media/…
   // until media.keralangounion.in is connected at launch.
   "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "union-media" }],
+  // The Cloudflare adapter adds a SESSION binding to every build (the site doesn't use sessions).
+  // Cloudflare made this namespace on the first deploy; naming its id stops each build making another.
+  "kv_namespaces": [{ "binding": "SESSION", "id": "4650d60ffeea4a4c8fb08266fd6cd098" }],
   // Every five minutes: publish scheduled posts (src/worker.ts)
   "triggers": { "crons": ["*/5 * * * *"] }
   // Later: "analytics_engine_datasets"; vars ACCESS_TEAM_DOMAIN and ACCESS_AUD for admin login

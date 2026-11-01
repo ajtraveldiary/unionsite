@@ -43,9 +43,8 @@ How this list is kept:
 - [ ] Load the content into the real D1 (the tables are there, empty): give `scripts/seed-d1.mjs` a remote mode without the four test users, since the `workers.dev` address is public
 - [ ] Copy the media into the real R2 bucket: give `scripts/copy-media.mjs` a remote mode (or upload `scripts/.cache/media/` with rclone), then run the D1 update against the real database
 - [ ] Until launch, R2 files are served through the Worker (or the bucket's r2.dev address, for testing only), and `media.keralangounion.in` is added at launch
-- [ ] Deploy to the Worker's `workers.dev` address from GitHub through Cloudflare. The repo is connected (1 Nov 2026, Worker `unionsite`, deploys `main`; Cloudflare made the `unionsite-session` KV itself); the first build failed because `main` still had the placeholder D1 id. Next: merge the real id into `main`, then a preview URL per branch with its own D1 database (no domain needed until launch)
+- [ ] Deploy to the Worker's `workers.dev` address from GitHub through Cloudflare. The repo is connected (1 Nov 2026, Worker `unionsite`, deploys `main`; bound to the `unionsite-session` KV); the first builds failed on the placeholder D1 id, then on that KV being made twice, both fixed in `main`. Next: a preview URL per branch with its own D1 database (no domain needed until launch)
 - [ ] Confirm the edge cache on the `workers.dev` address: a second visit reads no D1, and a tag purge makes the next visit read D1 again (Cloudflare's Workers cache works on workers.dev and preview URLs, each with its own cache)
-- [ ] Decide on the `SESSION` KV binding the Cloudflare adapter adds to every build: create the namespace, or turn sessions off (the site doesn't use them)
 - [ ] Switch on admin login: an Access application for `/admin` and `/api/admin` (email one-time code, any email let through to the app), then set `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` and `ADMIN_BOOTSTRAP_EMAIL` (the first super admin). The token check and the users table are built (§10)
 - [ ] Usage alerts at 80 % of the D1, R2 and Workers limits (§13)
 
@@ -103,6 +102,7 @@ How this list is kept:
 
 ## Done
 
+- [x] 2026-11-01 `SESSION` KV binding: Cloudflare made the `unionsite-session` namespace on the first deploy; its id is now in `wrangler.jsonc`, so builds stop trying to make another (the site still doesn't use sessions)
 - [x] 2026-11-01 Connected to Cloudflare (the owner's account, for now): created the real D1 database `union` (APAC) and the R2 bucket `union-media`, put the database id in `wrangler.jsonc`, and applied migrations 0000–0006 to the real D1 (recorded in `d1_migrations`, so `npm run db:migrate:remote` applies only new ones)
 
 - [x] 2026-10-25 Admin slice 4: contact form saved to the Inbox (honeypot, Turnstile check, 5 a day per sender, kept 12 months), Users, Settings (Gemini key per admin, auto-draft on publish, glossary in D1, site details with a site-wide purge, AI switch and model), Audit log screen, Analytics (beacon, hourly roll-ups, dashboard by role, CSV), WordPress import wizard (WXR posts: scan, map, dry run, batches, report), Help (Malayalam drafts by role); migration `0006_inbox_analytics_import`
