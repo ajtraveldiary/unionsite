@@ -40,7 +40,8 @@ How this list is kept:
 
 ## Phase 1 · Foundations: the part that needs the account (§15)
 
-- [ ] Load the content into the real D1 (the tables are there, empty): give `scripts/seed-d1.mjs` a remote mode without the four test users, since the `workers.dev` address is public
+- [ ] Load the content into the real D1: run `npx wrangler login`, then `node scripts/seed-d1.mjs --remote` (the remote mode is built, 1 Nov 2026: no test users, photos and PDFs link to the old site until the media copy below). Until then the live home and News pages are blank
+- [ ] Home and News render a blank page (200, empty body) when D1 has no posts: `HomeView` and `NewsView` assume a lead story. Show an empty state instead
 - [ ] Copy the media into the real R2 bucket: give `scripts/copy-media.mjs` a remote mode (or upload `scripts/.cache/media/` with rclone), then run the D1 update against the real database
 - [ ] Until launch, R2 files are served through the Worker (or the bucket's r2.dev address, for testing only), and `media.keralangounion.in` is added at launch
 - [ ] Deploy to the Worker's `workers.dev` address from GitHub through Cloudflare. The repo is connected (1 Nov 2026, Worker `unionsite`, deploys `main`; bound to the `unionsite-session` KV); the first builds failed on the placeholder D1 id, then on that KV being made twice, both fixed in `main`. Next: a preview URL per branch with its own D1 database (no domain needed until launch)

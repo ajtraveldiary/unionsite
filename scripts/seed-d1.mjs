@@ -4,11 +4,17 @@
 // per admin role. Anything made in the admin is wiped too. Run `npm run db:migrate` first.
 //
 //   node scripts/seed-d1.mjs
+//   node scripts/seed-d1.mjs --remote [--replace]
+//
+// --remote loads the real D1 on Cloudflare instead (needs `npx wrangler login`), without the test
+// users, since the live site is public, and without the local media map, since the files aren't in
+// the real R2 yet (photos and PDFs link to the old site until they are). It refuses to wipe a real
+// database that already has content or admin users unless --replace is given.
 //
 // Text goes in as bound parameters, never inlined SQL: D1 caps one statement at 100 KB and the
 // longest article is about 280 KB of Malayalam.
-import { existsSync, readFileSync } from 'node:fs';
-import { getPlatformProxy } from 'wrangler';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { getPlatformProxy, unstable_readConfig } from 'wrangler';
 import { districts, topics } from '../src/data/districts.ts';
 import { orderSubjects } from '../src/data/orders.ts';
 import { firstBanner, events, stateCommittee, videos } from '../src/data/site.ts';
@@ -20,8 +26,38 @@ const posts = live('posts');
 const orders = live('orders');
 const issues = live('issues');
 
-const { env, dispose } = await getPlatformProxy();
+const remote = process.argv.includes('--remote');
+const replace = process.argv.includes('--replace');
+
+// For --remote, a throwaway config that marks the D1 binding remote, so wrangler.jsonc keeps dev local
+let proxyOptions = {};
+if (remote) {
+  const config = unstable_readConfig({ config: 'wrangler.jsonc' });
+  const remoteConfig = {
+    name: config.name,
+    compatibility_date: config.compatibility_date,
+    d1_databases: config.d1_databases.filter((d) => d.binding === 'DB').map(({ binding, database_name, database_id }) => ({ binding, database_name, database_id, remote: true })),
+  };
+  const dir = new URL('./.cache/', import.meta.url);
+  mkdirSync(dir, { recursive: true });
+  const configPath = new URL('wrangler.remote.json', dir);
+  writeFileSync(configPath, JSON.stringify(remoteConfig, null, 2));
+  proxyOptions = { configPath: configPath.pathname, persist: false };
+  console.log(`Loading the real D1 database "${remoteConfig.d1_databases[0].database_name}" on Cloudflare…`);
+}
+
+const { env, dispose } = await getPlatformProxy(proxyOptions);
 const db = env.DB;
+const count = async (t) => (await db.prepare(`SELECT count(*) AS n FROM ${t}`).first()).n;
+
+if (remote && !replace) {
+  const [existingPosts, existingUsers] = [await count('posts'), await count('users')];
+  if (existingPosts || existingUsers) {
+    console.error(`The real database already has ${existingPosts} posts and ${existingUsers} admin users. Seeding wipes them, and everything made in the admin. Add --replace to go ahead.`);
+    await dispose();
+    process.exit(1);
+  }
+}
 const stmts = [];
 const add = (sql, ...params) => stmts.push(db.prepare(sql).bind(...params.map((p) => (p === undefined ? null : p))));
 
@@ -45,7 +81,7 @@ for (const s of orderSubjects) add('INSERT INTO order_subjects VALUES (?, ?, ?, 
 
 // Files already copied into R2 by scripts/copy-media.mjs: the old address → the copy
 const mapFile = new URL('./.cache/media-map.json', import.meta.url);
-const copied = existsSync(mapFile) ? JSON.parse(readFileSync(mapFile, 'utf8')) : {};
+const copied = !remote && existsSync(mapFile) ? JSON.parse(readFileSync(mapFile, 'utf8')) : {};
 
 let mediaId = 0;
 const addMedia = (kind, url, { srcset, bytes, altMl, altEn } = {}) => {
@@ -123,12 +159,15 @@ const testUsers = [
   ['kollam.admin@example.org', 'Test Kollam admin', 'district_admin', 'kollam'],
   ['kollam.editor@example.org', 'Test Kollam editor', 'district_editor', 'kollam'],
 ];
-for (const [email, name, role, district] of testUsers) add('INSERT INTO users (email, name, role, district) VALUES (?, ?, ?, ?)', email, name, role, district);
+if (!remote) for (const [email, name, role, district] of testUsers) add('INSERT INTO users (email, name, role, district) VALUES (?, ?, ?, ?)', email, name, role, district);
 
-// One batch is one transaction; a few hundred statements per batch keeps each one small
-const SIZE = 200;
-for (let i = 0; i < stmts.length; i += SIZE) await db.batch(stmts.slice(i, i + SIZE));
-
-const count = async (t) => (await db.prepare(`SELECT count(*) AS n FROM ${t}`).first()).n;
+// One batch is one transaction; a few hundred statements per batch keeps each one small. Remote
+// batches go over the network one request each, so they're smaller to stay well inside its limits.
+const SIZE = remote ? 50 : 200;
+for (let i = 0; i < stmts.length; i += SIZE) {
+  await db.batch(stmts.slice(i, i + SIZE));
+  if (remote) process.stdout.write(`\r${Math.min(i + SIZE, stmts.length)} / ${stmts.length} statements`);
+}
+if (remote) process.stdout.write('\n');
 console.log(`posts ${await count('posts')} · translations ${await count('post_translations')} · orders ${await count('orders')} · issues ${await count('magazine_issues')} · events ${await count('events')} · people ${await count('people')} · videos ${await count('videos')} · media ${await count('media')} · search ${await count('search_docs')}/${await count('search_fts')} · admin users ${await count('users')} · files in R2 ${Object.keys(copied).length}`);
 await dispose();

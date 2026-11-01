@@ -40,6 +40,7 @@ site Cloudflare Access does the sign-in and `src/lib/admin/auth.ts` checks its t
 - First time, and after changing the schema or the crawl: `npm run db:migrate`, then `npm run db:seed`.
   Without them the content pages fail (no tables). The seed also wipes everything made in the admin.
 - `npm run db:migrate:remote`: applies new migrations to the real D1 (needs `wrangler login` to the account). Run it with every schema change that ships.
+- `node scripts/seed-d1.mjs --remote`: loads the crawl into the real D1 (needs `wrangler login`), without the test users or the local media map. It refuses to wipe a database with content or users unless `--replace` is added.
 - `npm run dev`: dev server on port 4321 (in the desktop app, start it with the "site" entry in `.claude/launch.json`).
   It never caches; the terminal logs D1 queries per request (`[d1] GET /news · 2 queries`).
 - `npm run check`: Astro/TypeScript check. Must show 0 errors, 0 warnings.

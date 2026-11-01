@@ -161,6 +161,7 @@ http://localhost:4321/admin/login and pick a test user.
 | `npm run db:migrate` | Applies the migrations in `migrations/` to the local D1 |
 | `npm run db:migrate:remote` | Applies new migrations to the real D1 on Cloudflare (needs `wrangler login`) |
 | `npm run db:seed` | Replaces the local D1 content with the crawl in `src/data/live/` |
+| `node scripts/seed-d1.mjs --remote` | Loads the crawl into the real D1 on Cloudflare, without the test users (needs `wrangler login`) |
 | `npm run db:generate` | Writes a new migration after a change to `src/db/schema.ts` |
 | `npm run map` | Rebuilds the Kerala district map data (rarely needed) |
 
