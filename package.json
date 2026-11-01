@@ -11,6 +11,7 @@
     "map": "node scripts/build-map.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "wrangler d1 migrations apply union --local",
+    "db:migrate:remote": "wrangler d1 migrations apply union --remote",
     "db:seed": "node scripts/seed-d1.mjs",
     "preview:cached": "node scripts/preview-cached.mjs"
   },

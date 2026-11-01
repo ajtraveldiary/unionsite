@@ -16,7 +16,7 @@ How this list is kept:
 - [ ] **(union)** Offline copy: keep only recently opened orders, or also the home page and the Orders list?
 
 - [ ] **(union)** Who owns keralangounion.in and its DNS? It must move to, or point at, a union-owned Cloudflare account. *Before launch: the owner decided (22 Oct 2026) the domain is connected only in the last phase*
-- [ ] **(union)** Which Cloudflare and GitHub accounts to use, and in whose name (union-owned recommended). *Before Phase 1 deploy*
+- [ ] **(union)** Which Cloudflare and GitHub accounts to use, and in whose name (union-owned recommended). *Before launch: for now (1 Nov 2026) the owner chose their own Cloudflare account, which also runs other Workers; moving to a union account later means copying D1 and R2 and changing the ids in `wrangler.jsonc`*
 - [ ] **(union)** A vector version of the logo (SVG, AI or PDF) and any colour rules
 - [ ] **(union)** The State Centre's official email and phone (blank on the old site)
 - [ ] **(union)** Gemini keys: one union-owned key shared with editors, or one per district admin? *Before Phase 3*
@@ -40,10 +40,10 @@ How this list is kept:
 
 ## Phase 1 · Foundations: the part that needs the account (§15)
 
-- [ ] Create the real D1 database, put its id in `wrangler.jsonc`, apply the migrations remotely and load the content
+- [ ] Load the content into the real D1 (the tables are there, empty): give `scripts/seed-d1.mjs` a remote mode without the four test users, since the `workers.dev` address is public
 - [ ] Copy the media into the real R2 bucket: give `scripts/copy-media.mjs` a remote mode (or upload `scripts/.cache/media/` with rclone), then run the D1 update against the real database
-- [ ] Create the R2 bucket; until launch, files are served through the Worker (or the bucket's r2.dev address, for testing only), and `media.keralangounion.in` is added at launch
-- [ ] Deploy to the Worker's `workers.dev` address from GitHub through Cloudflare, with a preview URL per branch and its own D1 database (no domain needed until launch)
+- [ ] Until launch, R2 files are served through the Worker (or the bucket's r2.dev address, for testing only), and `media.keralangounion.in` is added at launch
+- [ ] Deploy to the Worker's `workers.dev` address from GitHub through Cloudflare: in the dashboard, Workers & Pages → Create → Import a repository (`ajtraveldiary/unionsite`), build command `npm run build`, deploy command `npx wrangler deploy`; then a preview URL per branch and its own D1 database (no domain needed until launch)
 - [ ] Confirm the edge cache on the `workers.dev` address: a second visit reads no D1, and a tag purge makes the next visit read D1 again (Cloudflare's Workers cache works on workers.dev and preview URLs, each with its own cache)
 - [ ] Decide on the `SESSION` KV binding the Cloudflare adapter adds to every build: create the namespace, or turn sessions off (the site doesn't use them)
 - [ ] Switch on admin login: an Access application for `/admin` and `/api/admin` (email one-time code, any email let through to the app), then set `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` and `ADMIN_BOOTSTRAP_EMAIL` (the first super admin). The token check and the users table are built (§10)
@@ -102,6 +102,8 @@ How this list is kept:
 - [ ] After launch: daily checks for 2 weeks, then the 30-day and 90-day reviews
 
 ## Done
+
+- [x] 2026-11-01 Connected to Cloudflare (the owner's account, for now): created the real D1 database `union` (APAC) and the R2 bucket `union-media`, put the database id in `wrangler.jsonc`, and applied migrations 0000–0006 to the real D1 (recorded in `d1_migrations`, so `npm run db:migrate:remote` applies only new ones)
 
 - [x] 2026-10-25 Admin slice 4: contact form saved to the Inbox (honeypot, Turnstile check, 5 a day per sender, kept 12 months), Users, Settings (Gemini key per admin, auto-draft on publish, glossary in D1, site details with a site-wide purge, AI switch and model), Audit log screen, Analytics (beacon, hourly roll-ups, dashboard by role, CSV), WordPress import wizard (WXR posts: scan, map, dry run, batches, report), Help (Malayalam drafts by role); migration `0006_inbox_analytics_import`
 - [x] 2026-10-25 Crawled photos and PDFs copied into the local R2 (`scripts/copy-media.mjs`: WebP at 320–1920 px, SHA-256 keys, resumable, re-applied by the seed); order and Kerala Service pages read their PDF on the page (byte ranges) with Download

@@ -5,14 +5,15 @@
   "main": "./src/worker.ts",
   "compatibility_date": "2026-09-01",
   "compatibility_flags": ["nodejs_compat"],
-  // Content (plan, section 4). Locally wrangler keeps this database in .wrangler/state; the real
-  // database_id comes when the union's Cloudflare account exists (plan, section 17).
+  // Content (plan, section 4). The real database (APAC) was created on 1 Nov 2026 in the owner's
+  // Cloudflare account, for now (plan, section 17). Locally wrangler keeps its own copy in
+  // .wrangler/state; `npm run db:migrate:remote` applies new migrations to the real one.
   "d1_databases": [
-    { "binding": "DB", "database_name": "union", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "migrations" }
+    { "binding": "DB", "database_name": "union", "database_id": "12e61fae-79e8-42bd-adbe-7d44bbb58e51", "migrations_dir": "migrations" }
   ],
-  // Uploaded photos and PDFs (plan, sections 4 and 9). Locally wrangler keeps the bucket in
-  // .wrangler/state; the real bucket is created in the union's account. Served at /media/… until
-  // media.keralangounion.in is connected at launch.
+  // Uploaded photos and PDFs (plan, sections 4 and 9). The real bucket was created on 1 Nov 2026
+  // in the same account; locally wrangler keeps the bucket in .wrangler/state. Served at /media/…
+  // until media.keralangounion.in is connected at launch.
   "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "union-media" }],
   // Every five minutes: publish scheduled posts (src/worker.ts)
   "triggers": { "crons": ["*/5 * * * *"] }

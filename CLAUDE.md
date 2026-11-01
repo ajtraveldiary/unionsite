@@ -22,8 +22,10 @@ D1 on request and are cached (plan, section 4, "Caching and database reads"). Ev
 (also seeded from `site.ts`), district office-bearers and offices, pages, documents and albums, all
 managed in the admin. The home-page
 banner (one post or event, set by a state editor; it stays until replaced) lives in D1
-(`site_settings.home_banner`), first set from `firstBanner` in `site.ts`. The Cloudflare account
-is not set up yet; R2 runs locally through wrangler.
+(`site_settings.home_banner`), first set from `firstBanner` in `site.ts`. Since 1 Nov 2026 the
+real D1 database (`union`, all migrations applied, no content yet) and R2 bucket (`union-media`) exist
+in the owner's Cloudflare account, used for now; the site isn't deployed yet, and dev, the seed and
+the media copy still work only on the local copies wrangler keeps in `.wrangler/state`.
 
 The admin panel at `/admin` was built in four slices (plan, section 1), all done locally: 1 (sign-in, roles,
 Dashboard, News, post editor), 2 (Orders, Kerala Service, Events, Home & banner), 3 (People &
@@ -37,6 +39,7 @@ site Cloudflare Access does the sign-in and `src/lib/admin/auth.ts` checks its t
 
 - First time, and after changing the schema or the crawl: `npm run db:migrate`, then `npm run db:seed`.
   Without them the content pages fail (no tables). The seed also wipes everything made in the admin.
+- `npm run db:migrate:remote`: applies new migrations to the real D1 (needs `wrangler login` to the account). Run it with every schema change that ships.
 - `npm run dev`: dev server on port 4321 (in the desktop app, start it with the "site" entry in `.claude/launch.json`).
   It never caches; the terminal logs D1 queries per request (`[d1] GET /news · 2 queries`).
 - `npm run check`: Astro/TypeScript check. Must show 0 errors, 0 warnings.
