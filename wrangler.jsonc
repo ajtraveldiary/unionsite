@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "kerala-ngo-union",
+  // Must match the Worker that Workers Builds deploys to (made when the repo was connected, 1 Nov 2026)
+  "name": "unionsite",
   // Astro's handler plus the scheduled jobs (src/worker.ts)
   "main": "./src/worker.ts",
   "compatibility_date": "2026-09-01",
