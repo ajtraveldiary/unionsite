@@ -20,6 +20,11 @@
   // Cloudflare made this namespace on the first deploy; naming its id stops each build making another.
   "kv_namespaces": [{ "binding": "SESSION", "id": "4650d60ffeea4a4c8fb08266fd6cd098" }],
   // Every five minutes: publish scheduled posts (src/worker.ts)
-  "triggers": { "crons": ["*/5 * * * *"] }
-  // Later: "analytics_engine_datasets"; vars ACCESS_TEAM_DOMAIN and ACCESS_AUD for admin login
+  "triggers": { "crons": ["*/5 * * * *"] },
+  // Page views and the other beacons (src/lib/analytics.ts), so they don't write to D1. The hourly
+  // roll-up reads them back through the SQL API with CF_ACCOUNT_ID and the CF_API_TOKEN secret
+  // (an "Account Analytics: Read" token); the account id changes if the site moves to a union account.
+  "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "union_events" }],
+  "vars": { "CF_ACCOUNT_ID": "4d2c2b4ca831c58d05db412df6452647" }
+  // Later: vars ACCESS_TEAM_DOMAIN and ACCESS_AUD for admin login
 }

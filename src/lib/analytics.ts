@@ -3,8 +3,10 @@
 // a PDF, sharing, searching, a page not found). Here each event is checked, robots are dropped, and
 // the visitor becomes an anonymous code that changes every day (a hash of address, browser and
 // the date, never stored or shown). On Cloudflare the event goes to Workers Analytics Engine (the
-// ANALYTICS binding); until that is set up, and on a laptop, to the `analytics_raw` table. The
-// hourly roll-up (rollupDay) turns either into the daily tables the dashboard reads.
+// ANALYTICS binding), so page views don't write to D1, but only once the roll-up can read it back
+// (CF_ACCOUNT_ID and the CF_API_TOKEN secret); until then, and on a laptop (where wrangler stands in
+// a binding that keeps nothing), to the `analytics_raw` table. The hourly roll-up (rollupDay) turns
+// either into the daily tables the dashboard reads.
 import { and, gte, lt, sql } from 'drizzle-orm';
 import { getD1, getDb } from '~/db/client';
 import { analyticsRaw, contentDaily, searchDaily, siteDaily } from '~/db/schema';
@@ -15,6 +17,8 @@ export type EventType = (typeof EVENT_TYPES)[number];
 interface AnalyticsEngine { writeDataPoint(p: { blobs?: string[]; doubles?: number[]; indexes?: string[] }): void }
 interface Env { ANALYTICS?: AnalyticsEngine; ANALYTICS_SALT?: string; CF_ACCOUNT_ID?: string; CF_API_TOKEN?: string; ANALYTICS_DATASET?: string }
 const env = async () => (await import('cloudflare:workers')).env as unknown as Env;
+/** Analytics Engine, when it is set up to be written and read back */
+const engine = (e: Env) => (e.ANALYTICS && e.CF_ACCOUNT_ID && e.CF_API_TOKEN ? e.ANALYTICS : undefined);
 
 const BOTS = /bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp\/|curl|wget|python|headless|lighthouse|pingdom|uptime/i;
 
@@ -59,8 +63,9 @@ export async function record(request: Request, body: unknown) {
     detail: type === 'search' ? detail.toLowerCase().replace(/\s+/g, ' ').trim() : detail,
     value: Number.isFinite(Number(b.v)) ? Math.max(0, Math.round(Number(b.v))) : 0,
   };
-  if (e.ANALYTICS) {
-    e.ANALYTICS.writeDataPoint({ blobs: [row.type, row.path, row.source, row.device, row.lang, row.country, row.region, row.detail], doubles: [row.value], indexes: [row.visitor] });
+  const ae = engine(e);
+  if (ae) {
+    ae.writeDataPoint({ blobs: [row.type, row.path, row.source, row.device, row.lang, row.country, row.region, row.detail], doubles: [row.value], indexes: [row.visitor] });
     return;
   }
   const db = await getDb();
@@ -96,7 +101,7 @@ const bump = (o: Record<string, number>, k: string, n = 1) => { if (k) o[k] = (o
 /** Rewrites one day's rows in the daily tables from that day's events (it can run any number of times) */
 export async function rollupDay(date: string) {
   const e = await env();
-  const events = e.ANALYTICS && e.CF_ACCOUNT_ID && e.CF_API_TOKEN ? await fromEngine(e, date) : await fromTable(date);
+  const events = engine(e) ? await fromEngine(e, date) : await fromTable(date);
   const views = events.filter((x) => x.type === 'view');
   const site = {
     date, visitors: new Set(views.map((x) => x.visitor)).size, pageviews: views.length,
@@ -147,8 +152,7 @@ export async function rollup() {
 
 /** Visitors in the last 30 minutes and what they read (fallback table only; Analytics Engine needs the API) */
 export async function liveNow() {
-  const e = await env();
-  if (e.ANALYTICS) return null;
+  if (engine(await env())) return null;
   const db = await getDb();
   const since = new Date(Date.now() - 30 * 60_000).toISOString();
   const rows = await db.select({ path: analyticsRaw.path, visitor: analyticsRaw.visitor }).from(analyticsRaw).where(and(gte(analyticsRaw.at, since), sql`${analyticsRaw.type} = 'view'`)).limit(5000);

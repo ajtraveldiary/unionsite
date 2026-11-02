@@ -1,0 +1,1 @@
+CREATE INDEX `media_source` ON `media` (`source_url`);

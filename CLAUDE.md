@@ -33,7 +33,7 @@ The admin panel at `/admin` was built in four slices (plan, section 1), all done
 Dashboard, News, post editor), 2 (Orders, Kerala Service, Events, Home & banner), 3 (People &
 committees, Districts, Pages & documents, Media) and 4 (Inbox, Users, Settings, Audit log, Analytics,
 Import, Help). The Contact form saves messages for the Inbox; pages send a cookie-less analytics
-beacon to `/api/e`, stored in D1 locally (Analytics Engine once the account exists). Locally, sign in at `/admin/login` as one of the four test users
+beacon to `/api/e`, stored in D1's `analytics_raw` locally and on the live site until its `CF_API_TOKEN` secret is set; then in Analytics Engine (`ANALYTICS`, dataset `union_events`), so page views don't write to D1. Locally, sign in at `/admin/login` as one of the four test users
 the seed adds (super admin, state editor, Kollam district admin, Kollam district editor); on the real
 site Cloudflare Access does the sign-in and `src/lib/admin/auth.ts` checks its token.
 

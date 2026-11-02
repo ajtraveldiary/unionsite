@@ -77,7 +77,7 @@ How this list is kept:
 - [ ] Where a district's cover photo shows on the site (the approved hub design has no place for it): design decision
 - [ ] Roles, district limits and cache purges for every new screen's API, as posts have them (`src/lib/admin/roles.ts`, `purgeTags` in `src/lib/cache.ts`)
 - [ ] Review notifications by email, once a sending service is chosen (the dashboard already lists what waits); the same service sends new contact messages to their district admin and the state office
-- [ ] Analytics Engine on the real account: the `ANALYTICS` dataset binding, `CF_ACCOUNT_ID`, a read-only `CF_API_TOKEN`, `ANALYTICS_DATASET` and `ANALYTICS_SALT`; then check that the hourly roll-up fills the dashboard
+- [ ] **(union)** Switch analytics to Analytics Engine: the `ANALYTICS` binding (dataset `union_events`) and `CF_ACCOUNT_ID` are deployed (2 Nov 2026), but beacons keep writing to D1 until the roll-up can read them back. Create a Cloudflare API token with Account → Account Analytics → Read and run `npx wrangler secret put CF_API_TOKEN`; also `npx wrangler secret put ANALYTICS_SALT` with a long random value (the default salt is in the public code). Then check that the next hourly roll-up fills the dashboard
 - [ ] View counts on articles ("1.2k views") from `content_views_daily` (§14)
 - [ ] Admin help: screenshots for each step and the 60-second videos; **(union)** the state office corrects the Malayalam drafts in `src/data/help.ts`
 - [ ] Photos: focal point after upload, square crop for office-bearers, the blurred placeholder and dominant colour (§9)
@@ -102,6 +102,8 @@ How this list is kept:
 
 ## Done
 
+- [x] 2026-11-02 Index `media_source` on `media.source_url` (migration `0007_media_source`, applied locally and to the real D1): the media copy's updates looked rows up by old address with a full scan of the media table, about 4.2 million rows read over the two remote runs; now each reads only its own rows
+- [x] 2026-11-02 Analytics Engine binding: `wrangler.jsonc` binds `ANALYTICS` to the `union_events` dataset and sets `CF_ACCOUNT_ID`; `src/lib/analytics.ts` writes there only once `CF_API_TOKEN` is set too, so local dev (where wrangler stands in a binding that keeps nothing) and the live site until the token keep using `analytics_raw`. Deployed with wrangler
 - [x] 2026-11-02 Deployed `acfcd45` with wrangler (version `d0a0ff25`): the empty states and the uncached 500 are live, and the site serves the real D1 and R2
 - [x] 2026-11-02 Content and media on the live site: `node scripts/seed-d1.mjs --remote` loaded the real D1 (1,611 posts, 379 orders, 138 issues, events, people, videos, search; no admin users), and the new `node scripts/copy-media.mjs --remote` put the local copies into the real R2. The October local copy had stopped at 836 of 1,881 files; it was run to the end, so the real R2 holds 4,401 files (1,257 photos in their WebP sizes and 147 PDFs) and 1,418 media rows point at them. The other 477 are lost on the old site itself (`scripts/.cache/media-report.txt`). Both get their remote config from `scripts/remote-config.mjs` (the seed's own version failed on Windows paths)
 - [x] 2026-11-02 Pages no longer go blank on an empty D1: home, News and Kerala Service (both languages) show empty states (no news, orders, issues or videos yet). Cached pages are now rendered in full before they're sent (`src/middleware.ts`), so a page that fails becomes an uncached 500 (`src/pages/500.astro`) instead of a blank page kept at the edge. Checked on an empty local D1 and on the seeded one

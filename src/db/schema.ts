@@ -48,7 +48,8 @@ export const media = sqliteTable('media', {
   uploadedBy: integer('uploaded_by'),
   ...timestamps,
 },
-(t) => [index('media_sha').on(t.sha256), index('media_kind').on(t.kind, t.id)]);
+// media_source: the media copy finds a crawled file's rows by its old address
+(t) => [index('media_sha').on(t.sha256), index('media_kind').on(t.kind, t.id), index('media_source').on(t.sourceUrl)]);
 
 export const posts = sqliteTable(
   'posts',
