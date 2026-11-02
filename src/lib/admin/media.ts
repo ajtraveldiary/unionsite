@@ -3,8 +3,8 @@
 // stripped, a SHA-256 of the original. The Worker checks each file and stores them in R2 under one id
 // (images/{yyyy}/{mm}/{id}/{width}.webp), so their URLs never change and are cached for a year. The
 // same photo uploaded twice reuses the first copy. Every upload needs a description (alt text).
-import { and, desc, eq, like, lt, sql } from 'drizzle-orm';
-import { getD1, getDb } from '~/db/client';
+import { and, desc, eq, lt, sql } from 'drizzle-orm';
+import { getD1, getDb, includesText } from '~/db/client';
 import { media } from '~/db/schema';
 import { fileUrl, srcsetUrls } from '~/lib/content';
 import { audit } from './audit';
@@ -49,7 +49,7 @@ function toItem(r: Row): MediaItem | null {
 export async function listImages(q: string, before?: number) {
   const db = await getDb();
   const rows = await db.select(columns).from(media)
-    .where(and(eq(media.kind, 'image'), q.trim() ? like(media.altMl, `%${q.trim()}%`) : undefined, before ? lt(media.id, before) : undefined))
+    .where(and(eq(media.kind, 'image'), q.trim() ? includesText(media.altMl, q.trim()) : undefined, before ? lt(media.id, before) : undefined))
     .orderBy(desc(media.id))
     .limit(30);
   return rows.map(toItem).filter((x): x is MediaItem => !!x);
@@ -195,7 +195,7 @@ export async function listLibrary(f: { q?: string; kind?: 'image' | 'pdf'; missi
   const rows = await db.select({ ...columns, kind: media.kind, bytes: media.bytes, createdAt: media.createdAt, uses: usageSql }).from(media)
     .where(and(
       f.kind ? eq(media.kind, f.kind) : undefined,
-      f.q?.trim() ? like(media.altMl, `%${f.q.trim()}%`) : undefined,
+      f.q?.trim() ? includesText(media.altMl, f.q.trim()) : undefined,
       f.missing ? and(eq(media.kind, 'image'), sql`coalesce(${media.altMl}, '') = ''`) : undefined,
       f.before ? lt(media.id, f.before) : undefined,
     ))

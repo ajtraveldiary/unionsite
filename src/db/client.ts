@@ -1,5 +1,6 @@
 // The D1 database through Drizzle. The binding is loaded on first use, so modules that import
 // content.ts for its URL helpers (prerendered wireframes, the style guide) never touch D1.
+import { sql, type SQLWrapper } from 'drizzle-orm';
 import { drizzle, type DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from './schema';
 
@@ -30,3 +31,10 @@ export async function getD1() {
   }
   return raw;
 }
+
+/**
+ * The column holds `text` somewhere, ignoring case for A–Z as LIKE does. Search boxes use this, not
+ * LIKE '%…%': D1 refuses a LIKE pattern over 50 bytes (a 49-letter search, or about 16 Malayalam
+ * letters), and a `%` or `_` typed in the box would act as a wildcard.
+ */
+export const includesText = (column: SQLWrapper, text: string) => sql`instr(lower(${column}), lower(${text})) > 0`;

@@ -5,9 +5,9 @@
 // approval or the next term being prepared ("Start new term" copies the committee); publishing a
 // new term turns the old rows into `past`, kept as history. State roles manage every committee,
 // district roles their own district's (district editors add drafts only).
-import { and, asc, count, desc, eq, inArray, isNull, like, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
-import { getDb } from '~/db/client';
+import { getDb, includesText } from '~/db/client';
 import { areaCommittees, media, people, positions, POSITION_ROLES, type PositionRole } from '~/db/schema';
 import { purgeTags } from '~/lib/cache';
 import { fileUrl } from '~/lib/content';
@@ -126,7 +126,7 @@ export async function findPeople(q: string) {
   if (term.length < 2) return [];
   const db = await getDb();
   return db.select({ id: people.id, nameMl: people.nameMl, nameEn: people.nameEn, department: people.department })
-    .from(people).where(or(like(people.nameMl, `%${term}%`), like(people.nameEn, `%${term}%`))).orderBy(asc(people.nameEn)).limit(10);
+    .from(people).where(or(includesText(people.nameMl, term), includesText(people.nameEn, term))).orderBy(asc(people.nameEn)).limit(10);
 }
 
 const str = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');

@@ -1,7 +1,7 @@
 // The audit log (plan, section 5): one row for every sign-in, create, edit, publish and delete,
 // with the item's district so district admins can read their own district's log.
-import { and, desc, eq, gte, inArray, isNull, like, lt, or } from 'drizzle-orm';
-import { getDb } from '~/db/client';
+import { and, desc, eq, gte, inArray, isNull, lt, or } from 'drizzle-orm';
+import { getDb, includesText } from '~/db/client';
 import { auditLog, users } from '~/db/schema';
 import type { AdminUser } from './roles';
 
@@ -80,7 +80,7 @@ export async function listAudit(user: AdminUser, f: AuditFilter) {
       state ? (f.district === 'state' ? isNull(auditLog.district) : f.district ? eq(auditLog.district, f.district) : undefined) : eq(auditLog.district, user.district ?? '__none__'),
       f.kind && KINDS[f.kind] ? inArray(auditLog.action, KINDS[f.kind].actions) : undefined,
       since ? gte(auditLog.at, since) : undefined,
-      q ? or(like(auditLog.summary, `%${q}%`), like(users.name, `%${q}%`), like(users.email, `%${q}%`)) : undefined,
+      q ? or(includesText(auditLog.summary, q), includesText(users.name, q), includesText(users.email, q)) : undefined,
       f.before ? lt(auditLog.id, f.before) : undefined,
     ))
     .orderBy(desc(auditLog.id)).limit(50);

@@ -4,7 +4,7 @@
 // picks the subject. Duplicates are caught by GO number and by the file itself. Publishing
 // writes the order's search entry (its PDF text included) and purges the Orders pages.
 import { and, count, desc, eq, like, ne, or, sql } from 'drizzle-orm';
-import { getDb } from '~/db/client';
+import { getDb, includesText } from '~/db/client';
 import { media, orders, revisions, users } from '~/db/schema';
 import { orderEntry } from '~/lib/search-entries';
 import { purgeTags } from '~/lib/cache';
@@ -93,7 +93,7 @@ export async function listOrders(user: AdminUser, f: OrderFilter) {
     f.status ? eq(orders.status, f.status) : ne(orders.status, 'archived'),
     f.group ? eq(orders.group, f.group) : undefined,
     f.subject ? eq(orders.subject, f.subject) : undefined,
-    q ? or(like(orders.titleEn, `%${q}%`), like(orders.titleMl, `%${q}%`), like(orders.goNumber, `%${q}%`)) : undefined,
+    q ? or(includesText(orders.titleEn, q), includesText(orders.titleMl, q), includesText(orders.goNumber, q)) : undefined,
   );
   const [rows, total] = await Promise.all([
     select(db).where(where).orderBy(desc(orders.goDate), desc(orders.id)).limit(f.limit ?? 50).offset(f.offset ?? 0),

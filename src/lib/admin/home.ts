@@ -4,8 +4,8 @@
 // history (`revisions`, entity "banner"), so it can be shown again. The lead story is the post
 // ticked "Lead story in Top news" (one at a time); without one, Top news leads with the newest post.
 // Only state roles change either; district admins ask from a post's settings.
-import { and, desc, eq, isNotNull, like, sql } from 'drizzle-orm';
-import { getDb } from '~/db/client';
+import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
+import { getDb, includesText } from '~/db/client';
 import { events, posts, postTranslations, revisions, siteSettings, users } from '~/db/schema';
 import { purgeTags } from '~/lib/cache';
 import type { L10n } from '~/lib/types';
@@ -168,6 +168,6 @@ export async function findPosts(q: string) {
   const db = await getDb();
   return db.select({ id: posts.id, title: postTranslations.title, date: posts.publishedAt, topic: posts.topic, district: posts.district })
     .from(posts).innerJoin(postTranslations, and(eq(postTranslations.postId, posts.id), eq(postTranslations.lang, 'ml')))
-    .where(and(eq(posts.status, 'published'), q.trim() ? like(postTranslations.title, `%${q.trim()}%`) : undefined))
+    .where(and(eq(posts.status, 'published'), q.trim() ? includesText(postTranslations.title, q.trim()) : undefined))
     .orderBy(desc(posts.publishedAt), desc(posts.id)).limit(12);
 }

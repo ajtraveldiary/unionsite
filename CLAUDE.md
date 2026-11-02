@@ -88,7 +88,8 @@ in light and dark themes.
   through an index (`latestPosts({ limit, topic, district, exclude })`, counts by `GROUP BY`);
   never load the whole archive for a page.
 - `src/db/`: `schema.ts` (tables, plan section 5) and `client.ts` (the D1 binding, opened on first
-  use). `migrations/` holds the generated SQL; `scripts/seed-d1.mjs` loads the crawl.
+  use, and `includesText()` for search boxes: never `LIKE '%…%'` on typed text, since D1 refuses a
+  pattern over 50 bytes, about 16 Malayalam letters). `migrations/` holds the generated SQL; `scripts/seed-d1.mjs` loads the crawl.
 - `src/lib/cache.ts`: cache rules and tags. Every on-demand page calls `cachePage(Astro, 'list' | 'item', [tags])`;
   `purgeTags` lists what a publish must purge. Content routes set `export const prerender = false`
   and return `new Response(null, { status: 404 })` for missing items (not `Astro.rewrite`).

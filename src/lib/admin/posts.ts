@@ -4,10 +4,10 @@
 // Update. Publishing writes the post, keeps a copy in the history (`revisions`), updates the search
 // index, purges the cached pages that show it and records it in the audit log. Every function
 // checks the role rules (src/lib/admin/roles.ts) itself, whatever the page showed.
-import { and, count, desc, eq, isNotNull, isNull, like, lte, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, isNotNull, isNull, lte, ne, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import type { BatchItem } from 'drizzle-orm/batch';
-import { getDb } from '~/db/client';
+import { getDb, includesText } from '~/db/client';
 import { editLocks, media, postDrafts, posts, postTranslations, revisions, siteSettings, users } from '~/db/schema';
 import { postEntry } from '~/lib/search-entries';
 import { purgeTags } from '~/lib/cache';
@@ -549,7 +549,7 @@ function listWhere(user: AdminUser, f: ListFilter): (SQL | undefined)[] {
     f.topic ? eq(posts.topic, f.topic) : undefined,
     f.district === 'state' ? isNull(posts.district) : f.district ? eq(posts.district, f.district) : undefined,
     f.english ? sql`${enStateSql} = ${f.english}` : undefined,
-    f.q?.trim() ? or(like(ml.title, `%${f.q.trim()}%`), like(en.title, `%${f.q.trim()}%`)) : undefined,
+    f.q?.trim() ? or(includesText(ml.title, f.q.trim()), includesText(en.title, f.q.trim()), includesText(posts.slug, f.q.trim())) : undefined,
     f.mine ? or(eq(posts.createdBy, user.id), eq(postDrafts.updatedBy, user.id)) : undefined,
     f.homeRequested ? isNotNull(posts.homeRequestedAt) : undefined,
   ];
@@ -572,8 +572,9 @@ export interface ListRow {
 }
 
 /**
- * One page of posts for the admin's News list, last changed first. The title search scans titles
- * (the admin is the only reader, and it reads a page at a time); the site's search uses the index.
+ * One page of posts for the admin's News list, last changed first. The search scans titles and the
+ * slug, so an address pasted from the site finds its post (the admin is the only reader, and it
+ * reads a page at a time); the site's search uses the index.
  */
 export async function listPosts(user: AdminUser, f: ListFilter) {
   const db = await getDb();
