@@ -13,6 +13,7 @@
     "db:migrate": "wrangler d1 migrations apply union --local",
     "db:migrate:remote": "wrangler d1 migrations apply union --remote",
     "db:seed": "node scripts/seed-d1.mjs",
+    "deploy": "npm run build && wrangler deploy --config dist/server/wrangler.json",
     "preview:cached": "node scripts/preview-cached.mjs"
   },
   "dependencies": {

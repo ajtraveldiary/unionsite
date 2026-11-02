@@ -23,9 +23,11 @@ D1 on request and are cached (plan, section 4, "Caching and database reads"). Ev
 managed in the admin. The home-page
 banner (one post or event, set by a state editor; it stays until replaced) lives in D1
 (`site_settings.home_banner`), first set from `firstBanner` in `site.ts`. Since 1 Nov 2026 the
-real D1 database (`union`, all migrations applied, no content yet) and R2 bucket (`union-media`) exist
-in the owner's Cloudflare account, used for now; the site isn't deployed yet, and dev, the seed and
-the media copy still work only on the local copies wrangler keeps in `.wrangler/state`.
+real D1 database (`union`) and R2 bucket (`union-media`) exist in the owner's Cloudflare account, used
+for now. Since 2 Nov 2026 `main` deploys through Workers Builds to https://unionsite.workdesk.workers.dev/
+(Worker `unionsite`), bound to them; the real D1 holds the crawl and the real R2 the copied media, but
+Access isn't set up, so there is no admin there yet. Dev, the seed and the media copy work on the local
+copies wrangler keeps in `.wrangler/state`; their `--remote` modes load the real D1 and R2.
 
 The admin panel at `/admin` was built in four slices (plan, section 1), all done locally: 1 (sign-in, roles,
 Dashboard, News, post editor), 2 (Orders, Kerala Service, Events, Home & banner), 3 (People &
@@ -37,7 +39,8 @@ site Cloudflare Access does the sign-in and `src/lib/admin/auth.ts` checks its t
 
 ## Commands
 
-- First time, and after changing the schema or the crawl: `npm run db:migrate`, then `npm run db:seed`.
+- First time, and after changing the schema, the crawl or the D1 `database_id` in `wrangler.jsonc` (wrangler keeps
+  a local copy per id): `npm run db:migrate`, then `npm run db:seed`.
   Without them the content pages fail (no tables). The seed also wipes everything made in the admin.
 - `npm run db:migrate:remote`: applies new migrations to the real D1 (needs `wrangler login` to the account). Run it with every schema change that ships.
 - `node scripts/seed-d1.mjs --remote`: loads the crawl into the real D1 (needs `wrangler login`), without the test users or the local media map. It refuses to wipe a database with content or users unless `--replace` is added.
@@ -59,7 +62,10 @@ site Cloudflare Access does the sign-in and `src/lib/admin/auth.ts` checks its t
 - `node scripts/copy-media.mjs`: copies the crawl's photos and PDFs from the old site into the local R2
   and points D1 at them (one request at a time, resumable; about two hours from scratch; `--limit 20` to
   try, `--progress` to watch). It keeps `scripts/.cache/media-map.json`, which `npm run db:seed` applies
-  again, and lists what failed in `scripts/.cache/media-report.txt`.
+  again, and lists what failed in `scripts/.cache/media-report.txt`. `--remote` then puts those local
+  copies into the real R2 and points the real D1 at them (no downloading; rerun it after every
+  `seed-d1.mjs --remote`, which leaves the rows linking to the old site). Both remote scripts get their
+  config from `scripts/remote-config.mjs`.
 
 There are no automated tests. Check changes in the browser at phone (375 px) and laptop width,
 in light and dark themes.
@@ -111,7 +117,8 @@ in light and dark themes.
   what, and the menu), `auth.ts`, `posts.ts` (every post read and write, history, locks, search sync,
   cache purge), `post-doc.ts` (the editor's document and `cleanDoc`), `media.ts`, `audit.ts`. Every API
   call checks the role itself; hiding a button is never the only guard. `src/middleware.ts` refuses
-  signed-out requests and writes from other origins, and sets no-store, noindex and the admin CSP.
+  signed-out requests and writes from other origins, and sets no-store, noindex and the admin CSP; it also
+  renders cached pages in full before sending them, so one that fails becomes an uncached 500 (`pages/500.astro`).
   More modules: `events.ts`, `orders.ts`, `issues.ts` (Kerala Service), `home.ts` (banner, lead story),
   `people.ts` (committees and terms), `districts.ts` (areas, offices), `pages.ts` (pages, documents,
   conferences), `albums.ts` (albums and videos), `media.ts` (uploads and the library), `inbox.ts`

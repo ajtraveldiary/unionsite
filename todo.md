@@ -40,11 +40,9 @@ How this list is kept:
 
 ## Phase 1 · Foundations: the part that needs the account (§15)
 
-- [ ] Load the content into the real D1: run `npx wrangler login`, then `node scripts/seed-d1.mjs --remote` (the remote mode is built, 1 Nov 2026: no test users, photos and PDFs link to the old site until the media copy below). Until then the live home and News pages are blank
-- [ ] Home and News render a blank page (200, empty body) when D1 has no posts: `HomeView` and `NewsView` assume a lead story. Show an empty state instead
-- [ ] Copy the media into the real R2 bucket: give `scripts/copy-media.mjs` a remote mode (or upload `scripts/.cache/media/` with rclone), then run the D1 update against the real database
+- [ ] Finish the media copy: the local run of `scripts/copy-media.mjs` stopped at 836 of 1,881 files (Oct 2026), so 404 post photos and other files still link to the old site, live and locally. Run it to the end (restarted 2 Nov 2026), then `node scripts/copy-media.mjs --remote` again (it puts only the new files)
 - [ ] Until launch, R2 files are served through the Worker (or the bucket's r2.dev address, for testing only), and `media.keralangounion.in` is added at launch
-- [ ] Deploy to the Worker's `workers.dev` address from GitHub through Cloudflare. The repo is connected (1 Nov 2026, Worker `unionsite`, deploys `main`; bound to the `unionsite-session` KV); the first builds failed on the placeholder D1 id, then on that KV being made twice, both fixed in `main`. Next: a preview URL per branch with its own D1 database (no domain needed until launch)
+- [ ] A preview URL per branch with its own D1 database (no domain needed until launch)
 - [ ] Confirm the edge cache on the `workers.dev` address: a second visit reads no D1, and a tag purge makes the next visit read D1 again (Cloudflare's Workers cache works on workers.dev and preview URLs, each with its own cache)
 - [ ] Switch on admin login: an Access application for `/admin` and `/api/admin` (email one-time code, any email let through to the app), then set `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` and `ADMIN_BOOTSTRAP_EMAIL` (the first super admin). The token check and the users table are built (§10)
 - [ ] Usage alerts at 80 % of the D1, R2 and Workers limits (§13)
@@ -103,6 +101,9 @@ How this list is kept:
 
 ## Done
 
+- [x] 2026-11-02 Content and media on the live site: `node scripts/seed-d1.mjs --remote` loaded the real D1 (1,611 posts, 379 orders, 138 issues, events, people, videos, search; no admin users), and the new `node scripts/copy-media.mjs --remote` put the 2,988 files of the local copy into the real R2 (323 MB) and pointed 844 media rows at them. Both get their remote config from `scripts/remote-config.mjs` (the seed's own version failed on Windows paths)
+- [x] 2026-11-02 Pages no longer go blank on an empty D1: home, News and Kerala Service (both languages) show empty states (no news, orders, issues or videos yet). Cached pages are now rendered in full before they're sent (`src/middleware.ts`), so a page that fails becomes an uncached 500 (`src/pages/500.astro`) instead of a blank page kept at the edge. Checked on an empty local D1 and on the seeded one
+- [x] 2026-11-02 Deployed to https://unionsite.workdesk.workers.dev/ from GitHub through Workers Builds (Worker `unionsite`, deploys `main`), bound to the real D1, R2 and the `unionsite-session` KV. Orders and Events read D1 there (0 items: no content loaded yet); the admin answers but sign-in waits for Cloudflare Access
 - [x] 2026-11-01 `SESSION` KV binding: Cloudflare made the `unionsite-session` namespace on the first deploy; its id is now in `wrangler.jsonc`, so builds stop trying to make another (the site still doesn't use sessions)
 - [x] 2026-11-01 Connected to Cloudflare (the owner's account, for now): created the real D1 database `union` (APAC) and the R2 bucket `union-media`, put the database id in `wrangler.jsonc`, and applied migrations 0000–0006 to the real D1 (recorded in `d1_migrations`, so `npm run db:migrate:remote` applies only new ones)
 

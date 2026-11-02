@@ -28,10 +28,12 @@ const PAGE = 12;
 // The lead and the first page; the rest comes from /api/news a page at a time
 const [posts, topicCounts] = await Promise.all([latestPosts({ limit: PAGE + 1 }), topicPostCounts()]);
 const total = Object.values(topicCounts).reduce((a, b) => a + b, 0);
-const lead = posts[0];
+const lead: Post | undefined = posts[0];
+// Stories after the lead
+const rest = Math.max(total - 1, 0);
 
 // Months of the newest year, then whole years before it (the script groups the same way)
-const newestYear = Number(lead.date.slice(0, 4));
+const newestYear = Number((lead?.date ?? new Date().toISOString()).slice(0, 4));
 const groupOf = (p: Post) => {
   const y = Number(p.date.slice(0, 4));
   return y === newestYear ? `${monthName(Number(p.date.slice(5, 7)), 'en')} ${y}` : String(y);
@@ -73,9 +75,13 @@ const events = await upcomingEvents(3);
   </div>
 
   <div class="wrap mt-8 grid gap-x-12 gap-y-14 lg:grid-cols-[minmax(0,1fr)_300px]">
-    <div data-news data-lang={lang} data-page={PAGE} data-total={total - 1} data-newest-year={newestYear} data-lead-id={lead.id}>
+    <div data-news data-lang={lang} data-page={PAGE} data-total={rest} data-newest-year={newestYear} data-lead-id={lead?.id ?? ''}>
       <div data-news-lead class="mb-8">
-        <StoryLead post={lead} lang={lang} headingLevel="h2" ratio="2/1" />
+        {lead ? (
+          <StoryLead post={lead} lang={lang} headingLevel="h2" ratio="2/1" />
+        ) : (
+          <EmptyState icon="Newspaper" title="No news yet" text="News from the union and its districts appears here once it is published." />
+        )}
       </div>
       <p class="sr-only" aria-live="polite" data-news-status></p>
 
@@ -96,8 +102,8 @@ const events = await upcomingEvents(3);
         </EmptyState>
       </div>
       <div lang="en" class="text-center">
-        <p class="t-meta" data-news-count>Showing {Math.min(PAGE, total - 1)} of {total - 1}</p>
-        <button type="button" data-news-more class="btn btn-secondary mt-2" hidden={total - 1 <= PAGE}>Load more</button>
+        <p class="t-meta" data-news-count hidden={!rest}>Showing {Math.min(PAGE, rest)} of {rest}</p>
+        <button type="button" data-news-more class="btn btn-secondary mt-2" hidden={rest <= PAGE}>Load more</button>
       </div>
     </div>
 
@@ -226,7 +232,8 @@ const events = await upcomingEvents(3);
         sections.at(-1)!.querySelector('ul')!.append(item(p, page));
       }
       feed.replaceChildren(...sections);
-      empty.hidden = page.total > 0;
+      // With no filter on, the lead (or its "No news yet") already shows
+      empty.hidden = page.total > 0 || !lead.hidden;
       count.hidden = page.total === 0;
       count.textContent = `Showing ${shown.length} of ${page.total}`;
       more.hidden = shown.length >= page.total;

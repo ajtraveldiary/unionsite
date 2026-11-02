@@ -1,0 +1,32 @@
+---
+/** Server error: a page failed to build. Say so plainly and offer the main sections; never cached. */
+import AppLayout from '~/layouts/AppLayout.astro';
+import Icon from '~/components/ui/Icon.astro';
+import { langFromPath, href } from '~/lib/i18n';
+
+const lang = langFromPath(Astro.url.pathname);
+const L = (p: string) => href(lang, p);
+const links = [
+  ['Government orders', '/orders', 'FileText'],
+  ['News', '/news', 'Newspaper'],
+  ['Districts', '/districts', 'MapPinned'],
+  ['Kerala Service', '/kerala-service', 'BookOpen'],
+] as const;
+---
+<AppLayout lang={lang} title="Something went wrong" noindex>
+  <section class="wrap max-w-[720px] py-12 text-center lg:py-20" lang="en">
+    <p class="t-label">Error 500</p>
+    <h1 class="t-display mt-2">This page didn't load</h1>
+    <p class="mx-auto mt-2 max-w-md text-ink-2">Something went wrong on our side. Try again in a minute, or start from one of these.</p>
+    <a href="" class="btn btn-primary mt-6"><Icon name="RefreshCw" size={16} /> Try again</a>
+    <ul class="mt-8 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {links.map(([label, p, icon]) => (
+        <li>
+          <a href={L(p)} class="card card-hover flex h-full flex-col items-center gap-2 p-4 text-sm font-semibold hover:text-accent-ink">
+            <Icon name={icon} size={22} class="text-accent-ink" />{label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+</AppLayout>

@@ -132,8 +132,9 @@ help), and the Tools & guides calculators.
   [pdf.js](https://mozilla.github.io/pdf.js/) to read PDFs in the browser
 - Cloudflare R2 for uploaded photos (locally through wrangler), Cloudflare Access for admin sign-in
 
-Planned for later phases: the union's Cloudflare account (D1 and R2 so far run only locally) and
-the rest of the admin panel.
+The preview is deployed from `main` to https://unionsite.workdesk.workers.dev/ (the owner's Cloudflare
+account for now, with the crawled content in the real D1 and its photos and PDFs in the real R2). Planned for later phases: the
+union's own Cloudflare account and keralangounion.in, connected at launch.
 
 ## Getting started
 
@@ -162,6 +163,7 @@ http://localhost:4321/admin/login and pick a test user.
 | `npm run db:migrate:remote` | Applies new migrations to the real D1 on Cloudflare (needs `wrangler login`) |
 | `npm run db:seed` | Replaces the local D1 content with the crawl in `src/data/live/` |
 | `node scripts/seed-d1.mjs --remote` | Loads the crawl into the real D1 on Cloudflare, without the test users (needs `wrangler login`) |
+| `node scripts/copy-media.mjs --remote` | Puts the local copies of the photos and PDFs into the real R2 and points the real D1 at them (after the remote seed) |
 | `npm run db:generate` | Writes a new migration after a change to `src/db/schema.ts` |
 | `npm run map` | Rebuilds the Kerala district map data (rarely needed) |
 

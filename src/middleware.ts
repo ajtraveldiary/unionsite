@@ -69,4 +69,19 @@ const queryLog = defineMiddleware(async (ctx, next) => {
   return new Response(body, response);
 });
 
-export const onRequest = sequence(queryLog, admin);
+// Cached pages are stored at the edge with whatever body they send, and a page starts sending before
+// it has finished rendering, so one that failed half-way (an empty D1, a bad row) would be cached
+// blank. These are rendered in full first: one that fails is not cached and becomes a 500
+// (src/pages/500.astro). Only a cache miss waits for this; hits are served by the edge.
+const whole = defineMiddleware(async (ctx, next) => {
+  const response = await next();
+  if (ctx.isPrerendered || !response.body || !ctx.cache.tags.length) return response;
+  try {
+    return new Response(await response.arrayBuffer(), response);
+  } catch (err) {
+    ctx.cache.set(false);
+    throw err;
+  }
+});
+
+export const onRequest = sequence(queryLog, admin, whole);

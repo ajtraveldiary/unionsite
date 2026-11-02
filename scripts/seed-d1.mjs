@@ -13,8 +13,9 @@
 //
 // Text goes in as bound parameters, never inlined SQL: D1 caps one statement at 100 KB and the
 // longest article is about 280 KB of Malayalam.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { getPlatformProxy, unstable_readConfig } from 'wrangler';
+import { existsSync, readFileSync } from 'node:fs';
+import { getPlatformProxy } from 'wrangler';
+import { remoteProxyOptions } from './remote-config.mjs';
 import { districts, topics } from '../src/data/districts.ts';
 import { orderSubjects } from '../src/data/orders.ts';
 import { firstBanner, events, stateCommittee, videos } from '../src/data/site.ts';
@@ -29,21 +30,11 @@ const issues = live('issues');
 const remote = process.argv.includes('--remote');
 const replace = process.argv.includes('--replace');
 
-// For --remote, a throwaway config that marks the D1 binding remote, so wrangler.jsonc keeps dev local
 let proxyOptions = {};
 if (remote) {
-  const config = unstable_readConfig({ config: 'wrangler.jsonc' });
-  const remoteConfig = {
-    name: config.name,
-    compatibility_date: config.compatibility_date,
-    d1_databases: config.d1_databases.filter((d) => d.binding === 'DB').map(({ binding, database_name, database_id }) => ({ binding, database_name, database_id, remote: true })),
-  };
-  const dir = new URL('./.cache/', import.meta.url);
-  mkdirSync(dir, { recursive: true });
-  const configPath = new URL('wrangler.remote.json', dir);
-  writeFileSync(configPath, JSON.stringify(remoteConfig, null, 2));
-  proxyOptions = { configPath: configPath.pathname, persist: false };
-  console.log(`Loading the real D1 database "${remoteConfig.d1_databases[0].database_name}" on Cloudflare…`);
+  const { options, names } = remoteProxyOptions();
+  proxyOptions = options;
+  console.log(`Loading the real D1 database "${names.db}" on Cloudflare…`);
 }
 
 const { env, dispose } = await getPlatformProxy(proxyOptions);

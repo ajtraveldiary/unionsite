@@ -8,6 +8,7 @@ import AppLayout from '~/layouts/AppLayout.astro';
 import Icon from '~/components/ui/Icon.astro';
 import Breadcrumbs from '~/components/ds/Breadcrumbs.astro';
 import MagazineCover from '~/components/ui/MagazineCover.astro';
+import EmptyState from '~/components/ds/EmptyState.astro';
 import type { Lang } from '~/lib/types';
 import { href, monthName } from '~/lib/i18n';
 import { allIssues, issuePath } from '~/lib/content';
@@ -18,59 +19,66 @@ const { lang } = Astro.props;
 const L = (p: string) => href(lang, p);
 const magazineIssues = await allIssues();
 const current = magazineIssues[0];
-const since = `${monthName(magazineIssues.at(-1)!.month, 'en')} ${magazineIssues.at(-1)!.year}`;
+const oldest = magazineIssues.at(-1);
+const since = oldest ? `${monthName(oldest.month, 'en')} ${oldest.year}` : '';
 const years = [...new Set(magazineIssues.map((i) => i.year))];
 const byYear = years.map((y) => ({ y, issues: magazineIssues.filter((i) => i.year === y) }));
 ---
-<AppLayout lang={lang} title="Kerala Service" description={`Kerala Service, the Kerala NGO Union's monthly magazine: ${magazineIssues.length} issues since ${since}, readable on any phone.`}>
+<AppLayout lang={lang} title="Kerala Service" description={current ? `Kerala Service, the Kerala NGO Union's monthly magazine: ${magazineIssues.length} issues since ${since}, readable on any phone.` : "Kerala Service, the Kerala NGO Union's monthly magazine, readable on any phone."}>
   <div class="wrap pt-5 lg:pt-8" lang="en">
     <Breadcrumbs lang={lang} items={[{ label: 'Kerala Service' }]} />
     <h1 class="t-display mt-2">Kerala Service</h1>
-    <p class="mt-1 text-ink-2">The union's monthly magazine. {magazineIssues.length} issues since {since}.</p>
+    <p class="mt-1 text-ink-2">The union's monthly magazine.{current && ` ${magazineIssues.length} issues since ${since}.`}</p>
 
-    <section class="mt-6 flex gap-5 border-y border-line py-5 sm:gap-8" aria-labelledby="current">
-      <a href={L(issuePath(current.year, current.month))} class="block w-32 shrink-0 self-start overflow-hidden rounded-md border border-line sm:w-44" tabindex="-1" aria-hidden="true">
-        <MagazineCover issue={current} class="block h-auto w-full" />
-      </a>
-      <div class="flex min-w-0 flex-col">
-        <p class="t-label">Current issue</p>
-        <h2 id="current" class="t-h1 mt-1">{monthName(current.month, 'en')} {current.year}</h2>
-        <p class="mt-1 text-sm text-ink-2">Read it online on any phone, or download the PDF.</p>
-        <div class="mt-auto flex flex-wrap gap-2 pt-4">
-          <a href={L(issuePath(current.year, current.month))} class="btn btn-primary btn-sm"><Icon name="BookOpen" size={16} /> Open issue</a>
-          <a href={site.magazineSite} target="_blank" rel="noopener" class="btn btn-secondary btn-sm">Articles site <Icon name="ArrowUpRight" size={16} /></a>
-        </div>
-      </div>
-    </section>
-
-    <section class="mt-10" aria-labelledby="archive">
-      <h2 id="archive" class="t-h1">Archive</h2>
-      <nav aria-label="Jump to year" class="sticky top-16 z-20 -mx-4 mt-2 border-b border-line bg-bg/95 px-4 py-2.5 backdrop-blur md:mx-0 md:px-0">
-        <ul class="no-scrollbar flex gap-2 overflow-x-auto">
-          {years.map((y) => <li><a href={`#y${y}`} class="chip !min-h-8 tabular" data-year-chip={y}>{y}</a></li>)}
-        </ul>
-      </nav>
-      {byYear.map(({ y, issues }) => (
-        <section id={`y${y}`} class="scroll-mt-32 pt-8" aria-labelledby={`h${y}`} data-year={y}>
-          <div class="mb-3 flex items-baseline justify-between gap-3 border-b border-line pb-1">
-            <h3 id={`h${y}`} class="t-h2 tabular">{y}</h3>
-            <p class="t-meta">{issues.length} {issues.length === 1 ? 'issue' : 'issues'}</p>
+    {current ? (
+      <>
+        <section class="mt-6 flex gap-5 border-y border-line py-5 sm:gap-8" aria-labelledby="current">
+          <a href={L(issuePath(current.year, current.month))} class="block w-32 shrink-0 self-start overflow-hidden rounded-md border border-line sm:w-44" tabindex="-1" aria-hidden="true">
+            <MagazineCover issue={current} class="block h-auto w-full" />
+          </a>
+          <div class="flex min-w-0 flex-col">
+            <p class="t-label">Current issue</p>
+            <h2 id="current" class="t-h1 mt-1">{monthName(current.month, 'en')} {current.year}</h2>
+            <p class="mt-1 text-sm text-ink-2">Read it online on any phone, or download the PDF.</p>
+            <div class="mt-auto flex flex-wrap gap-2 pt-4">
+              <a href={L(issuePath(current.year, current.month))} class="btn btn-primary btn-sm"><Icon name="BookOpen" size={16} /> Open issue</a>
+              <a href={site.magazineSite} target="_blank" rel="noopener" class="btn btn-secondary btn-sm">Articles site <Icon name="ArrowUpRight" size={16} /></a>
+            </div>
           </div>
-          <ul class="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6 lg:gap-5">
-            {issues.map((iss) => (
-              <li>
-                <a href={L(issuePath(iss.year, iss.month))} class="group block">
-                  <span class="block overflow-hidden rounded-md border border-line transition-colors group-hover:border-accent">
-                    <MagazineCover issue={iss} class="block h-auto w-full" />
-                  </span>
-                  <span class="mt-1.5 block text-center text-sm font-medium group-hover:text-accent-ink">{monthName(iss.month, 'en').slice(0, 3)}<span class="sr-only"> {iss.year}</span></span>
-                </a>
-              </li>
-            ))}
-          </ul>
         </section>
-      ))}
-    </section>
+
+        <section class="mt-10" aria-labelledby="archive">
+          <h2 id="archive" class="t-h1">Archive</h2>
+          <nav aria-label="Jump to year" class="sticky top-16 z-20 -mx-4 mt-2 border-b border-line bg-bg/95 px-4 py-2.5 backdrop-blur md:mx-0 md:px-0">
+            <ul class="no-scrollbar flex gap-2 overflow-x-auto">
+              {years.map((y) => <li><a href={`#y${y}`} class="chip !min-h-8 tabular" data-year-chip={y}>{y}</a></li>)}
+            </ul>
+          </nav>
+          {byYear.map(({ y, issues }) => (
+            <section id={`y${y}`} class="scroll-mt-32 pt-8" aria-labelledby={`h${y}`} data-year={y}>
+              <div class="mb-3 flex items-baseline justify-between gap-3 border-b border-line pb-1">
+                <h3 id={`h${y}`} class="t-h2 tabular">{y}</h3>
+                <p class="t-meta">{issues.length} {issues.length === 1 ? 'issue' : 'issues'}</p>
+              </div>
+              <ul class="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6 lg:gap-5">
+                {issues.map((iss) => (
+                  <li>
+                    <a href={L(issuePath(iss.year, iss.month))} class="group block">
+                      <span class="block overflow-hidden rounded-md border border-line transition-colors group-hover:border-accent">
+                        <MagazineCover issue={iss} class="block h-auto w-full" />
+                      </span>
+                      <span class="mt-1.5 block text-center text-sm font-medium group-hover:text-accent-ink">{monthName(iss.month, 'en').slice(0, 3)}<span class="sr-only"> {iss.year}</span></span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </section>
+      </>
+    ) : (
+      <EmptyState icon="BookOpen" class="mt-6" title="No issues yet" text="Each month's issue appears here once it is added." />
+    )}
   </div>
 </AppLayout>
 

@@ -10,16 +10,19 @@
 //   4. point the D1 `media` rows at the copies (r2_key, srcset, size, sha256), keeping the old
 //      address in source_url. scripts/.cache/media-map.json remembers it all, and
 //      `npm run db:seed` applies it again after a reseed.
-// Local R2 and D1 for now (wrangler's local state); the copy to the real bucket comes with the
-// Cloudflare account (todo Phase 1).
+// This fills the local R2 and D1 (wrangler's local state). --remote then puts every file in that
+// map into the real bucket on Cloudflare (skipping those already there; nothing is downloaded or
+// converted again) and points the real D1's rows at them, so run it after `seed-d1.mjs --remote`.
 //
 //   node scripts/copy-media.mjs              everything (hours from scratch: the old server is slow)
 //   node scripts/copy-media.mjs --limit 20   the first 20 of each kind, to try it out
 //   node scripts/copy-media.mjs --offline    only what's already downloaded
+//   node scripts/copy-media.mjs --remote     the local copies into the real R2 and D1 (needs `npx wrangler login`)
 // Watch it with `node scripts/copy-media.mjs --progress` in another terminal.
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import sharp from 'sharp';
+import { remoteProxyOptions } from './remote-config.mjs';
 
 const CACHE = new URL('./.cache/media/', import.meta.url);
 const MAP = new URL('./.cache/media-map.json', import.meta.url);
@@ -30,6 +33,7 @@ const PAUSE_MS = 350;
 const arg = (name) => { const i = process.argv.indexOf(name); return i > 0 ? process.argv[i + 1] : undefined; };
 const LIMIT = Number(arg('--limit')) || Infinity;
 const OFFLINE = process.argv.includes('--offline');
+const REMOTE = process.argv.includes('--remote');
 
 if (process.argv.includes('--progress')) {
   // Prints the running copy's progress every 10 seconds
@@ -61,6 +65,57 @@ for (const o of take(live('orders').filter((o) => o.pdfUrl))) addJob('pdf', o.pd
 for (const i of take(live('issues'))) { addJob('pdf', i.pdfUrl); addJob('image', i.coverUrl); }
 
 const map = existsSync(MAP) ? JSON.parse(readFileSync(MAP, 'utf8')) : {};
+const { getPlatformProxy } = await import('wrangler');
+
+// Every file copied so far onto its D1 rows; returns how many rows changed
+async function pointRows(db, size) {
+  const entries = Object.entries(map);
+  let rows = 0;
+  for (let i = 0; i < entries.length; i += size) {
+    const res = await db.batch(entries.slice(i, i + size).map(([source, e]) =>
+      db.prepare('UPDATE media SET r2_key = ?, srcset = ?, width = coalesce(?, width), height = coalesce(?, height), bytes = ?, sha256 = ? WHERE source_url = ? AND (r2_key IS NULL OR r2_key LIKE ?)')
+        .bind(e.r2Key, e.srcset ?? null, e.width ?? null, e.height ?? null, e.bytes, e.sha256, source, '%/crawl/%')));
+    rows += res.reduce((n, r) => n + (r.meta?.changes ?? 0), 0);
+  }
+  return rows;
+}
+
+if (REMOTE) {
+  // Every R2 key the map names (each photo's sizes, each PDF), from the local bucket to the real one
+  const local = await getPlatformProxy();
+  const { options, names } = remoteProxyOptions({ media: true });
+  const real = await getPlatformProxy(options);
+  const keys = [...new Set(Object.values(map).flatMap((e) => (e.srcset ? e.srcset.split(', ').map((s) => s.split(' ')[0]) : [e.r2Key])))];
+  const there = new Set();
+  for (let cursor; ;) {
+    const page = await real.env.MEDIA.list({ limit: 1000, cursor });
+    page.objects.forEach((o) => there.add(o.key));
+    if (!page.truncated) break;
+    cursor = page.cursor;
+  }
+  const todo = keys.filter((k) => !there.has(k));
+  console.log(`${keys.length} files in the local copy; ${keys.length - todo.length} already in the real bucket "${names.bucket}", ${todo.length} to put.`);
+  const missing = [];
+  let done = 0;
+  // A few at a time: each put is one request to Cloudflare
+  const next = async () => {
+    for (let key; (key = todo.shift()); ) {
+      const obj = await local.env.MEDIA.get(key);
+      if (!obj) missing.push(key);
+      else await real.env.MEDIA.put(key, await obj.arrayBuffer(), { httpMetadata: obj.httpMetadata });
+      status({ phase: 'putting into the real R2', done: ++done, total: keys.length - there.size, failed: missing.length, current: key });
+      if (done % 100 === 0) console.log(`  …${done}`);
+    }
+  };
+  await Promise.all(Array.from({ length: 4 }, next));
+  const rows = await pointRows(real.env.DB, 50);
+  status({ phase: 'finished', done, total: keys.length - there.size, failed: missing.length });
+  await Promise.all([local.dispose(), real.dispose()]);
+  console.log(`Put ${done - missing.length} files into the real R2; ${rows} media rows in the real D1 point at them.`);
+  if (missing.length) console.log(`${missing.length} keys are in the map but not in the local R2 (run the local copy again): ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? ' …' : ''}`);
+  process.exit(0);
+}
+
 const failures = [];
 const todo = [...jobs.values()].filter((j) => !map[j.source]);
 console.log(`${jobs.size} files linked from the crawl; ${jobs.size - todo.length} already copied, ${todo.length} to do.`);
@@ -118,7 +173,6 @@ function pdf(data) {
 }
 
 // ── 3 · Store in R2, 4 · point D1 at it ─────────────────────────────────────────────────
-const { getPlatformProxy } = await import('wrangler');
 const { env, dispose } = await getPlatformProxy();
 async function store(files) {
   for (const f of files) {
@@ -149,14 +203,7 @@ writeFileSync(MAP, JSON.stringify(map));
 writeFileSync(REPORT, failures.join('\n') + (failures.length ? '\n' : ''));
 
 // Every file copied so far, also those from earlier runs, onto its D1 rows
-const entries = Object.entries(map);
-let rows = 0;
-for (let i = 0; i < entries.length; i += 100) {
-  const res = await env.DB.batch(entries.slice(i, i + 100).map(([source, e]) =>
-    env.DB.prepare('UPDATE media SET r2_key = ?, srcset = ?, width = coalesce(?, width), height = coalesce(?, height), bytes = ?, sha256 = ? WHERE source_url = ? AND (r2_key IS NULL OR r2_key LIKE ?)')
-      .bind(e.r2Key, e.srcset ?? null, e.width ?? null, e.height ?? null, e.bytes, e.sha256, source, '%/crawl/%')));
-  rows += res.reduce((n, r) => n + (r.meta?.changes ?? 0), 0);
-}
+const rows = await pointRows(env.DB, 100);
 status({ phase: 'finished', done, total, failed: failures.length });
 await dispose();
 

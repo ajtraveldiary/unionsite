@@ -35,13 +35,13 @@ const skip = banner?.kind === 'post' ? [banner.post.id] : [];
 
 // Top news: the featured story leads, the next four sit beside it (three on phones)
 const [featured, recent] = await Promise.all([featuredPost(), latestPosts({ limit: 5, exclude: skip })]);
-const lead = featured && !skip.includes(featured.id) ? featured : recent[0];
-const topRest = recent.filter((p) => p.id !== lead.id).slice(0, 4);
+const lead: Post | undefined = featured && !skip.includes(featured.id) ? featured : recent[0];
+const topRest = recent.filter((p) => p.id !== lead?.id).slice(0, 4);
 
 // From the union: three columns that carry on where Top news stops, so nothing repeats.
 // Each opens with a photo story when one exists, then lists three more as text. The topics of
 // Articles and the three columns don't overlap, so each only has to skip what Top news showed.
-const used = new Set<number>([...skip, lead.id, ...topRest.map((p) => p.id)]);
+const used = new Set<number>([...skip, ...(lead ? [lead.id] : []), ...topRest.map((p) => p.id)]);
 const notTop = [...used];
 const [articles, secretary, fseto, news] = await Promise.all([
   latestPosts({ limit: 3, topic: 'articles', exclude: notTop }),
@@ -99,7 +99,7 @@ const districtOptions = districts.map(({ d }) => ({ value: d.slug, label: d.name
 const firstNews = districtPosts.filter((p) => !used.has(p.id)).slice(0, NEWS_LIMIT);
 
 const issue = issues[0];
-const oldest = issues.at(-1)!;
+const oldest = issues.at(-1);
 ---
 <AppLayout lang={lang}>
   <h1 class="sr-only">Kerala NGO Union</h1>
@@ -113,14 +113,18 @@ const oldest = issues.at(-1)!;
   <!-- 1 · Top news, with upcoming events underneath -->
   <section class="wrap mt-6 lg:mt-8" aria-labelledby="top-news">
     <SectionHead title="Top news" id="top-news" href={L('/news')} linkLabel="All news" />
-    <div class="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-      <StoryLead post={lead} lang={lang} />
-      <ul class="balance-list divide-y divide-line">
-        {topRest.map((p, i) => (
-          <li class:list={['py-3 first:pt-0 lg:last:pb-0', i === 3 && 'max-lg:hidden']}><StoryRow post={p} lang={lang} /></li>
-        ))}
-      </ul>
-    </div>
+    {lead ? (
+      <div class="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <StoryLead post={lead} lang={lang} />
+        <ul class="balance-list divide-y divide-line">
+          {topRest.map((p, i) => (
+            <li class:list={['py-3 first:pt-0 lg:last:pb-0', i === 3 && 'max-lg:hidden']}><StoryRow post={p} lang={lang} /></li>
+          ))}
+        </ul>
+      </div>
+    ) : (
+      <EmptyState icon="Newspaper" title="No news yet" text="News from the union and its districts appears here once it is published." />
+    )}
     {events.length > 0 && (
       <EventSlider events={events} lang={lang} href={L('/events')} class="mt-8 border-t border-line pt-5" />
     )}
@@ -170,9 +174,13 @@ const oldest = issues.at(-1)!;
       <nav aria-label="Popular subjects" lang="en" class="no-scrollbar -mx-4 mb-3 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
         {popular.map((c) => <a href={L(c.path)} class="chip">{c.label}</a>)}
       </nav>
-      <ul class="balance-list divide-y divide-line">
-        {orders.map((o) => <li class="py-3 lg:last:pb-0"><OrderRow order={o} lang={lang} /></li>)}
-      </ul>
+      {orders.length ? (
+        <ul class="balance-list divide-y divide-line">
+          {orders.map((o) => <li class="py-3 lg:last:pb-0"><OrderRow order={o} lang={lang} /></li>)}
+        </ul>
+      ) : (
+        <EmptyState compact title="No orders yet" text="Government orders appear here once they are added." />
+      )}
     </div>
     <div class="col">
       <SectionHead title="Tools & guides" />
@@ -234,24 +242,32 @@ const oldest = issues.at(-1)!;
   <section class="wrap section grid gap-x-10 gap-y-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
     <div class="col">
       <SectionHead title="Kerala Service" href={L('/kerala-service')} linkLabel="Archive" />
-      <div class="flex flex-1 gap-5">
-        <a href={L(issuePath(issue.year, issue.month))} class="block w-32 shrink-0 self-start overflow-hidden rounded-md border border-line" aria-label={`Read Kerala Service, ${monthName(issue.month, 'en')} ${issue.year}`}>
-          <MagazineCover issue={issue} class="h-auto w-full" />
-        </a>
-        <div lang="en" class="flex min-w-0 flex-col">
-          <p class="t-label">Current issue</p>
-          <p class="t-h2 mt-1">{monthName(issue.month, 'en')} {issue.year}</p>
-          <p class="mt-1 text-sm text-ink-2">The union's monthly magazine. Every issue since {monthName(oldest.month, 'en')} {oldest.year}, readable on any phone.</p>
-          <a href={L(issuePath(issue.year, issue.month))} class="btn btn-primary btn-sm mt-auto self-start"><Icon name="BookOpen" size={16} /> Read online</a>
+      {issue && oldest ? (
+        <div class="flex flex-1 gap-5">
+          <a href={L(issuePath(issue.year, issue.month))} class="block w-32 shrink-0 self-start overflow-hidden rounded-md border border-line" aria-label={`Read Kerala Service, ${monthName(issue.month, 'en')} ${issue.year}`}>
+            <MagazineCover issue={issue} class="h-auto w-full" />
+          </a>
+          <div lang="en" class="flex min-w-0 flex-col">
+            <p class="t-label">Current issue</p>
+            <p class="t-h2 mt-1">{monthName(issue.month, 'en')} {issue.year}</p>
+            <p class="mt-1 text-sm text-ink-2">The union's monthly magazine. Every issue since {monthName(oldest.month, 'en')} {oldest.year}, readable on any phone.</p>
+            <a href={L(issuePath(issue.year, issue.month))} class="btn btn-primary btn-sm mt-auto self-start"><Icon name="BookOpen" size={16} /> Read online</a>
+          </div>
         </div>
-      </div>
+      ) : (
+        <EmptyState compact title="No issues yet" text="The union's monthly magazine appears here once an issue is added." />
+      )}
     </div>
     <div class="col">
       <SectionHead title="Videos" href={info.social.youtube} linkLabel="YouTube channel" />
       <!-- Phones: a swipe row with the next video peeking in; from tablets up, three side by side -->
-      <ul class="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
-        {videos.slice(0, 3).map((v) => <li class="w-[78%] shrink-0 snap-start sm:w-auto"><VideoCard video={v} lang={lang} /></li>)}
-      </ul>
+      {videos.length ? (
+        <ul class="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
+          {videos.slice(0, 3).map((v) => <li class="w-[78%] shrink-0 snap-start sm:w-auto"><VideoCard video={v} lang={lang} /></li>)}
+        </ul>
+      ) : (
+        <EmptyState compact title="No videos yet" text="Videos from the union's YouTube channel appear here." />
+      )}
     </div>
   </section>
 </AppLayout>
