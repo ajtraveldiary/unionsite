@@ -5,7 +5,7 @@
 // Every publish rewrites the event's search entry and purges the pages that show events.
 import { and, asc, desc, eq, gte, isNotNull, isNull, lt, ne, or, sql } from 'drizzle-orm';
 import { getDb } from '~/db/client';
-import { events, posts, postTranslations, revisions, siteSettings, users } from '~/db/schema';
+import { conferences, events, posts, postTranslations, revisions, siteSettings, users } from '~/db/schema';
 import { eventEntry } from '~/lib/search-entries';
 import { purgeTags } from '~/lib/cache';
 import { slugify } from '~/lib/slug';
@@ -258,6 +258,32 @@ export async function changeEventStatus(user: AdminUser, id: number, change: 'ar
     await purge([...purgeTags.event(), ...((await isBanner(ev.slug)) ? purgeTags.banner() : [])]);
   }
   await audit(user, change, 'event', id, { district: ev.district, summary: ev.titleMl });
+}
+
+/**
+ * Deletes an event for good: off the site and out of search, with its history. News posts and
+ * conferences linked to it keep everything but the link, and if it is the home banner the banner
+ * comes off. The audit log keeps the record. Whoever may archive the event may delete it.
+ */
+export async function deleteEvent(user: AdminUser, id: number) {
+  const db = await getDb();
+  const ev = await loadEvent(user, id);
+  if (!ev) throw new AdminError('This event could not be found.', 404);
+  if (!can.archive(user, ev)) throw new AdminError('You can’t delete this event.', 403);
+  const [banner, conference] = await Promise.all([
+    isBanner(ev.slug),
+    db.select({ id: conferences.id }).from(conferences).where(eq(conferences.eventSlug, ev.slug)).get(),
+  ]);
+  await db.batch([
+    db.update(posts).set({ eventSlug: null }).where(eq(posts.eventSlug, ev.slug)),
+    db.update(conferences).set({ eventSlug: null }).where(eq(conferences.eventSlug, ev.slug)),
+    db.delete(revisions).where(and(eq(revisions.entity, 'event'), eq(revisions.entityId, id))),
+    ...(banner ? [db.delete(siteSettings).where(eq(siteSettings.key, 'home_banner'))] : []),
+    db.delete(events).where(eq(events.id, id)),
+  ]);
+  await setSearch('event', id, null);
+  await purge([...purgeTags.event(), ...(banner ? purgeTags.banner() : []), ...(conference ? purgeTags.pages() : [])]);
+  await audit(user, 'delete', 'event', id, { district: ev.district, summary: ev.titleMl });
 }
 
 /** After the day: the news post that reports on it (or none) */

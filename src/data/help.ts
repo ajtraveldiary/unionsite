@@ -76,6 +76,14 @@ export const helpTasks: HelpTask[] = [
     ],
   },
   {
+    id: 'event-delete', name: 'Delete an event', roles: ADMINS, path: '/admin/events', minutes: 1,
+    steps: [
+      'മെനുവിൽ **Events** തുറന്ന് പരിപാടി തിരഞ്ഞെടുക്കുക.',
+      'താഴെയുള്ള **Delete** അമർത്തി ഉറപ്പിക്കുക. പരിപാടി സൈറ്റിൽ നിന്നും തിരച്ചിലിൽ നിന്നും പൂർണ്ണമായി മാറും; തിരികെ കൊണ്ടുവരാനാവില്ല.',
+      'പിന്നീടും സൂക്ഷിക്കണമെങ്കിൽ **Delete**-നു പകരം **Archive** ഉപയോഗിക്കുക.',
+    ],
+  },
+  {
     id: 'office-bearers', name: 'Update office-bearers', path: '/admin/people', minutes: 3,
     steps: [
       'മെനുവിൽ **People & committees** തുറക്കുക.',

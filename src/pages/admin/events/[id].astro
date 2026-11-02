@@ -4,7 +4,7 @@
  * (src/lib/admin/events.ts checks every rule) and comes back here with what happened.
  */
 import EventEditorView from '~/views/admin/EventEditorView.astro';
-import { changeEventStatus, linkReport, loadEvent, saveEvent, type EventAction, type EventDoc } from '~/lib/admin/events';
+import { changeEventStatus, deleteEvent, linkReport, loadEvent, saveEvent, type EventAction, type EventDoc } from '~/lib/admin/events';
 import { AdminError } from '~/lib/admin/publish';
 
 export const prerender = false;
@@ -25,6 +25,10 @@ if (Astro.request.method === 'POST') {
     if (action === 'archive' || action === 'restore' || action === 'send_back') {
       await changeEventStatus(user, id!, action);
       return Astro.redirect(`/admin/events/${id}?done=${action}`);
+    }
+    if (action === 'delete') {
+      await deleteEvent(user, id!);
+      return Astro.redirect('/admin/events?done=deleted');
     }
     if (action === 'report') {
       await linkReport(user, id!, Number(input.reportPostId) || null);

@@ -19,9 +19,11 @@ const p = Astro.url.searchParams;
 const when = p.get('when') === 'past' ? 'past' : 'upcoming';
 const district = isState(user) && (p.get('district') === 'state' || districtBySlug[p.get('district') ?? '']) ? p.get('district')! : undefined;
 const rows = await listEvents(user, { when, district });
+const deleted = p.get('done') === 'deleted';
 const districtName = (slug: string | null) => (slug ? districtBySlug[slug]?.name.en.replace('Thiruvananthapuram', 'TVM') : 'State level');
 const link = (change: Record<string, string | undefined>) => {
   const u = new URLSearchParams(Astro.url.search);
+  u.delete('done');
   for (const [k, v] of Object.entries(change)) v ? u.set(k, v) : u.delete(k);
   return `/admin/events${u.size ? `?${u}` : ''}`;
 };
@@ -34,6 +36,7 @@ const link = (change: Record<string, string | undefined>) => {
     </div>
     <a href="/admin/events/new" class="btn btn-primary"><Icon name="Plus" size={18} /> New event</a>
   </div>
+  {deleted && <p class="mt-4 flex items-start gap-2 rounded-[var(--radius-card)] border border-line-strong bg-surface px-4 py-3 text-sm" role="status"><Icon name="CircleCheck" size={17} class="mt-0.5" /> Event deleted. It is off the site; the audit log keeps the record.</p>}
 
   <form method="get" action="/admin/events" class="mt-5 flex flex-wrap items-center gap-2" data-filters>
     <a href={link({ when: undefined })} class="chip" aria-current={when === 'upcoming' ? 'page' : undefined}>Upcoming</a>
