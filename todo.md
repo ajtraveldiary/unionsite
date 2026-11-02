@@ -40,8 +40,8 @@ How this list is kept:
 
 ## Phase 1 · Foundations: the part that needs the account (§15)
 
-- [ ] Finish the media copy: the local run of `scripts/copy-media.mjs` stopped at 836 of 1,881 files (Oct 2026), so 404 post photos and other files still link to the old site, live and locally. Run it to the end (restarted 2 Nov 2026), then `node scripts/copy-media.mjs --remote` again (it puts only the new files)
 - [ ] Until launch, R2 files are served through the Worker (or the bucket's r2.dev address, for testing only), and `media.keralangounion.in` is added at launch
+- [ ] Workers Builds didn't deploy `acfcd45` (pushed 2 Nov 2026, 05:54 UTC): no new Worker version after 30 minutes and no status on GitHub, while the 1 Nov merge did deploy. Read its build log (Workers & Pages → unionsite → Deployments) and fix it, so a push to `main` deploys again. Until then `npm run deploy` deploys from a laptop (`acfcd45` went out that way, version `d0a0ff25`)
 - [ ] A preview URL per branch with its own D1 database (no domain needed until launch)
 - [ ] Confirm the edge cache on the `workers.dev` address: a second visit reads no D1, and a tag purge makes the next visit read D1 again (Cloudflare's Workers cache works on workers.dev and preview URLs, each with its own cache)
 - [ ] Switch on admin login: an Access application for `/admin` and `/api/admin` (email one-time code, any email let through to the app), then set `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` and `ADMIN_BOOTSTRAP_EMAIL` (the first super admin). The token check and the users table are built (§10)
@@ -54,6 +54,7 @@ How this list is kept:
 - [ ] District data from the ~100 district posts (office-bearers, committees, history, addresses, galleries) into people and positions tables, with a "Needs checking" queue; show it on the district hub tabs
 - [ ] Review the topics the importer guessed from title keywords
 - [ ] Fix crawl data: post 15526 has an empty title
+- [ ] Photos the old site has lost (111 post photos and Kerala Service covers return 404, one returns 500; listed in `scripts/.cache/media-report.txt`) show as broken images, live and locally. Treat them as no photo, so stories get the neutral topic tile and issues a stand-in cover
 - [ ] Core templates pass the §9 performance budgets (LCP under 2 s, Lighthouse 95+, JavaScript under 50 KB on articles)
 
 ## Phase 3 · Feature pages (§11)
@@ -101,7 +102,8 @@ How this list is kept:
 
 ## Done
 
-- [x] 2026-11-02 Content and media on the live site: `node scripts/seed-d1.mjs --remote` loaded the real D1 (1,611 posts, 379 orders, 138 issues, events, people, videos, search; no admin users), and the new `node scripts/copy-media.mjs --remote` put the 2,988 files of the local copy into the real R2 (323 MB) and pointed 844 media rows at them. Both get their remote config from `scripts/remote-config.mjs` (the seed's own version failed on Windows paths)
+- [x] 2026-11-02 Deployed `acfcd45` with wrangler (version `d0a0ff25`): the empty states and the uncached 500 are live, and the site serves the real D1 and R2
+- [x] 2026-11-02 Content and media on the live site: `node scripts/seed-d1.mjs --remote` loaded the real D1 (1,611 posts, 379 orders, 138 issues, events, people, videos, search; no admin users), and the new `node scripts/copy-media.mjs --remote` put the local copies into the real R2. The October local copy had stopped at 836 of 1,881 files; it was run to the end, so the real R2 holds 4,401 files (1,257 photos in their WebP sizes and 147 PDFs) and 1,418 media rows point at them. The other 477 are lost on the old site itself (`scripts/.cache/media-report.txt`). Both get their remote config from `scripts/remote-config.mjs` (the seed's own version failed on Windows paths)
 - [x] 2026-11-02 Pages no longer go blank on an empty D1: home, News and Kerala Service (both languages) show empty states (no news, orders, issues or videos yet). Cached pages are now rendered in full before they're sent (`src/middleware.ts`), so a page that fails becomes an uncached 500 (`src/pages/500.astro`) instead of a blank page kept at the edge. Checked on an empty local D1 and on the seeded one
 - [x] 2026-11-02 Deployed to https://unionsite.workdesk.workers.dev/ from GitHub through Workers Builds (Worker `unionsite`, deploys `main`), bound to the real D1, R2 and the `unionsite-session` KV. Orders and Events read D1 there (0 items: no content loaded yet); the admin answers but sign-in waits for Cloudflare Access
 - [x] 2026-11-01 `SESSION` KV binding: Cloudflare made the `unionsite-session` namespace on the first deploy; its id is now in `wrangler.jsonc`, so builds stop trying to make another (the site still doesn't use sessions)
