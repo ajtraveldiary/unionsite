@@ -44,7 +44,7 @@ How this list is kept:
 - [ ] Workers Builds didn't deploy `acfcd45` (pushed 2 Nov 2026, 05:54 UTC): no new Worker version after 30 minutes and no status on GitHub, while the 1 Nov merge did deploy. Read its build log (Workers & Pages → unionsite → Deployments) and fix it, so a push to `main` deploys again. Until then `npm run deploy` deploys from a laptop (`acfcd45` went out that way, version `d0a0ff25`)
 - [ ] A preview URL per branch with its own D1 database (no domain needed until launch)
 - [ ] Confirm the edge cache on the `workers.dev` address: a second visit reads no D1, and a tag purge makes the next visit read D1 again (Cloudflare's Workers cache works on workers.dev and preview URLs, each with its own cache)
-- [ ] Switch on admin login: an Access application for `/admin` and `/api/admin` (email one-time code, any email let through to the app), then set `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` and `ADMIN_BOOTSTRAP_EMAIL` (the first super admin). The token check and the users table are built (§10)
+- [ ] **(union)** Each admin invited in Admin → Users must also be added to the Access policy "Union admins" (Zero Trust → Access controls → Policies), which lists emails one by one. Or let any email through Access and leave it to the users list, as §10 first planned; every person who signs in then takes one of the free plan's 50 seats
 - [ ] Usage alerts at 80 % of the D1, R2 and Workers limits (§13)
 
 ## Phase 2 · Demo data and core site (§12, §9)
@@ -102,6 +102,7 @@ How this list is kept:
 
 ## Done
 
+- [x] 2026-11-02 Admin sign-in on the live site: the Access application "Union admin" guards `/admin` and `/api/admin` (policy "Union admins": listed emails, one-time code or Cloudflare account, 24-hour session; the public pages stay open). `ACCESS_TEAM_DOMAIN` (`abhijithpyd.cloudflareaccess.com`), `ACCESS_AUD` and `ADMIN_BOOTSTRAP_EMAIL` are Worker secrets, not vars, so local dev keeps its stand-in login. abhijithpyd@gmail.com signed in and became the super admin
 - [x] 2026-11-02 Index `media_source` on `media.source_url` (migration `0007_media_source`, applied locally and to the real D1): the media copy's updates looked rows up by old address with a full scan of the media table, about 4.2 million rows read over the two remote runs; now each reads only its own rows
 - [x] 2026-11-02 Analytics Engine binding: `wrangler.jsonc` binds `ANALYTICS` to the `union_events` dataset and sets `CF_ACCOUNT_ID`; `src/lib/analytics.ts` writes there only once `CF_API_TOKEN` is set too, so local dev (where wrangler stands in a binding that keeps nothing) and the live site until the token keep using `analytics_raw`. Deployed with wrangler
 - [x] 2026-11-02 Deployed `acfcd45` with wrangler (version `d0a0ff25`): the empty states and the uncached 500 are live, and the site serves the real D1 and R2

@@ -25,6 +25,9 @@
   // roll-up reads them back through the SQL API with CF_ACCOUNT_ID and the CF_API_TOKEN secret
   // (an "Account Analytics: Read" token); the account id changes if the site moves to a union account.
   "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "union_events" }],
+  // Admin sign-in (src/lib/admin/auth.ts): Cloudflare Access guards /admin and /api/admin through the
+  // "Union admin" application. Its team domain and audience (ACCESS_TEAM_DOMAIN, ACCESS_AUD) and the
+  // first super admin's email (ADMIN_BOOTSTRAP_EMAIL) are Worker secrets, not vars, so local dev
+  // keeps its stand-in login.
   "vars": { "CF_ACCOUNT_ID": "4d2c2b4ca831c58d05db412df6452647" }
-  // Later: vars ACCESS_TEAM_DOMAIN and ACCESS_AUD for admin login
 }

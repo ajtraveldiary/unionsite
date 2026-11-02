@@ -25,8 +25,9 @@ banner (one post or event, set by a state editor; it stays until replaced) lives
 (`site_settings.home_banner`), first set from `firstBanner` in `site.ts`. Since 1 Nov 2026 the
 real D1 database (`union`) and R2 bucket (`union-media`) exist in the owner's Cloudflare account, used
 for now. Since 2 Nov 2026 `main` deploys through Workers Builds to https://unionsite.workdesk.workers.dev/
-(Worker `unionsite`), bound to them; the real D1 holds the crawl and the real R2 the copied media, but
-Access isn't set up, so there is no admin there yet. Dev, the seed and the media copy work on the local
+(Worker `unionsite`), bound to them; the real D1 holds the crawl and the real R2 the copied media, and
+the admin works there behind Cloudflare Access (the "Union admin" application; its team domain, AUD and the
+first super admin's email are Worker secrets). Dev, the seed and the media copy work on the local
 copies wrangler keeps in `.wrangler/state`; their `--remote` modes load the real D1 and R2.
 
 The admin panel at `/admin` was built in four slices (plan, section 1), all done locally: 1 (sign-in, roles,
@@ -35,7 +36,8 @@ committees, Districts, Pages & documents, Media) and 4 (Inbox, Users, Settings, 
 Import, Help). The Contact form saves messages for the Inbox; pages send a cookie-less analytics
 beacon to `/api/e`, stored in D1's `analytics_raw` locally and on the live site until its `CF_API_TOKEN` secret is set; then in Analytics Engine (`ANALYTICS`, dataset `union_events`), so page views don't write to D1. Locally, sign in at `/admin/login` as one of the four test users
 the seed adds (super admin, state editor, Kollam district admin, Kollam district editor); on the real
-site Cloudflare Access does the sign-in and `src/lib/admin/auth.ts` checks its token.
+site Cloudflare Access does the sign-in and `src/lib/admin/auth.ts` checks its token. Access lets in only the
+emails in its policy "Union admins", so a new admin is added there as well as in Admin → Users.
 
 ## Commands
 
